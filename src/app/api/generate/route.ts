@@ -1,0 +1,140 @@
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { NextResponse } from 'next/server'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { subject, grade, topic, focus, outputType, questionCount, questionTypes } = await request.json()
+
+    // Check profile and daily limits
+    const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single()
+    if (!profile?.is_premium) {
+      const today = new Date().toISOString().split('T')[0]
+      const { data: usage } = await supabase.from('daily_usage').select('questions, worksheets').eq('user_id', user.id).eq('date', today).single()
+      const used = outputType === 'questions' ? (usage?.questions ?? 0) : (usage?.worksheets ?? 0)
+      if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
+    }
+
+    // Build prompt
+    const systemPrompt = `You are StudySpark, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level. Be encouraging and clear. Always respond in valid JSON only — no markdown, no preamble, no backticks.`
+
+    let userPrompt = ''
+    if (outputType === 'questions') {
+      const types = questionTypes?.join(' and ') || 'multiple choice'
+      userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}
+
+Include ${types} questions.
+
+For each MC question provide:
+- id (number)
+- type: "mc"
+- question (string)
+- options (array of 4 strings like ["A. ...", "B. ...", "C. ...", "D. ..."])
+- correctAnswer (string: "A", "B", "C", or "D")
+- explanation (3-5 sentences, plain language, step by step)
+
+For each FR question provide:
+- id (number)
+- type: "fr"
+- question (string)
+- modelAnswer (3-5 sentences)
+
+Return JSON: { "questions": [...] }`
+    } else {
+      userPrompt = `Create a complete study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}
+
+Return JSON with this exact structure:
+{
+  "worksheet": {
+    "introduction": {
+      "text": "2-3 sentence friendly intro",
+      "vocabulary": [{"term": "...", "definition": "..."}]
+    },
+    "steps": [
+      {
+        "title": "Step title",
+        "explanation": "Clear explanation paragraph",
+        "visualDescription": "Describe a simple diagram or table that illustrates this step",
+        "keyTakeaway": "One sentence summary"
+      }
+    ],
+    "summary": {
+      "bullets": ["bullet 1", "bullet 2"],
+      "quickCheck": ["True or false question", "Fill in the blank"]
+    },
+    "practiceQuestions": [
+      {
+        "id": 1,
+        "type": "mc",
+        "question": "...",
+        "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+        "correctAnswer": "A",
+        "explanation": "..."
+      }
+    ]
+  }
+}`
+    }
+
+    // Add artificial delay for free users
+    const startTime = Date.now()
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    })
+
+    const raw = completion.choices[0].message.content ?? '{}'
+    const parsed = JSON.parse(raw)
+
+    // Free user artificial delay (30s total)
+    if (!profile?.is_premium) {
+      const elapsed = Date.now() - startTime
+      const remaining = 30000 - elapsed
+      if (remaining > 0) await new Promise(r => setTimeout(r, remaining))
+    }
+
+    // Save session
+    const { data: session, error: sessionError } = await supabase
+      .from('sessions')
+      .insert({
+        user_id: user.id,
+        subject,
+        grade,
+        topic,
+        focus: focus || null,
+        output_type: outputType,
+        content: parsed,
+      })
+      .select('id')
+      .single()
+
+    if (sessionError) throw sessionError
+
+    // Increment usage
+    const today = new Date().toISOString().split('T')[0]
+    const field = outputType === 'questions' ? 'questions' : 'worksheets'
+    await supabase.from('daily_usage').upsert(
+      { user_id: user.id, date: today, [field]: 1 },
+      { onConflict: 'user_id,date', ignoreDuplicates: false }
+    )
+    // Try to increment — if upsert created new row with 1, we're done; if existing, increment
+    await supabase.rpc('increment_daily_usage', { p_user_id: user.id, p_date: today, p_field: field }).maybeSingle()
+
+    return NextResponse.json({ sessionId: session.id, outputType })
+  } catch (error: any) {
+    console.error('Generate error:', error)
+    return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })
+  }
+}
