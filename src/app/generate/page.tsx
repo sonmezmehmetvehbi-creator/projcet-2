@@ -229,9 +229,9 @@ export default function GeneratePage() {
                           <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
                             Click to upload your notes
                           </p>
-                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, JPG, PNG, PPTX — max 10MB</p>
+                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT — max 20MB</p>
                         </div>
-                        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.pptx" style={{ display:'none' }} onChange={handleFileUpload} />
+                        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.pptx,.ppt,.docx,.txt" style={{ display:'none' }} onChange={handleFileUpload} />
                         {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginTop:'0.5rem' }}>{uploadError}</p>}
                       </div>
                     ) : (
