@@ -2,8 +2,15 @@ export function formatMath(text: string): string {
   if (!text) return text
 
   return text
-    // Superscripts: a^2 → a²  (common exponents)
-    .replace(/\^{(\d+)}/g, (_, n) => toSuperscript(n))
+  // Remove LaTeX delimiters
+  .replace(/\\\(/g, '')
+  .replace(/\\\)/g, '')
+  .replace(/\\\[/g, '')
+  .replace(/\\\]/g, '')
+  .replace(/\$\$/g, '')
+  .replace(/\$/g, '')
+  // Rest of existing replacements
+  .replace(/\^{(\d+)}/g, (_, n) => toSuperscript(n))
     .replace(/\^(\d+|[a-zA-Z])/g, (_, n) => toSuperscript(n))
     .replace(/\^{([^}]+)}/g, (_, n) => `<sup>${n}</sup>`)
     // Subscripts: H_2 → H₂
