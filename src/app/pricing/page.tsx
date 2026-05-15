@@ -3,6 +3,7 @@ import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
 import { CheckCircle, Zap } from 'lucide-react'
 import type { Profile } from '@/types'
+import UpgradeButton from '@/components/premium/UpgradeButton'
 
 export default async function PricingPage() {
   let profile: Profile | null = null
@@ -125,10 +126,12 @@ export default async function PricingPage() {
                 <div style={{ textAlign:'center', padding:'0.875rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600, fontSize:'0.9375rem' }}>
                   Your current plan ✓
                 </div>
+              ) : profile ? (
+                <UpgradeButton />
               ) : (
-                <Link href={profile ? '/api/stripe/checkout' : '/signup?plan=premium'} className="btn-primary" style={{ width:'100%', justifyContent:'center', boxShadow:'0 4px 16px rgba(34,85,14,0.2)' }}>
+                <Link href="/signup?plan=premium" className="btn-primary" style={{ width:'100%', justifyContent:'center', boxShadow:'0 4px 16px rgba(34,85,14,0.2)' }}>
                   <Zap style={{ width:'1rem', height:'1rem' }} />
-                  Upgrade to Premium →
+                  Get Started →
                 </Link>
               )}
             </div>
