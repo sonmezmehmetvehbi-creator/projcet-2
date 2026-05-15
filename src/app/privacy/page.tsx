@@ -26,7 +26,7 @@ export default async function PrivacyPage() {
 
             <section>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, marginBottom:'0.75rem' }}>1. Introduction</h2>
-              <p>StudySpark ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use StudySpark ("Service"). By using StudySpark, you agree to the practices described in this policy.</p>
+              <p>AceForge ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use AceForge ("Service"). By using AceForge, you agree to the practices described in this policy.</p>
               <p style={{ marginTop:'0.75rem' }}>Questions? Contact us at <a href="mailto:contactinfo21342@gmail.com" style={{ color:'rgb(34,85,14)', fontWeight:600 }}>contactinfo21342@gmail.com</a></p>
             </section>
 
@@ -65,7 +65,7 @@ export default async function PrivacyPage() {
 
             <section>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, marginBottom:'0.75rem' }}>4. Children's Privacy (COPPA)</h2>
-              <p>StudySpark is designed for students of all ages, including children under 13. We comply with the Children's Online Privacy Protection Act (COPPA).</p>
+              <p>AceForge is designed for students of all ages, including children under 13. We comply with the Children's Online Privacy Protection Act (COPPA).</p>
               <p style={{ marginTop:'0.75rem' }}><strong>For users under 13:</strong> We require verifiable parental consent before collecting personal information. During registration, users under 13 are directed through a parental consent flow. Parents may review, modify, or request deletion of their child's data at any time by contacting <a href="mailto:contactinfo21342@gmail.com" style={{ color:'rgb(34,85,14)', fontWeight:600 }}>contactinfo21342@gmail.com</a>.</p>
               <p style={{ marginTop:'0.75rem' }}>We collect the minimum information necessary from all users. We do not show behaviorally targeted advertising to users under 13. Any ads shown to users under 13 are contextual only (based on page content, not personal data).</p>
             </section>
@@ -139,7 +139,7 @@ export default async function PrivacyPage() {
             <section>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, marginBottom:'0.75rem' }}>12. Contact</h2>
               <p>
-                <strong>StudySpark</strong><br />
+                <strong>AceForge</strong><br />
                 Email: <a href="mailto:contactinfo21342@gmail.com" style={{ color:'rgb(34,85,14)', fontWeight:600 }}>contactinfo21342@gmail.com</a>
               </p>
             </section>

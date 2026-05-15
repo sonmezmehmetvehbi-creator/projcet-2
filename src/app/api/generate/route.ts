@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
     }
 
-    const systemPrompt = `You are StudySpark, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level. Be encouraging and clear. Always respond in valid JSON only — no markdown, no preamble, no backticks.`
+    const systemPrompt = `You are AceForge, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level. Be encouraging and clear. Always respond in valid JSON only — no markdown, no preamble, no backticks.`
 
     const notesContext = uploadedText
       ? `\n\nIMPORTANT: Base ALL questions/content ONLY on the following student notes. Do not add information from outside these notes:\n\n---\n${uploadedText}\n---\n`

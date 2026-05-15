@@ -99,7 +99,7 @@ function buildPDFContent(session: any): string {
 </head>
 <body>
   <div class="header">
-    <div class="app-name">StudySpark</div>
+    <div class="app-name">AceForge</div>
     <div class="title">${session.topic}</div>
     <div class="meta">${session.subject} · ${session.grade} · ${questions.length} Questions · ${new Date(session.created_at).toLocaleDateString()}</div>
   </div>
@@ -154,7 +154,7 @@ function buildPDFContent(session: any): string {
 </head>
 <body>
   <div class="header">
-    <div class="app-name">StudySpark Worksheet</div>
+    <div class="app-name">AceForge Worksheet</div>
     <div class="title">${session.topic}</div>
     <div class="meta">${session.subject} · ${session.grade} · ${new Date(session.created_at).toLocaleDateString()}</div>
   </div>

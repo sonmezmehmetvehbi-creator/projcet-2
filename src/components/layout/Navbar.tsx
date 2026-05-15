@@ -71,7 +71,7 @@ export default function Navbar({ profile }: NavbarProps) {
           <div style={{ width:'2rem', height:'2rem', borderRadius:'0.5rem', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <BookOpen style={{ width:'1rem', height:'1rem', color:'white' }} strokeWidth={2.5} />
           </div>
-          <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>StudySpark</span>
+          <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>AceForge</span>
         </Link>
 
         {profile ? (

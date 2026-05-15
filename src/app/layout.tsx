@@ -4,7 +4,7 @@ import CookieBanner from '@/components/ui/CookieBanner'
 import Script from 'next/script'
 
 export const metadata: Metadata = {
-  title: 'StudySpark — AI-Powered Study Materials',
+  title: 'AceForge — AI-Powered Study Materials',
   description: 'Generate personalized questions and visual worksheets for any subject and grade level.',
 }
 

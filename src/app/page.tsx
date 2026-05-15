@@ -201,7 +201,7 @@ export default async function HomePage() {
         <div className="container-base" style={{ textAlign:'center' }}>
           <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'clamp(2rem, 5vw, 3rem)', fontWeight:700, color:'white', marginBottom:'1.5rem' }}>Ready to study smarter?</h2>
           <p style={{ color:'rgba(255,255,255,0.7)', fontSize:'1.125rem', marginBottom:'2.5rem', maxWidth:'32rem', margin:'0 auto 2.5rem' }}>
-            Join students using StudySpark to turn any topic into an interactive study session.
+            Join students using AceForge to turn any topic into an interactive study session.
           </p>
           <Link href={profile ? '/generate' : '/signup'} className="btn-accent" style={{ fontSize:'1.0625rem', padding:'1rem 2rem' }}>
             Start for free <ArrowRight style={{ width:'1rem', height:'1rem' }} />
@@ -216,9 +216,9 @@ export default async function HomePage() {
             <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'0.375rem', background:'rgb(74,122,40)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <BookOpen style={{ width:'0.75rem', height:'0.75rem', color:'white' }} />
             </div>
-            <span style={{ fontWeight:600, color:'white' }}>StudySpark</span>
+            <span style={{ fontWeight:600, color:'white' }}>AceForge</span>
           </div>
-          <p>© {new Date().getFullYear()} StudySpark. Built for students.</p>
+          <p>© {new Date().getFullYear()} AceForge. Built for students.</p>
           <div style={{ display:'flex', gap:'1.5rem', flexWrap:'wrap' }}>
             <Link href="/pricing" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Pricing</Link>
             <Link href="/login" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Log in</Link>

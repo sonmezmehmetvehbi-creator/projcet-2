@@ -61,7 +61,7 @@ export default function SignupPage() {
             <div style={{ width:'2.5rem', height:'2.5rem', borderRadius:'0.75rem', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <BookOpen style={{ width:'1.25rem', height:'1.25rem', color:'white' }} strokeWidth={2.5} />
             </div>
-            <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>StudySpark</span>
+            <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>AceForge</span>
           </Link>
           <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.875rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>Create your account</h1>
           <p style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem' }}>Start studying smarter today — free</p>
@@ -118,7 +118,7 @@ export default function SignupPage() {
                 style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }}
               />
               <label htmlFor="agree" style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6, cursor:'pointer' }}>
-                I agree to StudySpark's{' '}
+                I agree to AceForge's{' '}
                 <a href="/terms" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Terms of Service</a>
                 {' '}and{' '}
                 <a href="/privacy" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Privacy Policy</a>.
