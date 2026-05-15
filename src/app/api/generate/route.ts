@@ -43,6 +43,8 @@ export async function POST(request: Request) {
 
 Difficulty: ${activeDifficulty.toUpperCase()} — ${difficultyGuide[activeDifficulty]}
 
+IMPORTANT: Do NOT use LaTeX notation. Write math in plain text using ^ for exponents (e.g. x^2), / for fractions (e.g. 1/2), and * or "times" for multiplication. Never use \\frac, \\times, \\( \\) or any LaTeX commands.
+
 Always respond in valid JSON only — no markdown, no preamble, no backticks.`
 
     const notesContext = uploadedText
