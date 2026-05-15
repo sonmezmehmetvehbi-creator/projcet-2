@@ -128,8 +128,27 @@ Return JSON with this exact structure:
     })
 
     const raw = completion.choices[0].message.content ?? '{}'
-    const clean = raw.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean)
+let clean = raw.replace(/```json|```/g, '').trim()
+
+// Fix common JSON issues from GPT
+clean = clean
+  .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ') // remove control characters
+  .replace(/\n/g, ' ') // flatten newlines inside strings
+  .trim()
+
+let parsed
+try {
+  parsed = JSON.parse(clean)
+} catch (e) {
+  // Try a more aggressive cleanup
+  clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
+  try {
+    parsed = JSON.parse(clean)
+  } catch (e2) {
+    console.error('JSON parse failed:', clean.substring(0, 500))
+    throw new Error('Failed to parse AI response. Please try again.')
+  }
+}
 
     // Don't save retry sessions to dashboard
     if (isRetry) {
