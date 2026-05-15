@@ -191,9 +191,7 @@ function MCOptions({ question, answered, onSelect }: {
           <p style={{ fontWeight:700, fontSize:'1rem', marginBottom:'0.5rem', color: answered.correct ? 'rgb(59,109,17)' : 'rgb(163,45,45)' }}>
             {answered.correct ? '🎉 Excellent!!! Great job!' : "💡 Not quite — here's how to think about it:"}
           </p>
-          <p style={{ fontSize:'0.9375rem', lineHeight:1.7, color: answered.correct ? 'rgba(59,109,17,0.9)' : 'rgba(163,45,45,0.9)' }}>
-            {question.explanation}
-          </p>
+          <MathText text={question.explanation} style={{ fontSize:'0.9375rem', lineHeight:1.7, color: answered.correct ? 'rgba(59,109,17,0.9)' : 'rgba(163,45,45,0.9)', display:'block' }} />
         </div>
       )}
     </div>

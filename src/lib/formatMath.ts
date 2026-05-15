@@ -4,7 +4,7 @@ export function formatMath(text: string): string {
   return text
     // Superscripts: a^2 → a²  (common exponents)
     .replace(/\^{(\d+)}/g, (_, n) => toSuperscript(n))
-    .replace(/\^(\d+)/g, (_, n) => toSuperscript(n))
+    .replace(/\^(\d+|[a-zA-Z])/g, (_, n) => toSuperscript(n))
     .replace(/\^{([^}]+)}/g, (_, n) => `<sup>${n}</sup>`)
     // Subscripts: H_2 → H₂
     .replace(/_\{(\d+)\}/g, (_, n) => toSubscript(n))
