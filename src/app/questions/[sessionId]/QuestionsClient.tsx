@@ -6,9 +6,9 @@ import { CheckCircle, XCircle, ArrowLeft, ArrowRight, RotateCcw, Download } from
 import type { MCQuestion, FRQuestion, Question } from '@/types'
 import MathText from '@/components/ui/MathText'
 
-interface Props { session: any }
+interface Props { session: any; isPremium?: boolean }
 
-export default function QuestionsClient({ session }: Props) {
+export default function QuestionsClient({ session, isPremium = false }: Props) {
   const questions: Question[] = session.content?.questions ?? []
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState<Record<number, { answer: string; correct: boolean | null; topic?: string }>>({})
