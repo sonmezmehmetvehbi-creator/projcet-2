@@ -156,15 +156,19 @@ export default function GeneratePage() {
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!subject.trim() || !topic.trim()) { setError('Please fill in all required fields.'); return }
-    if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
-    if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
-    setError('')
-    setLoading(true)
+  e.preventDefault()
+  if (!subject.trim() || !topic.trim()) { setError('Please fill in all required fields.'); return }
+  if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
+  if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
+  setError('')
+  setLoading(true)
 
-    try {
-      const res = await fetch('/api/generate', {
+  const minWait = profile?.is_premium ? 15000 : 30000
+
+  try {
+    // Fire both the API call and the timer at the same time
+    const [data] = await Promise.all([
+      fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -172,16 +176,18 @@ export default function GeneratePage() {
           questionCount, questionTypes,
           uploadedText: useUpload ? uploadedText : undefined,
         }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Generation failed')
-      if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
-      else router.push(`/worksheet/${data.sessionId}`)
-    } catch (err: any) {
-      setError(err.message)
-      setLoading(false)
-    }
+      }).then(res => res.json()),
+      new Promise(resolve => setTimeout(resolve, minWait)),
+    ])
+
+    if (data.error) throw new Error(data.error)
+    if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
+    else router.push(`/worksheet/${data.sessionId}`)
+  } catch (err: any) {
+    setError(err.message)
+    setLoading(false)
   }
+}
 
   if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} />
 

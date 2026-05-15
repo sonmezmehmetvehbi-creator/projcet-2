@@ -119,11 +119,7 @@ Return JSON with this exact structure:
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
 
-    if (!profile?.is_premium) {
-      const elapsed = Date.now() - startTime
-      const remaining = 30000 - elapsed
-      if (remaining > 0) await new Promise(r => setTimeout(r, remaining))
-    }
+   
 
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
