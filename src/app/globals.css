@@ -178,4 +178,13 @@
   .animate-stagger-4 { animation: staggerIn 0.5s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
   .animate-stagger-5 { animation: staggerIn 0.5s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
   .animate-stagger-6 { animation: staggerIn 0.5s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+
+  /* ── Mobile fixes ── */
+  @media (max-width: 640px) {
+    .container-base { padding-left: 1rem; padding-right: 1rem; }
+    .section { padding: 3rem 1rem; }
+    .card { border-radius: 0.75rem; }
+    .btn-primary, .btn-secondary, .btn-accent { padding: 0.625rem 1rem; font-size: 0.9375rem; }
+    .card-hover { border-radius: 0.75rem; }
+  }
 }

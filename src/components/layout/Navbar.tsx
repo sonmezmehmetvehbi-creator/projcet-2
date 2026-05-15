@@ -11,12 +11,15 @@ interface NavbarProps { profile?: Profile | null }
 
 export default function Navbar({ profile }: NavbarProps) {
   const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -25,6 +28,12 @@ export default function Navbar({ profile }: NavbarProps) {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   async function signOut() {
@@ -46,15 +55,16 @@ export default function Navbar({ profile }: NavbarProps) {
   }
 
   const isHome = pathname === '/'
+  const isTransparent = isHome && !scrolled
 
   return (
     <nav style={{
       position:'fixed', top:0, left:0, right:0, zIndex:50,
-      background: isHome ? 'transparent' : 'rgba(255,255,255,0.92)',
-      backdropFilter: isHome ? 'none' : 'blur(12px)',
-      borderBottom: isHome ? 'none' : '1px solid rgba(34,85,14,0.08)',
-      boxShadow: isHome ? 'none' : '0 1px 12px rgba(34,85,14,0.06)',
-      transition: 'all 0.3s',
+      background: isTransparent ? 'transparent' : 'rgba(255,255,255,0.95)',
+      backdropFilter: isTransparent ? 'none' : 'blur(12px)',
+      borderBottom: isTransparent ? 'none' : '1px solid rgba(34,85,14,0.08)',
+      boxShadow: isTransparent ? 'none' : '0 1px 12px rgba(34,85,14,0.06)',
+      transition: 'all 0.3s ease',
     }}>
       <div className="container-base" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:'4rem', padding:'0 1.5rem' }}>
         <Link href={profile ? '/dashboard' : '/'} style={{ display:'flex', alignItems:'center', gap:'0.5rem', textDecoration:'none' }}>
@@ -103,10 +113,10 @@ export default function Navbar({ profile }: NavbarProps) {
                     { href:'/settings', icon:<Settings style={{width:'1rem',height:'1rem'}} />, label:'Settings' },
                     { href:'/dashboard?tab=pdfs', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'My PDFs' },
                   ].map(item => (
-                    <Link key={item.href} href={item.href} onClick={() => setOpen(false)} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
+                    <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
+                      style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
                       onMouseEnter={e => (e.currentTarget.style.background='rgb(249,250,251)')}
-                      onMouseLeave={e => (e.currentTarget.style.background='transparent')}
-                    >
+                      onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                       <span style={{ color:'rgb(107,107,88)' }}>{item.icon}</span>{item.label}
                     </Link>
                   ))}
@@ -114,26 +124,28 @@ export default function Navbar({ profile }: NavbarProps) {
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.625rem 1rem' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', fontSize:'0.875rem', color:'rgb(26,26,20)' }}>
                       <Crown style={{ width:'1rem', height:'1rem', color:'rgb(107,107,88)' }} />
-                      Plan: {profile.is_premium ? <span style={{ fontWeight:600, color:'rgb(217,119,6)' }}>Premium ⚡</span> : <span>Free</span>}
+                      Plan: {profile.is_premium
+                        ? <span style={{ fontWeight:600, color:'rgb(217,119,6)' }}>Premium ⚡</span>
+                        : <span>Free</span>}
                     </div>
                     {!profile.is_premium && (
                       <Link href="/pricing" onClick={() => setOpen(false)} style={{ fontSize:'0.75rem', fontWeight:600, color:'rgb(34,85,14)', textDecoration:'none' }}>Upgrade →</Link>
                     )}
                   </div>
 
-                  <Link href="/settings?section=password" onClick={() => setOpen(false)} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
+                  <Link href="/settings?section=password" onClick={() => setOpen(false)}
+                    style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
                     onMouseEnter={e => (e.currentTarget.style.background='rgb(249,250,251)')}
-                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}
-                  >
+                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                     <span style={{ color:'rgb(107,107,88)' }}>🔑</span> Change Password
                   </Link>
                 </div>
 
                 <div style={{ borderTop:'1px solid rgb(243,244,246)', padding:'0.5rem 0' }}>
-                  <button onClick={() => { setOpen(false); signOut() }} style={{ display:'flex', alignItems:'center', gap:'0.75rem', width:'100%', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(163,45,45)', background:'transparent', border:'none', cursor:'pointer', textAlign:'left' }}
+                  <button onClick={() => { setOpen(false); signOut() }}
+                    style={{ display:'flex', alignItems:'center', gap:'0.75rem', width:'100%', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(163,45,45)', background:'transparent', border:'none', cursor:'pointer', textAlign:'left' }}
                     onMouseEnter={e => (e.currentTarget.style.background='rgb(254,242,242)')}
-                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}
-                  >
+                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                     <LogOut style={{ width:'1rem', height:'1rem' }} /> Sign Out
                   </button>
                 </div>

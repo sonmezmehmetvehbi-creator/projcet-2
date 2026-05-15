@@ -228,7 +228,7 @@ export default function SettingsContent() {
                 )}
               </div>
               {profile.is_premium ? (
-                <button className="btn-secondary" style={{ fontSize:'0.875rem', padding:'0.5rem 1rem' }}>Manage subscription</button>
+                <ManageSubscriptionButton />
               ) : (
                 <Link href="/pricing" className="btn-primary" style={{ fontSize:'0.875rem', padding:'0.5rem 1.25rem' }}>
                   <Zap style={{ width:'0.875rem', height:'0.875rem' }} />
@@ -261,5 +261,28 @@ export default function SettingsContent() {
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  )
+}
+
+function ManageSubscriptionButton() {
+  const [loading, setLoading] = useState(false)
+
+  async function handleManage() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else { alert(data.error || 'Something went wrong'); setLoading(false) }
+    } catch {
+      alert('Something went wrong')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button onClick={handleManage} disabled={loading} className="btn-secondary" style={{ fontSize:'0.875rem', padding:'0.5rem 1rem' }}>
+      {loading ? 'Loading...' : 'Manage subscription'}
+    </button>
   )
 }
