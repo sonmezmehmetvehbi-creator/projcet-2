@@ -13,10 +13,20 @@ export async function POST(request: Request) {
     const { subject, grade, topic, focus, outputType, questionCount, questionTypes } = await request.json()
 
     // Check profile and daily limits
-    const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user.id)
+      .single()
+
     if (!profile?.is_premium) {
       const today = new Date().toISOString().split('T')[0]
-      const { data: usage } = await supabase.from('daily_usage').select('questions, worksheets').eq('user_id', user.id).eq('date', today).single()
+      const { data: usage } = await supabase
+        .from('daily_usage')
+        .select('questions, worksheets')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single()
       const used = outputType === 'questions' ? (usage?.questions ?? 0) : (usage?.worksheets ?? 0)
       if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
     }
@@ -82,7 +92,6 @@ Return JSON with this exact structure:
 }`
     }
 
-    // Add artificial delay for free users
     const startTime = Date.now()
 
     const completion = await openai.chat.completions.create({
@@ -96,7 +105,8 @@ Return JSON with this exact structure:
     })
 
     const raw = completion.choices[0].message.content ?? '{}'
-    const parsed = JSON.parse(raw)
+    const clean = raw.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(clean)
 
     // Free user artificial delay (30s total)
     if (!profile?.is_premium) {
@@ -122,15 +132,27 @@ Return JSON with this exact structure:
 
     if (sessionError) throw sessionError
 
-    // Increment usage
+    // Increment daily usage
     const today = new Date().toISOString().split('T')[0]
     const field = outputType === 'questions' ? 'questions' : 'worksheets'
-    await supabase.from('daily_usage').upsert(
-      { user_id: user.id, date: today, [field]: 1 },
-      { onConflict: 'user_id,date', ignoreDuplicates: false }
-    )
-    // Try to increment — if upsert created new row with 1, we're done; if existing, increment
-    await supabase.rpc('increment_daily_usage', { p_user_id: user.id, p_date: today, p_field: field }).maybeSingle()
+
+    const { data: existingUsage } = await supabase
+      .from('daily_usage')
+      .select('id, questions, worksheets')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .single()
+
+    if (existingUsage) {
+      await supabase
+        .from('daily_usage')
+        .update({ [field]: (existingUsage[field as keyof typeof existingUsage] as number) + 1 })
+        .eq('id', existingUsage.id)
+    } else {
+      await supabase
+        .from('daily_usage')
+        .insert({ user_id: user.id, date: today, [field]: 1 })
+    }
 
     return NextResponse.json({ sessionId: session.id, outputType })
   } catch (error: any) {
