@@ -93,7 +93,8 @@ export async function POST(request: Request) {
 
 // PDF — use OpenAI Assistants file upload API
 async function extractPDFWithOpenAI(buffer: Buffer, fileName: string): Promise<string> {
-  // Upload file to OpenAI
+  console.log('Starting PDF extraction, buffer size:', buffer.length)
+  console.log('File received:', fileName, fileType, file.size)
   const blob = new Blob([new Uint8Array(buffer)], { type: 'application/pdf' })
   const file = new File([blob], fileName, { type: 'application/pdf' })
 
