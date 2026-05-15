@@ -344,7 +344,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
             <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
               Question {retryCurrent + 1} of {retryQuestions.length}
             </p>
-            <p style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem' }}>
+            <MathText text={rq.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
               {rq.question}
             </p>
             {rq.type === 'mc' && (
