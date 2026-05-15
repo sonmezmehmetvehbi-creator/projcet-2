@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import OpenAI from 'openai'
 
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(request: Request) {
@@ -26,48 +29,56 @@ export async function POST(request: Request) {
     let extractedText = ''
 
     try {
-      if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
+      if (fileName.endsWith('.txt')) {
+        // Plain text — just read it
+        extractedText = buffer.toString('utf-8')
+
+      } else if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
+        // Extract text from PPTX XML
         extractedText = await extractPPTX(buffer)
-        // If PPTX extraction got very little text, fall back to vision
-        if (extractedText.trim().length < 100) {
-          extractedText = await extractWithVision(
-            buffer,
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'PowerPoint presentation'
-          )
+        if (extractedText.trim().length < 50) {
+          return NextResponse.json({
+            error: 'Could not extract text from this PowerPoint. Try saving it as PDF first, then uploading the PDF.'
+          }, { status: 400 })
         }
-      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+
+      } else if (fileName.endsWith('.docx')) {
+        // Extract text from DOCX XML
         extractedText = await extractDocx(buffer)
         if (extractedText.trim().length < 50) {
-          extractedText = await extractWithVision(buffer, 'application/msword', 'Word document')
+          return NextResponse.json({
+            error: 'Could not extract text from this Word document. Try copying and pasting your notes as a .txt file.'
+          }, { status: 400 })
         }
-      } else if (fileName.endsWith('.txt')) {
-        extractedText = buffer.toString('utf-8')
-      } else if (
-        fileName.endsWith('.pdf') ||
-        fileType === 'application/pdf'
-      ) {
-        extractedText = await extractWithVision(buffer, 'application/pdf', 'PDF document')
+
+      } else if (fileName.endsWith('.pdf') || fileType === 'application/pdf') {
+        // Use OpenAI file API for PDFs
+        extractedText = await extractPDFWithOpenAI(buffer, file.name)
+
       } else if (
         fileType.startsWith('image/') ||
         fileName.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
       ) {
+        // Images — use vision
         const mime = fileType || 'image/jpeg'
-        extractedText = await extractWithVision(buffer, mime, 'image of notes')
+        extractedText = await extractImageWithVision(buffer, mime)
+
       } else {
-        // Unknown type — try vision as last resort
-        extractedText = await extractWithVision(buffer, fileType || 'application/octet-stream', 'document')
+        return NextResponse.json({
+          error: 'Unsupported file type. Please upload a PDF, image (PNG/JPG), PowerPoint, Word doc, or text file.'
+        }, { status: 400 })
       }
+
     } catch (innerErr: any) {
-      console.error('Extraction error:', innerErr)
+      console.error('Extraction error:', innerErr.message)
       return NextResponse.json({
-        error: `Could not read this file: ${innerErr.message}. Try converting it to PDF or an image first.`
+        error: `Could not read this file: ${innerErr.message}`
       }, { status: 400 })
     }
 
     if (!extractedText || extractedText.trim().length < 30) {
       return NextResponse.json({
-        error: 'Could not extract enough text from this file. Try a PDF, image of your notes, or plain text file.'
+        error: 'Could not extract enough text from this file. Make sure the file contains readable text.'
       }, { status: 400 })
     }
 
@@ -75,45 +86,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ text: truncated, fileName: file.name })
 
   } catch (error: any) {
-    console.error('Parse upload error:', error)
+    console.error('Parse upload error:', error.message)
     return NextResponse.json({ error: error.message || 'Failed to parse file' }, { status: 500 })
   }
 }
 
-async function extractWithVision(buffer: Buffer, mimeType: string, fileDescription: string): Promise<string> {
-  const base64 = buffer.toString('base64')
+// PDF — use OpenAI Assistants file upload API
+async function extractPDFWithOpenAI(buffer: Buffer, fileName: string): Promise<string> {
+  // Upload file to OpenAI
+  const blob = new Blob([buffer], { type: 'application/pdf' })
+  const file = new File([blob], fileName, { type: 'application/pdf' })
 
-  // For non-image types that vision might not support, convert description
-  const supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-  const isImage = supportedImageTypes.includes(mimeType)
+  const uploaded = await openai.files.create({
+    file,
+    purpose: 'assistants',
+  })
 
-  if (!isImage) {
-    // For PDFs and other docs, use text completion with base64 hint
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Extract ALL text content from this ${fileDescription}. Return only the raw text, preserving structure.`,
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`,
-                detail: 'high',
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 4000,
-    })
-    return response.choices[0].message.content ?? ''
-  }
-
+  // Use a completion with file content
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -122,7 +111,37 @@ async function extractWithVision(buffer: Buffer, mimeType: string, fileDescripti
         content: [
           {
             type: 'text',
-            text: `Extract ALL text content from this ${fileDescription}. Return only the raw text, preserving structure (headings, bullets, paragraphs). Include everything you can read.`,
+            text: 'Extract ALL text content from this PDF. Return only the raw text preserving structure.',
+          },
+          {
+            // @ts-ignore
+            type: 'file',
+            file: { file_id: uploaded.id },
+          },
+        ],
+      },
+    ],
+    max_tokens: 4000,
+  })
+
+  // Clean up uploaded file
+  await openai.files.del(uploaded.id).catch(() => {})
+
+  return response.choices[0].message.content ?? ''
+}
+
+// Images — OpenAI vision
+async function extractImageWithVision(buffer: Buffer, mimeType: string): Promise<string> {
+  const base64 = buffer.toString('base64')
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract ALL text content from this image. This may be a photo of handwritten notes, a textbook page, or lecture slides. Return only the raw text content, preserving structure.',
           },
           {
             type: 'image_url',
@@ -139,6 +158,7 @@ async function extractWithVision(buffer: Buffer, mimeType: string, fileDescripti
   return response.choices[0].message.content ?? ''
 }
 
+// PPTX — extract text from slide XML
 async function extractPPTX(buffer: Buffer): Promise<string> {
   const JSZip = (await import('jszip')).default
   const zip = await JSZip.loadAsync(buffer)
@@ -168,6 +188,7 @@ async function extractPPTX(buffer: Buffer): Promise<string> {
   return texts.join('\n\n')
 }
 
+// DOCX — extract text from document XML
 async function extractDocx(buffer: Buffer): Promise<string> {
   const JSZip = (await import('jszip')).default
   const zip = await JSZip.loadAsync(buffer)
