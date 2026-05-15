@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, ArrowLeft, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle, XCircle, ArrowLeft, BookOpen, Download } from 'lucide-react'
 import type { Worksheet, MCQuestion, FRQuestion, Question } from '@/types'
 
 interface Props { session: any }
@@ -10,6 +10,26 @@ interface Props { session: any }
 export default function WorksheetClient({ session }: Props) {
   const worksheet: Worksheet = session.content?.worksheet
   const router = useRouter()
+
+  async function downloadPDF() {
+  const res = await fetch('/api/export-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: session.id }),
+  })
+  const html = await res.text()
+  
+  // Open in new window and trigger print dialog
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.focus()
+  setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 500)
+}
 
   if (!worksheet) return (
     <div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>
@@ -142,10 +162,14 @@ export default function WorksheetClient({ session }: Props) {
           <button onClick={() => router.push('/generate')} className="btn-secondary" style={{ flex:1 }}>
             New Topic
           </button>
+          <button onClick={downloadPDF} className="btn-ghost" style={{ flex:'0 0 auto' }}>
+            <Download style={{ width:'1rem', height:'1rem' }} /> Save PDF
+          </button>
           <button onClick={() => router.push('/dashboard')} className="btn-primary" style={{ flex:1 }}>
             <BookOpen style={{ width:'1rem', height:'1rem' }} /> Dashboard
           </button>
         </div>
+
       </div>
     </div>
   )
@@ -171,7 +195,13 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.question, modelAnswer: question.modelAnswer, studentAnswer, grade: session.grade, subject: session.subject }),
+        body: JSON.stringify({
+          question: question.question,
+          modelAnswer: question.modelAnswer,
+          studentAnswer,
+          grade: session.grade,
+          subject: session.subject,
+        }),
       })
       const data = await res.json()
       setFrFeedback(prev => ({ ...prev, [index]: data }))
@@ -203,7 +233,8 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                   else cls += ' mc-option-disabled'
                 }
                 return (
-                  <button key={letter} onClick={() => selectMC(i, q as MCQuestion, letter)} className={cls} style={{ width:'100%', background:'none', textAlign:'left' }}>
+                  <button key={letter} onClick={() => selectMC(i, q as MCQuestion, letter)}
+                    className={cls} style={{ width:'100%', background:'none', textAlign:'left' }}>
                     <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.75rem', fontWeight:700, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgb(107,107,88)') : 'rgb(34,85,14)' }}>
                       {letter}
                     </div>
@@ -216,7 +247,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
               {answers[i] && (
                 <div style={{ padding:'1rem', borderRadius:'0.75rem', background: answers[i].correct ? 'rgb(234,243,222)' : 'rgb(252,235,235)', border:`1px solid ${answers[i].correct ? 'rgba(59,109,17,0.2)' : 'rgba(163,45,45,0.2)'}`, marginTop:'0.25rem' }}>
                   <p style={{ fontWeight:700, fontSize:'0.9375rem', color: answers[i].correct ? 'rgb(59,109,17)' : 'rgb(163,45,45)', marginBottom:'0.375rem' }}>
-                    {answers[i].correct ? '🎉 Excellent!!!' : '💡 Here\'s the correct answer:'}
+                    {answers[i].correct ? '🎉 Excellent!!!' : "💡 Here's the correct answer:"}
                   </p>
                   <p style={{ fontSize:'0.875rem', color: answers[i].correct ? 'rgba(59,109,17,0.9)' : 'rgba(163,45,45,0.9)', lineHeight:1.7 }}>
                     {(q as MCQuestion).explanation}
@@ -230,7 +261,8 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                 disabled={!!answers[i]} placeholder="Write your answer here..." rows={4}
                 className="input" style={{ resize:'vertical', lineHeight:1.6 }} />
               {!answers[i] && (
-                <button onClick={() => submitFR(i, q as FRQuestion)} disabled={frLoading[i] || !frInputs[i]?.trim()} className="btn-primary" style={{ alignSelf:'flex-start' }}>
+                <button onClick={() => submitFR(i, q as FRQuestion)}
+                  disabled={frLoading[i] || !frInputs[i]?.trim()} className="btn-primary" style={{ alignSelf:'flex-start' }}>
                   {frLoading[i] ? 'Checking...' : 'Check My Answer'}
                 </button>
               )}
@@ -242,7 +274,9 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
               )}
             </div>
           )}
-          {i < questions.length - 1 && <div style={{ height:'1px', background:'rgba(34,85,14,0.08)', marginTop:'1.5rem' }} />}
+          {i < questions.length - 1 && (
+            <div style={{ height:'1px', background:'rgba(34,85,14,0.08)', marginTop:'1.5rem' }} />
+          )}
         </div>
       ))}
     </div>

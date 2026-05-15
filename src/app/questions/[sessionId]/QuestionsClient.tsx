@@ -51,20 +51,24 @@ export default function QuestionsClient({ session }: Props) {
   }
 
   async function downloadPDF() {
-    const res = await fetch('/api/export-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: session.id }),
-    })
-    const html = await res.text()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `studyspark-${session.topic.replace(/\s+/g, '-')}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const res = await fetch('/api/export-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: session.id }),
+  })
+  const html = await res.text()
+  
+  // Open in new window and trigger print dialog
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.focus()
+  setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 500)
+}
 
   function next() {
     if (current < total - 1) setCurrent(c => c + 1)
