@@ -10,9 +10,8 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { subject, grade, topic, focus, outputType, questionCount, questionTypes } = await request.json()
+    const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText } = await request.json()
 
-    // Check profile and daily limits
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_premium')
@@ -31,13 +30,16 @@ export async function POST(request: Request) {
       if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
     }
 
-    // Build prompt
     const systemPrompt = `You are StudySpark, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level. Be encouraging and clear. Always respond in valid JSON only — no markdown, no preamble, no backticks.`
+
+    const notesContext = uploadedText
+      ? `\n\nIMPORTANT: Base ALL questions/content ONLY on the following student notes. Do not add information from outside these notes:\n\n---\n${uploadedText}\n---\n`
+      : ''
 
     let userPrompt = ''
     if (outputType === 'questions') {
       const types = questionTypes?.join(' and ') || 'multiple choice'
-      userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}
+      userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}${notesContext}
 
 Include ${types} questions.
 
@@ -48,16 +50,18 @@ For each MC question provide:
 - options (array of 4 strings like ["A. ...", "B. ...", "C. ...", "D. ..."])
 - correctAnswer (string: "A", "B", "C", or "D")
 - explanation (3-5 sentences, plain language, step by step)
+- topic (string: the specific subtopic this question covers, e.g. "Mitosis", "Cell membrane")
 
 For each FR question provide:
 - id (number)
 - type: "fr"
 - question (string)
 - modelAnswer (3-5 sentences)
+- topic (string: the specific subtopic this question covers)
 
 Return JSON: { "questions": [...] }`
     } else {
-      userPrompt = `Create a complete study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}
+      userPrompt = `Create a complete study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}${notesContext}
 
 Return JSON with this exact structure:
 {
@@ -85,7 +89,8 @@ Return JSON with this exact structure:
         "question": "...",
         "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
         "correctAnswer": "A",
-        "explanation": "..."
+        "explanation": "...",
+        "topic": "specific subtopic"
       }
     ]
   }
@@ -108,14 +113,12 @@ Return JSON with this exact structure:
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
 
-    // Free user artificial delay (30s total)
     if (!profile?.is_premium) {
       const elapsed = Date.now() - startTime
       const remaining = 30000 - elapsed
       if (remaining > 0) await new Promise(r => setTimeout(r, remaining))
     }
 
-    // Save session
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .insert({
@@ -132,7 +135,6 @@ Return JSON with this exact structure:
 
     if (sessionError) throw sessionError
 
-    // Increment daily usage
     const today = new Date().toISOString().split('T')[0]
     const field = outputType === 'questions' ? 'questions' : 'worksheets'
 

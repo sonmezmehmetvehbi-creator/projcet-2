@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import { createClient } from '@/lib/supabase'
-import { BookOpen, FileText, ChevronDown, AlertCircle, Zap } from 'lucide-react'
+import { BookOpen, FileText, ChevronDown, AlertCircle, Zap, Upload, X, FileUp } from 'lucide-react'
 import type { Profile, Grade, OutputType, QuestionType } from '@/types'
 
 const GRADES: { value: Grade; label: string }[] = [
@@ -27,6 +27,15 @@ export default function GeneratePage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
+
+  // Upload state
+  const [useUpload, setUseUpload] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [uploadedText, setUploadedText] = useState('')
+  const [uploadParsing, setUploadParsing] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -56,9 +65,51 @@ export default function GeneratePage() {
     )
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File must be under 10MB')
+      return
+    }
+
+    setUploadedFile(file)
+    setUploadError('')
+    setUploadParsing(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/parse-upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setUploadedText(data.text)
+
+      // Auto-fill topic from filename if empty
+      if (!topic) {
+        const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+        setTopic(name)
+      }
+    } catch (err: any) {
+      setUploadError(err.message)
+      setUploadedFile(null)
+    }
+    setUploadParsing(false)
+  }
+
+  function removeUpload() {
+    setUploadedFile(null)
+    setUploadedText('')
+    setUploadError('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!subject.trim() || !topic.trim()) { setError('Please fill in all required fields.'); return }
+    if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
     if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
     setError('')
     setLoading(true)
@@ -67,7 +118,11 @@ export default function GeneratePage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, grade, topic, focus, outputType, questionCount, questionTypes }),
+        body: JSON.stringify({
+          subject, grade, topic, focus, outputType,
+          questionCount, questionTypes,
+          uploadedText: useUpload ? uploadedText : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Generation failed')
@@ -91,7 +146,7 @@ export default function GeneratePage() {
               What are you studying?
             </h1>
             <p style={{ color:'rgb(107,107,88)', fontSize:'1.0625rem' }}>
-              Tell us your topic and we'll generate personalized study materials instantly.
+              Tell us your topic — or upload your notes and we'll generate from those.
             </p>
           </div>
 
@@ -146,6 +201,65 @@ export default function GeneratePage() {
                 </div>
               </div>
 
+              {/* Upload toggle */}
+              <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: useUpload ? '1rem' : 0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+                    <FileUp style={{ width:'1.125rem', height:'1.125rem', color:'rgb(34,85,14)' }} />
+                    <div>
+                      <p style={{ fontWeight:600, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>Upload my notes</p>
+                      <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>PDF, images, or PowerPoint</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => { setUseUpload(u => !u); removeUpload() }}
+                    style={{ width:'2.75rem', height:'1.5rem', borderRadius:'9999px', border:'none', cursor:'pointer', transition:'all 0.2s', background: useUpload ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)', position:'relative', flexShrink:0 }}>
+                    <div style={{ width:'1.125rem', height:'1.125rem', borderRadius:'50%', background:'white', position:'absolute', top:'0.1875rem', transition:'all 0.2s', left: useUpload ? '1.4375rem' : '0.1875rem', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }} />
+                  </button>
+                </div>
+
+                {useUpload && (
+                  <div>
+                    {!uploadedFile ? (
+                      <div>
+                        <div onClick={() => fileRef.current?.click()}
+                          style={{ border:'2px dashed rgba(34,85,14,0.3)', borderRadius:'0.75rem', padding:'1.5rem', textAlign:'center', cursor:'pointer', transition:'all 0.2s', background:'white' }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.6)')}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.3)')}>
+                          <Upload style={{ width:'1.5rem', height:'1.5rem', color:'rgb(107,107,88)', margin:'0 auto 0.5rem' }} />
+                          <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+                            Click to upload your notes
+                          </p>
+                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, JPG, PNG, PPTX — max 10MB</p>
+                        </div>
+                        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.pptx" style={{ display:'none' }} onChange={handleFileUpload} />
+                        {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginTop:'0.5rem' }}>{uploadError}</p>}
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'white', border:'1px solid rgba(34,85,14,0.2)' }}>
+                        {uploadParsing ? (
+                          <>
+                            <div style={{ width:'1.25rem', height:'1.25rem', border:'2px solid rgba(34,85,14,0.2)', borderTop:'2px solid rgb(34,85,14)', borderRadius:'50%', animation:'spin 1s linear infinite', flexShrink:0 }} />
+                            <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>Reading your notes...</p>
+                          </>
+                        ) : (
+                          <>
+                            <FileText style={{ width:'1.25rem', height:'1.25rem', color:'rgb(34,85,14)', flexShrink:0 }} />
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <p style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{uploadedFile.name}</p>
+                              <p style={{ fontSize:'0.75rem', color:'rgb(59,109,17)' }}>✓ Notes extracted successfully</p>
+                            </div>
+                            <button type="button" onClick={removeUpload}
+                              style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgb(107,107,88)', padding:'0.25rem', borderRadius:'50%', display:'flex' }}>
+                              <X style={{ width:'1rem', height:'1rem' }} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Subject */}
               <div>
                 <label className="label" htmlFor="subject">Subject <span style={{ color:'rgb(163,45,45)' }}>*</span></label>
@@ -167,9 +281,12 @@ export default function GeneratePage() {
 
               {/* Topic */}
               <div>
-                <label className="label" htmlFor="topic">Topic <span style={{ color:'rgb(163,45,45)' }}>*</span></label>
+                <label className="label" htmlFor="topic">
+                  Topic <span style={{ color:'rgb(163,45,45)' }}>*</span>
+                  {useUpload && uploadedText && <span style={{ fontWeight:400, color:'rgb(107,107,88)', fontSize:'0.8125rem' }}> — will be generated from your notes</span>}
+                </label>
                 <input id="topic" value={topic} onChange={e => setTopic(e.target.value)}
-                  className="input" placeholder="e.g. Photosynthesis, The Civil War, Quadratic Equations" required />
+                  className="input" placeholder={useUpload ? 'e.g. Lecture 4 — Cell Division' : 'e.g. Photosynthesis, The Civil War'} required />
               </div>
 
               {/* Focus (optional) */}
@@ -178,7 +295,7 @@ export default function GeneratePage() {
                   Specific focus <span style={{ fontSize:'0.8125rem', fontWeight:400, color:'rgb(107,107,88)' }}>(optional)</span>
                 </label>
                 <input id="focus" value={focus} onChange={e => setFocus(e.target.value)}
-                  className="input" placeholder="e.g. light-dependent reactions only" />
+                  className="input" placeholder="e.g. focus only on pages 3-5" />
               </div>
 
               {/* Question options */}
@@ -210,11 +327,13 @@ export default function GeneratePage() {
                 </>
               )}
 
-              <button type="submit" disabled={atLimit} className="btn-primary" style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem' }}>
+              <button type="submit" disabled={atLimit || uploadParsing} className="btn-primary" style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem' }}>
                 {atLimit ? (
                   <><Zap style={{ width:'1rem', height:'1rem' }} />Daily limit reached — Upgrade to continue</>
+                ) : uploadParsing ? (
+                  'Reading your notes...'
                 ) : (
-                  <>Generate {outputType === 'questions' ? 'Questions' : 'Worksheet'} ✨</>
+                  <>Generate {outputType === 'questions' ? 'Questions' : 'Worksheet'} {useUpload && uploadedText ? 'from my notes' : ''} ✨</>
                 )}
               </button>
 
@@ -222,6 +341,7 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
@@ -249,19 +369,13 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1.5rem' }}>
       <div style={{ textAlign:'center', maxWidth:'28rem', width:'100%' }}>
-
-        {/* Pencil & notebook animation */}
         <div className="notebook-breathe" style={{ width:'200px', height:'160px', margin:'0 auto 2rem', position:'relative' }}>
           <svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" style={{ width:'100%', height:'100%' }}>
-            {/* Notebook cover */}
             <rect x="20" y="20" width="160" height="120" rx="8" fill="rgb(34,85,14)" />
-            {/* Spiral binding */}
             {[35,50,65,80,95,110,125].map((y, i) => (
               <circle key={i} cx="28" cy={y} r="4" fill="rgb(232,160,32)" className="spiral-pulse" style={{ animationDelay:`${i * 0.2}s` }} />
             ))}
-            {/* Right page */}
             <rect x="38" y="28" width="134" height="104" rx="4" fill="#FAFAF8" />
-            {/* Ruled lines */}
             {[
               { y1:48, y2:48, cls:'line-draw-1' },
               { y1:68, y2:68, cls:'line-draw-2' },
@@ -272,17 +386,11 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
                 stroke="#C8D8E8" strokeWidth="1.5"
                 strokeDasharray="114" className={line.cls} />
             ))}
-            {/* Pencil */}
             <g className="pencil-write">
-              {/* Body */}
               <rect x="-18" y="-5" width="36" height="10" rx="2" fill="#F5C842" />
-              {/* Tip */}
               <polygon points="18,-5 18,5 26,0" fill="#E8A020" />
-              {/* Eraser */}
               <rect x="-22" y="-5" width="6" height="10" rx="1" fill="#F4A0A0" />
-              {/* Ferrule */}
               <rect x="-16" y="-5" width="4" height="10" fill="#B0B0B0" />
-              {/* Eraser dust */}
               <circle cx="22" cy="-3" r="1.5" fill="rgba(180,180,180,0.6)" className="eraser-dust-1" />
               <circle cx="25" cy="1" r="1" fill="rgba(180,180,180,0.5)" className="eraser-dust-2" />
               <circle cx="20" cy="3" r="1.2" fill="rgba(180,180,180,0.4)" className="eraser-dust-3" />
@@ -290,7 +398,6 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
           </svg>
         </div>
 
-        {/* Message */}
         <p style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.5rem', minHeight:'1.75rem' }}>
           {messages[messageIndex]}
         </p>
@@ -298,17 +405,14 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
           {isPremium ? 'Generating your content...' : `Ready in ${countdown} second${countdown !== 1 ? 's' : ''}...`}
         </p>
 
-        {/* Progress bar */}
         <div style={{ width:'100%', height:'6px', background:'rgba(34,85,14,0.12)', borderRadius:'9999px', overflow:'hidden', marginBottom:'1.5rem' }}>
           <div style={{
-            height:'100%',
-            borderRadius:'9999px',
+            height:'100%', borderRadius:'9999px',
             background:'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))',
             animation: `progressFill ${duration}s linear forwards`,
           }} />
         </div>
 
-        {/* Upgrade nudge for free users */}
         {!isPremium && (
           <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
             ⚡ <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Premium members</a> load in half the time
