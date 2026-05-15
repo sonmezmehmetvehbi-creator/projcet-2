@@ -38,10 +38,16 @@ export async function POST(request: Request) {
 
     let userPrompt = ''
     if (outputType === 'questions') {
-      const types = questionTypes?.join(' and ') || 'multiple choice'
+     const hasMC = questionTypes?.includes('mc')
+const hasFR = questionTypes?.includes('fr')
+const types = hasMC && hasFR
+  ? 'a mix of multiple choice and free response'
+  : hasFR
+  ? 'ONLY free response — do not include any multiple choice questions'
+  : 'ONLY multiple choice — do not include any free response questions'
       userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}${notesContext}
 
-Include ${types} questions.
+Include ${types} questions. This is strictly enforced — if the type says ONLY, do not include any other type.
 
 For each MC question provide:
 - id (number)
