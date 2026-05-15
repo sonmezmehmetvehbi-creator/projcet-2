@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
+import { CheckCircle, XCircle, ArrowLeft, ArrowRight, RotateCcw, Download } from 'lucide-react'
 import type { MCQuestion, FRQuestion, Question } from '@/types'
 
 interface Props { session: any }
@@ -48,6 +48,22 @@ export default function QuestionsClient({ session }: Props) {
       setAnswers(prev => ({ ...prev, [current]: { answer: studentAnswer, correct: null } }))
     } catch {}
     setFrLoading(prev => ({ ...prev, [current]: false }))
+  }
+
+  async function downloadPDF() {
+    const res = await fetch('/api/export-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: session.id }),
+    })
+    const html = await res.text()
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `studyspark-${session.topic.replace(/\s+/g, '-')}.html`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   function next() {
@@ -119,14 +135,18 @@ export default function QuestionsClient({ session }: Props) {
         </div>
 
         {/* Navigation */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.75rem' }}>
           <button onClick={prev} disabled={current === 0} className="btn-secondary" style={{ padding:'0.625rem 1.25rem' }}>
             <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Previous
+          </button>
+          <button onClick={downloadPDF} className="btn-ghost" style={{ fontSize:'0.875rem' }}>
+            <Download style={{ width:'1rem', height:'1rem' }} /> Save PDF
           </button>
           <button onClick={next} disabled={!answers[current]} className="btn-primary" style={{ padding:'0.625rem 1.25rem' }}>
             {current === total - 1 ? 'See Results' : 'Next'} <ArrowRight style={{ width:'1rem', height:'1rem' }} />
           </button>
         </div>
+
       </div>
     </div>
   )
@@ -177,7 +197,7 @@ function MCOptions({ question, answered, onSelect }: {
           border:`1px solid ${answered.correct ? 'rgba(59,109,17,0.2)' : 'rgba(163,45,45,0.2)'}`
         }}>
           <p style={{ fontWeight:700, fontSize:'1rem', marginBottom:'0.5rem', color: answered.correct ? 'rgb(59,109,17)' : 'rgb(163,45,45)' }}>
-            {answered.correct ? '🎉 Excellent!!! Great job!' : '💡 Not quite — here\'s how to think about it:'}
+            {answered.correct ? '🎉 Excellent!!! Great job!' : "💡 Not quite — here's how to think about it:"}
           </p>
           <p style={{ fontSize:'0.9375rem', lineHeight:1.7, color: answered.correct ? 'rgba(59,109,17,0.9)' : 'rgba(163,45,45,0.9)' }}>
             {question.explanation}
