@@ -175,14 +175,42 @@ async function extractPPTX(buffer: Buffer): Promise<string> {
 
   for (const slideFile of slideFiles) {
     const content = await zip.files[slideFile].async('text')
-    const matches = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? []
-    const slideText = matches
+    
+    // Remove all XML tags and get raw text
+    const noXml = content
+      .replace(/<[^>]+>/g, ' ')  // replace all tags with space
+      .replace(/\s+/g, ' ')       // collapse whitespace
+      .trim()
+    
+    // Also try specific text tags as backup
+    const tagMatches = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? []
+    const tagText = tagMatches
       .map(m => m.replace(/<[^>]+>/g, '').trim())
       .filter(t => t.length > 0)
       .join(' ')
-    if (slideText.trim()) {
+
+    // Use whichever method got more text
+    const slideText = tagText.length > noXml.length ? tagText : noXml
+    
+    if (slideText.trim().length > 10) {
       const slideNum = slideFile.match(/\d+/)?.[0]
-      texts.push(`[Slide ${slideNum}] ${slideText}`)
+      texts.push(`[Slide ${slideNum}]\n${slideText.trim()}`)
+    }
+  }
+
+  // Also check slide notes
+  const notesFiles = Object.keys(zip.files)
+    .filter(name => name.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/))
+  
+  for (const notesFile of notesFiles) {
+    const content = await zip.files[notesFile].async('text')
+    const matches = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? []
+    const notesText = matches
+      .map(m => m.replace(/<[^>]+>/g, '').trim())
+      .filter(t => t.length > 0)
+      .join(' ')
+    if (notesText.trim().length > 10) {
+      texts.push(`[Notes] ${notesText.trim()}`)
     }
   }
 
