@@ -345,8 +345,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
               Question {retryCurrent + 1} of {retryQuestions.length}
             </p>
             <MathText text={rq.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
-              {rq.question}
-            </p>
             {rq.type === 'mc' && (
               <MCOptions
                 question={rq as MCQuestion}
