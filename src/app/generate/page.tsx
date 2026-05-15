@@ -27,13 +27,13 @@ export default function GeneratePage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  // Upload state
+
   const [useUpload, setUseUpload] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [uploadedText, setUploadedText] = useState('')
   const [uploadParsing, setUploadParsing] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const router = useRouter()
@@ -65,13 +65,46 @@ export default function GeneratePage() {
     )
   }
 
+  async function extractPPTXClientSide(file: File): Promise<string> {
+    const JSZip = (await import('jszip')).default
+    const buffer = await file.arrayBuffer()
+    const zip = await JSZip.loadAsync(buffer)
+    const texts: string[] = []
+
+    const slideFiles = Object.keys(zip.files)
+      .filter(name => name.match(/^ppt\/slides\/slide\d+\.xml$/))
+      .sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] ?? '0')
+        const numB = parseInt(b.match(/\d+/)?.[0] ?? '0')
+        return numA - numB
+      })
+
+    for (const slideFile of slideFiles) {
+      const content = await zip.files[slideFile].async('text')
+      const matches = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? []
+      const slideText = matches
+        .map((m: string) => m.replace(/<[^>]+>/g, '').trim())
+        .filter((t: string) => t.length > 0)
+        .join(' ')
+      if (slideText.trim().length > 5) {
+        const slideNum = slideFile.match(/\d+/)?.[0]
+        texts.push(`[Slide ${slideNum}] ${slideText.trim()}`)
+      }
+    }
+
+    if (texts.length === 0) {
+      throw new Error('Could not extract text from this PowerPoint. Make sure it contains text (not just images).')
+    }
+
+    return texts.join('\n\n')
+  }
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // 10MB limit
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('File must be under 10MB')
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('File must be under 20MB')
       return
     }
 
@@ -80,20 +113,30 @@ export default function GeneratePage() {
     setUploadParsing(true)
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-const res = await fetch('/api/parse-upload', { method: 'POST', body: formData })
-const text = await res.text()
-let data: any
-try {
-  data = JSON.parse(text)
-} catch {
-  throw new Error('Server error reading file. Please try again.')
-}
-if (!res.ok) throw new Error(data.error || 'Failed to parse file')
-      setUploadedText(data.text)
+      const fileName = file.name.toLowerCase()
+      let extractedText = ''
 
-      // Auto-fill topic from filename if empty
+      if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
+        extractedText = await extractPPTXClientSide(file)
+      } else if (fileName.endsWith('.txt')) {
+        extractedText = await file.text()
+      } else {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/parse-upload', { method: 'POST', body: formData })
+        const text = await res.text()
+        let data: any
+        try { data = JSON.parse(text) } catch { throw new Error('Server error reading file. Please try again.') }
+        if (!res.ok) throw new Error(data.error || 'Failed to parse file')
+        extractedText = data.text
+      }
+
+      if (!extractedText || extractedText.trim().length < 30) {
+        throw new Error('Could not extract enough text from this file.')
+      }
+
+      setUploadedText(extractedText.slice(0, 12000))
+
       if (!topic) {
         const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
         setTopic(name)
@@ -156,7 +199,6 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
             </p>
           </div>
 
-          {/* Daily usage */}
           {!profile?.is_premium && (
             <div style={{ display:'flex', gap:'1rem', marginBottom:'1.5rem', flexWrap:'wrap' }}>
               {(['questions', 'worksheet'] as const).map(type => {
@@ -189,7 +231,7 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
 
             <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
 
-              {/* Output type toggle */}
+              {/* Output type */}
               <div>
                 <label className="label">What do you want to generate?</label>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem' }}>
@@ -214,7 +256,7 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
                     <FileUp style={{ width:'1.125rem', height:'1.125rem', color:'rgb(34,85,14)' }} />
                     <div>
                       <p style={{ fontWeight:600, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>Upload my notes</p>
-                      <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>PDF, images, or PowerPoint</p>
+                      <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT</p>
                     </div>
                   </div>
                   <button type="button" onClick={() => { setUseUpload(u => !u); removeUpload() }}
@@ -227,41 +269,35 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
                   <div>
                     {!uploadedFile ? (
                       <div>
-                       <div
-  onClick={() => fileRef.current?.click()}
-  onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
-  onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
-  onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
-  onDrop={e => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) {
-      // Simulate file input change
-      const dt = new DataTransfer()
-      dt.items.add(file)
-      if (fileRef.current) {
-        fileRef.current.files = dt.files
-        fileRef.current.dispatchEvent(new Event('change', { bubbles: true }))
-      }
-      // Directly trigger handler
-      const syntheticEvent = { target: { files: dt.files } } as any
-      handleFileUpload(syntheticEvent)
-    }
-  }}
-  style={{
-    border: `2px dashed ${isDragging ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.3)'}`,
-    borderRadius:'0.75rem', padding:'1.5rem', textAlign:'center', cursor:'pointer',
-    transition:'all 0.2s',
-    background: isDragging ? 'rgba(34,85,14,0.04)' : 'white',
-    transform: isDragging ? 'scale(1.01)' : 'scale(1)',
-  }}>
-  <Upload style={{ width:'1.5rem', height:'1.5rem', color: isDragging ? 'rgb(34,85,14)' : 'rgb(107,107,88)', margin:'0 auto 0.5rem' }} />
-  <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
-    {isDragging ? 'Drop it here!' : 'Drag & drop or click to upload'}
-  </p>
-  <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT — max 20MB</p>
-</div>
+                        <div
+                          onClick={() => fileRef.current?.click()}
+                          onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+                          onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
+                          onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+                          onDrop={e => {
+                            e.preventDefault()
+                            setIsDragging(false)
+                            const file = e.dataTransfer.files?.[0]
+                            if (file) {
+                              const dt = new DataTransfer()
+                              dt.items.add(file)
+                              const syntheticEvent = { target: { files: dt.files } } as any
+                              handleFileUpload(syntheticEvent)
+                            }
+                          }}
+                          style={{
+                            border: `2px dashed ${isDragging ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.3)'}`,
+                            borderRadius:'0.75rem', padding:'1.5rem', textAlign:'center', cursor:'pointer',
+                            transition:'all 0.2s',
+                            background: isDragging ? 'rgba(34,85,14,0.04)' : 'white',
+                            transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+                          }}>
+                          <Upload style={{ width:'1.5rem', height:'1.5rem', color: isDragging ? 'rgb(34,85,14)' : 'rgb(107,107,88)', margin:'0 auto 0.5rem' }} />
+                          <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+                            {isDragging ? 'Drop it here!' : 'Drag & drop or click to upload'}
+                          </p>
+                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT — max 20MB</p>
+                        </div>
                         <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.pptx,.ppt,.docx,.txt" style={{ display:'none' }} onChange={handleFileUpload} />
                         {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginTop:'0.5rem' }}>{uploadError}</p>}
                       </div>
@@ -320,7 +356,7 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
                   className="input" placeholder={useUpload ? 'e.g. Lecture 4 — Cell Division' : 'e.g. Photosynthesis, The Civil War'} required />
               </div>
 
-              {/* Focus (optional) */}
+              {/* Focus */}
               <div>
                 <label className="label" htmlFor="focus">
                   Specific focus <span style={{ fontSize:'0.8125rem', fontWeight:400, color:'rgb(107,107,88)' }}>(optional)</span>
@@ -364,7 +400,7 @@ if (!res.ok) throw new Error(data.error || 'Failed to parse file')
                 ) : uploadParsing ? (
                   'Reading your notes...'
                 ) : (
-                  <>Generate {outputType === 'questions' ? 'Questions' : 'Worksheet'} {useUpload && uploadedText ? 'from my notes' : ''} ✨</>
+                  <>Generate {outputType === 'questions' ? 'Questions' : 'Worksheet'}{useUpload && uploadedText ? ' from my notes' : ''} ✨</>
                 )}
               </button>
 
