@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import { createClient } from '@/lib/supabase'
 import { BookOpen, FileText, ChevronDown, AlertCircle, Zap, Upload, X, FileUp } from 'lucide-react'
-import type { Profile, Grade, OutputType, QuestionType } from '@/types'
+import type { Profile, Grade, OutputType, QuestionType, Difficulty } from '@/types'
 
 const GRADES: { value: Grade; label: string }[] = [
   { value: 'K-5', label: 'K–5 (Elementary)' },
@@ -24,6 +24,7 @@ export default function GeneratePage() {
   const [outputType, setOutputType] = useState<OutputType>('questions')
   const [questionCount, setQuestionCount] = useState(10)
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(['mc'])
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
@@ -156,38 +157,37 @@ export default function GeneratePage() {
   }
 
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault()
-  if (!subject.trim() || !topic.trim()) { setError('Please fill in all required fields.'); return }
-  if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
-  if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
-  setError('')
-  setLoading(true)
+    e.preventDefault()
+    if (!subject.trim() || !topic.trim()) { setError('Please fill in all required fields.'); return }
+    if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
+    if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
+    setError('')
+    setLoading(true)
 
-  const minWait = profile?.is_premium ? 15000 : 30000
+    const minWait = profile?.is_premium ? 15000 : 30000
 
-  try {
-    // Fire both the API call and the timer at the same time
-    const [data] = await Promise.all([
-      fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject, grade, topic, focus, outputType,
-          questionCount, questionTypes,
-          uploadedText: useUpload ? uploadedText : undefined,
-        }),
-      }).then(res => res.json()),
-      new Promise(resolve => setTimeout(resolve, minWait)),
-    ])
+    try {
+      const [data] = await Promise.all([
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject, grade, topic, focus, outputType,
+            questionCount, questionTypes, difficulty,
+            uploadedText: useUpload ? uploadedText : undefined,
+          }),
+        }).then(res => res.json()),
+        new Promise(resolve => setTimeout(resolve, minWait)),
+      ])
 
-    if (data.error) throw new Error(data.error)
-    if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
-    else router.push(`/worksheet/${data.sessionId}`)
-  } catch (err: any) {
-    setError(err.message)
-    setLoading(false)
+      if (data.error) throw new Error(data.error)
+      if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
+      else router.push(`/worksheet/${data.sessionId}`)
+    } catch (err: any) {
+      setError(err.message)
+      setLoading(false)
+    }
   }
-}
 
   if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} />
 
@@ -400,6 +400,31 @@ export default function GeneratePage() {
                 </>
               )}
 
+              {/* Difficulty */}
+              <div>
+                <label className="label">Difficulty level</label>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'0.5rem' }}>
+                  {([
+                    { value:'easy', label:'Easy', emoji:'🌱', desc:'Basic concepts' },
+                    { value:'medium', label:'Medium', emoji:'📚', desc:'Standard level' },
+                    { value:'hard', label:'Hard', emoji:'🔥', desc:'Challenging' },
+                    { value:'expert', label:'Expert', emoji:'⚡', desc:'AP/College level' },
+                  ] as const).map(d => (
+                    <button key={d.value} type="button" onClick={() => setDifficulty(d.value)}
+                      style={{
+                        padding:'0.75rem 0.5rem', borderRadius:'0.75rem',
+                        border:`2px solid ${difficulty === d.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`,
+                        background: difficulty === d.value ? 'rgba(34,85,14,0.06)' : 'white',
+                        cursor:'pointer', textAlign:'center', transition:'all 0.2s'
+                      }}>
+                      <div style={{ fontSize:'1.25rem', marginBottom:'0.25rem' }}>{d.emoji}</div>
+                      <p style={{ fontWeight:600, fontSize:'0.8125rem', color: difficulty === d.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom:'0.125rem' }}>{d.label}</p>
+                      <p style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)' }}>{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button type="submit" disabled={atLimit || uploadParsing} className="btn-primary" style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem' }}>
                 {atLimit ? (
                   <><Zap style={{ width:'1rem', height:'1rem' }} />Daily limit reached — Upgrade to continue</>
@@ -486,14 +511,14 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
           }} />
         </div>
 
-       {!isPremium && (
-  <div style={{ marginTop:'1rem' }}>
-    <AdSlot isPremium={false} slot="4455667788" format="horizontal" />
-    <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginTop:'0.75rem' }}>
-      ⚡ <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Premium members</a> load in half the time
-    </p>
-  </div>
-)}
+        {!isPremium && (
+          <div style={{ marginTop:'1rem' }}>
+            <AdSlot isPremium={false} slot="4455667788" format="horizontal" />
+            <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginTop:'0.75rem' }}>
+              ⚡ <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Premium members</a> load in half the time
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

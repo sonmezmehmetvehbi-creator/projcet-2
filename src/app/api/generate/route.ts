@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText, isRetry } = await request.json()
+    const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText, isRetry, difficulty } = await request.json()
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -30,7 +30,20 @@ export async function POST(request: Request) {
       if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
     }
 
-    const systemPrompt = `You are AceForge, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level. Be encouraging and clear. Always respond in valid JSON only — no markdown, no preamble, no backticks.`
+    const difficultyGuide: Record<string, string> = {
+      easy: 'Use simple language and basic concepts. Questions should be straightforward, testing recall and basic understanding. Avoid complex terminology. Perfect for beginners or quick review.',
+      medium: 'Use standard grade-level language. Mix recall, understanding, and some application questions. Moderate complexity.',
+      hard: 'Use complex concepts and require deeper analysis and application. Include multi-step reasoning and nuanced distinctions. Students must think critically.',
+      expert: 'Use advanced terminology. Require synthesis, evaluation, and deep understanding. AP exam or college level difficulty. Include edge cases and complex problem solving.',
+    }
+
+    const activeDifficulty = difficulty || 'medium'
+
+    const systemPrompt = `You are AceForge, an expert educational tutor. Create engaging, accurate, age-appropriate study materials. Match language complexity to the student's grade level.
+
+Difficulty: ${activeDifficulty.toUpperCase()} — ${difficultyGuide[activeDifficulty]}
+
+Always respond in valid JSON only — no markdown, no preamble, no backticks.`
 
     const notesContext = uploadedText
       ? `\n\nIMPORTANT: Base ALL questions/content ONLY on the following student notes. Do not add information from outside these notes:\n\n---\n${uploadedText}\n---\n`
@@ -46,7 +59,7 @@ export async function POST(request: Request) {
 
     let userPrompt = ''
     if (outputType === 'questions') {
-      userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}${notesContext}
+      userPrompt = `Generate ${questionCount} ${activeDifficulty.toUpperCase()} difficulty study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}${notesContext}
 
 Include ${types} questions. This is strictly enforced — if the type says ONLY, do not include any other type.
 
@@ -68,7 +81,7 @@ For each FR question provide:
 
 Return JSON: { "questions": [...] }`
     } else {
-      userPrompt = `Create a complete study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}${notesContext}
+      userPrompt = `Create a complete ${activeDifficulty.toUpperCase()} difficulty study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}${notesContext}
 
 Return JSON with this exact structure:
 {
@@ -133,6 +146,7 @@ Return JSON with this exact structure:
         focus: focus || null,
         output_type: outputType,
         content: parsed,
+        difficulty: activeDifficulty,
       })
       .select('id')
       .single()

@@ -92,10 +92,26 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
 
         <div style={{ marginBottom:'1.5rem' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem', flexWrap:'wrap', gap:'0.5rem' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <span className="badge badge-primary">{session.subject}</span>
-              <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{session.topic}</span>
-            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap' }}>
+  <span className="badge badge-primary">{session.subject}</span>
+  <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{session.topic}</span>
+  {session.difficulty && (
+    <span className="badge" style={{
+      background: session.difficulty === 'easy' ? 'rgba(34,85,14,0.08)' :
+        session.difficulty === 'medium' ? 'rgba(59,130,246,0.1)' :
+        session.difficulty === 'hard' ? 'rgba(245,158,11,0.12)' :
+        'rgba(239,68,68,0.1)',
+      color: session.difficulty === 'easy' ? 'rgb(34,85,14)' :
+        session.difficulty === 'medium' ? 'rgb(37,99,235)' :
+        session.difficulty === 'hard' ? 'rgb(180,120,10)' :
+        'rgb(185,28,28)',
+    }}>
+      {session.difficulty === 'easy' ? '🌱 Easy' :
+       session.difficulty === 'medium' ? '📚 Medium' :
+       session.difficulty === 'hard' ? '🔥 Hard' : '⚡ Expert'}
+    </span>
+  )}
+</div>
             <span style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)' }}>
               {Object.keys(answers).length}/{total} answered
             </span>

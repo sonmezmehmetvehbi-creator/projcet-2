@@ -2,6 +2,7 @@ export type Plan = 'free' | 'premium'
 export type Grade = 'K-5' | '6-8' | '9-10' | '11-12' | 'college'
 export type OutputType = 'questions' | 'worksheet'
 export type QuestionType = 'mc' | 'fr'
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert'
 
 export interface Profile {
   id: string
