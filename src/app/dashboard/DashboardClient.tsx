@@ -204,3 +204,12 @@ function DashboardInner({ profile, sessions, usage }: Props) {
     `}</style>
   </div>
 )
+}
+
+export default function DashboardClient(props: Props) {
+  return (
+    <Suspense fallback={<div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>Loading...</div>}>
+      <DashboardInner {...props} />
+    </Suspense>
+  )
+}
