@@ -20,8 +20,7 @@ export default function AdBanner({ slot, format = 'auto', style }: AdBannerProps
     } catch {}
   }, [])
 
-  const publisherId = 'ca-pub-XXXXXXXXXXXXXXXX' // Replace with your real ID after AdSense approval
-
+  const publisherId = 'ca-pub-8087795524838705'
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'center',

@@ -15,12 +15,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <CookieBanner />
         {/* Replace ca-pub-XXXXXXXXXXXXXXXX with your real publisher ID after AdSense approval */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
+       <Script
+  async
+  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8087795524838705"
+  crossOrigin="anonymous"
+  strategy="lazyOnload"
+/>
       </body>
     </html>
   )
