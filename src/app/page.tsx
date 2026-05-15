@@ -219,9 +219,11 @@ export default async function HomePage() {
             <span style={{ fontWeight:600, color:'white' }}>StudySpark</span>
           </div>
           <p>© {new Date().getFullYear()} StudySpark. Built for students.</p>
-          <div style={{ display:'flex', gap:'1.5rem' }}>
+          <div style={{ display:'flex', gap:'1.5rem', flexWrap:'wrap' }}>
             <Link href="/pricing" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Pricing</Link>
             <Link href="/login" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Log in</Link>
+            <Link href="/terms" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Terms</Link>
+            <Link href="/privacy" style={{ color:'rgba(255,255,255,0.5)', textDecoration:'none' }}>Privacy</Link>
           </div>
         </div>
       </footer>

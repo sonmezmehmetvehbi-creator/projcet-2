@@ -7,6 +7,7 @@ import { BookOpen, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 export default function SignupPage() {
+  const [agreed, setAgreed] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,6 +26,7 @@ export default function SignupPage() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
+    if (!agreed) { setError('Please agree to the Terms of Service and Privacy Policy.'); return }
     if (!passwordValid) { setError('Please meet all password requirements.'); return }
     setError(''); setLoading(true)
     const supabase = createClient()
@@ -105,7 +107,26 @@ export default function SignupPage() {
                 </ul>
               )}
             </div>
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width:'100%', justifyContent:'center', marginTop:'0.5rem' }}>
+
+            {/* Terms agreement */}
+            <div style={{ display:'flex', alignItems:'flex-start', gap:'0.75rem', padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
+              <input
+                type="checkbox"
+                id="agree"
+                checked={agreed}
+                onChange={e => setAgreed(e.target.checked)}
+                style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }}
+              />
+              <label htmlFor="agree" style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6, cursor:'pointer' }}>
+                I agree to StudySpark's{' '}
+                <a href="/terms" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Privacy Policy</a>.
+                {' '}If I am under 13, I confirm my parent or guardian has reviewed and agreed on my behalf.
+              </label>
+            </div>
+
+            <button type="submit" disabled={loading || !agreed} className="btn-primary" style={{ width:'100%', justifyContent:'center', marginTop:'0.25rem' }}>
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import CookieBanner from '@/components/ui/CookieBanner'
 
 export const metadata: Metadata = {
   title: 'StudySpark — AI-Powered Study Materials',
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen flex flex-col antialiased">
         {children}
+        <CookieBanner />
       </body>
     </html>
   )
