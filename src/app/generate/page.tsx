@@ -27,7 +27,7 @@ export default function GeneratePage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
-
+  const [isDragging, setIsDragging] = useState(false)
   // Upload state
   const [useUpload, setUseUpload] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -221,16 +221,41 @@ export default function GeneratePage() {
                   <div>
                     {!uploadedFile ? (
                       <div>
-                        <div onClick={() => fileRef.current?.click()}
-                          style={{ border:'2px dashed rgba(34,85,14,0.3)', borderRadius:'0.75rem', padding:'1.5rem', textAlign:'center', cursor:'pointer', transition:'all 0.2s', background:'white' }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.6)')}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.3)')}>
-                          <Upload style={{ width:'1.5rem', height:'1.5rem', color:'rgb(107,107,88)', margin:'0 auto 0.5rem' }} />
-                          <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
-                            Click to upload your notes
-                          </p>
-                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT — max 20MB</p>
-                        </div>
+                       <div
+  onClick={() => fileRef.current?.click()}
+  onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+  onDragEnter={e => { e.preventDefault(); setIsDragging(true) }}
+  onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+  onDrop={e => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      // Simulate file input change
+      const dt = new DataTransfer()
+      dt.items.add(file)
+      if (fileRef.current) {
+        fileRef.current.files = dt.files
+        fileRef.current.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+      // Directly trigger handler
+      const syntheticEvent = { target: { files: dt.files } } as any
+      handleFileUpload(syntheticEvent)
+    }
+  }}
+  style={{
+    border: `2px dashed ${isDragging ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.3)'}`,
+    borderRadius:'0.75rem', padding:'1.5rem', textAlign:'center', cursor:'pointer',
+    transition:'all 0.2s',
+    background: isDragging ? 'rgba(34,85,14,0.04)' : 'white',
+    transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+  }}>
+  <Upload style={{ width:'1.5rem', height:'1.5rem', color: isDragging ? 'rgb(34,85,14)' : 'rgb(107,107,88)', margin:'0 auto 0.5rem' }} />
+  <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+    {isDragging ? 'Drop it here!' : 'Drag & drop or click to upload'}
+  </p>
+  <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>PDF, images, PPTX, DOCX, TXT — max 20MB</p>
+</div>
                         <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.pptx,.ppt,.docx,.txt" style={{ display:'none' }} onChange={handleFileUpload} />
                         {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginTop:'0.5rem' }}>{uploadError}</p>}
                       </div>
