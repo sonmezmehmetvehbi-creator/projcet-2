@@ -21,7 +21,7 @@ export function formatMath(text: string): string {
     // Infinity
     .replace(/\binfinity\b/gi, '∞')
     // Less/greater than or equal
-    .replace(/</g, '≤').replace(/>/g, '≥')
+    
     // Arrows
     .replace(/->/g, '→')
     // Degree symbol
