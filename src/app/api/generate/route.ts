@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText } = await request.json()
+    const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText, isRetry } = await request.json()
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -36,15 +36,16 @@ export async function POST(request: Request) {
       ? `\n\nIMPORTANT: Base ALL questions/content ONLY on the following student notes. Do not add information from outside these notes:\n\n---\n${uploadedText}\n---\n`
       : ''
 
+    const hasMC = questionTypes?.includes('mc')
+    const hasFR = questionTypes?.includes('fr')
+    const types = hasMC && hasFR
+      ? 'a mix of multiple choice and free response'
+      : hasFR
+      ? 'ONLY free response — do not include any multiple choice questions'
+      : 'ONLY multiple choice — do not include any free response questions'
+
     let userPrompt = ''
     if (outputType === 'questions') {
-     const hasMC = questionTypes?.includes('mc')
-const hasFR = questionTypes?.includes('fr')
-const types = hasMC && hasFR
-  ? 'a mix of multiple choice and free response'
-  : hasFR
-  ? 'ONLY free response — do not include any multiple choice questions'
-  : 'ONLY multiple choice — do not include any free response questions'
       userPrompt = `Generate ${questionCount} study questions about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus specifically on: ${focus}.` : ''}${notesContext}
 
 Include ${types} questions. This is strictly enforced — if the type says ONLY, do not include any other type.
@@ -103,8 +104,6 @@ Return JSON with this exact structure:
 }`
     }
 
-    const startTime = Date.now()
-
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -119,7 +118,10 @@ Return JSON with this exact structure:
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
 
-   
+    // Don't save retry sessions to dashboard
+    if (isRetry) {
+      return NextResponse.json({ sessionId: 'retry', outputType, content: parsed })
+    }
 
     const { data: session, error: sessionError } = await supabase
       .from('sessions')

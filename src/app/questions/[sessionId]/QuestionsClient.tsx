@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, ArrowLeft, ArrowRight, RotateCcw, Download } from 'lucide-react'
 import type { MCQuestion, FRQuestion, Question } from '@/types'
+import MathText from '@/components/ui/MathText'
 
 interface Props { session: any }
 
@@ -271,49 +272,36 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
   const msg = getMessage()
 
   async function handlePracticeWeakSpots() {
-    setRetryLoading(true)
-    try {
-      const wrongQs = wrongTopics.flatMap(([, v]) => v.questions)
-      const topicsStr = wrongTopics.map(([t]) => t).join(', ')
+  setRetryLoading(true)
+  try {
+    const wrongTopicNames = wrongTopics.map(([t]) => t).join(', ')
+    const retryCount = totalWrong <= 3 ? 5 : wrongTopics.length * 2
 
-      // Build retry count: ≤3 wrong → 5 questions, >3 wrong → 2 per topic
-      const retryCount = totalWrong <= 3 ? 5 : wrongTopics.length * 2
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: session.subject,
-          grade: session.grade,
-          topic: session.topic,
-          focus: `Focus ONLY on these weak areas: ${topicsStr}. Mix in some questions similar to the ones the student got wrong.`,
-          outputType: 'questions',
-          questionCount: retryCount,
-          questionTypes: ['mc'],
-          isRetry: true,
-        }),
-      })
-      const data = await res.json()
-
-      // Fetch the generated questions
-      const { createClient } = await import('@/lib/supabase')
-      const supabase = createClient()
-      const { data: sessionData } = await supabase
-        .from('sessions')
-        .select('content')
-        .eq('id', data.sessionId)
-        .single()
-
-      if (sessionData?.content?.questions) {
-        setRetryQuestions(sessionData.content.questions)
-        setRetryCurrent(0)
-        setRetryAnswers({})
-      }
-    } catch (err) {
-      console.error('Retry error:', err)
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: session.subject,
+        grade: session.grade,
+        topic: session.topic,
+        focus: `Focus ONLY on these weak areas: ${wrongTopicNames}. Mix in some questions similar to the ones the student got wrong.`,
+        outputType: 'questions',
+        questionCount: retryCount,
+        questionTypes: ['mc'],
+        isRetry: true,
+      }),
+    })
+    const data = await res.json()
+    if (data.content?.questions) {
+      setRetryQuestions(data.content.questions)
+      setRetryCurrent(0)
+      setRetryAnswers({})
     }
-    setRetryLoading(false)
+  } catch (err) {
+    console.error('Retry error:', err)
   }
+  setRetryLoading(false)
+}
 
   // Retry session UI
   if (retryQuestions) {
