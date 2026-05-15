@@ -109,10 +109,12 @@ export default function Navbar({ profile }: NavbarProps) {
                 </div>
 
                 <div style={{ padding:'0.5rem 0' }}>
-                  {[
-                    { href:'/settings', icon:<Settings style={{width:'1rem',height:'1rem'}} />, label:'Settings' },
-                    { href:'/dashboard?tab=pdfs', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'My PDFs' },
-                  ].map(item => (
+                 {[
+  { href:'/settings', icon:<Settings style={{width:'1rem',height:'1rem'}} />, label:'Settings' },
+  { href:'/dashboard?tab=pdfs', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'My PDFs' },
+  { href:'/terms', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Terms of Service' },
+  { href:'/privacy', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Privacy Policy' },
+].map(item => (
                     <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
                       style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
                       onMouseEnter={e => (e.currentTarget.style.background='rgb(249,250,251)')}
