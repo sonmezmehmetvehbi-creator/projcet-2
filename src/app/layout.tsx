@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import CookieBanner from '@/components/ui/CookieBanner'
+import Script from 'next/script'
 
 export const metadata: Metadata = {
   title: 'StudySpark — AI-Powered Study Materials',
@@ -13,6 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col antialiased">
         {children}
         <CookieBanner />
+        {/* Replace ca-pub-XXXXXXXXXXXXXXXX with your real publisher ID after AdSense approval */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+          crossOrigin="anonymous"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   )

@@ -1,5 +1,5 @@
 'use client'
-
+import AdSlot from '@/components/ui/AdSlot'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
@@ -486,11 +486,14 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
           }} />
         </div>
 
-        {!isPremium && (
-          <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
-            ⚡ <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Premium members</a> load in half the time
-          </p>
-        )}
+       {!isPremium && (
+  <div style={{ marginTop:'1rem' }}>
+    <AdSlot isPremium={false} slot="4455667788" format="horizontal" />
+    <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginTop:'0.75rem' }}>
+      ⚡ <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Premium members</a> load in half the time
+    </p>
+  </div>
+)}
       </div>
     </div>
   )

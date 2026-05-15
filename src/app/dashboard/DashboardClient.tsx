@@ -1,5 +1,5 @@
 'use client'
-
+import AdSlot from '@/components/ui/AdSlot'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -46,10 +46,22 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   }
 
   return (
-    <div style={{ paddingTop:'5rem' }}>
-      <div className="container-base" style={{ padding:'2rem 1.5rem' }}>
+  <div style={{ paddingTop:'5rem' }}>
+    <div style={{ display:'flex', gap:'1.5rem', maxWidth:'80rem', margin:'0 auto' }}>
 
-        {/* Welcome back banner after upgrade */}
+      {/* Left sidebar ad */}
+      <div style={{ width:'160px', flexShrink:0, padding:'2rem 0' }} className="dash-ad-sidebar">
+        <AdSlot
+          isPremium={profile?.is_premium ?? false}
+          slot="2233445566"
+          format="vertical"
+          style={{ position:'sticky', top:'5rem' }}
+        />
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex:1, minWidth:0, padding:'2rem 1.5rem' }}>
+        {/* YOUR EXISTING DASHBOARD CONTENT GOES HERE — don't change anything inside */}
         {upgraded && (
           <div style={{ padding:'1rem 1.5rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, rgba(34,85,14,0.08), rgba(232,160,32,0.08))', border:'1px solid rgba(34,85,14,0.2)', marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
             <span style={{ fontSize:'1.5rem' }}>🎉</span>
@@ -60,7 +72,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           </div>
         )}
 
-        {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'1rem' }}>
           <div>
             <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
@@ -74,7 +85,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           </Link>
         </div>
 
-        {/* Usage bar (free users) */}
         {!profile?.is_premium && (
           <div className="card" style={{ padding:'1.25rem 1.5rem', marginBottom:'1.5rem', display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'2rem' }}>
@@ -102,7 +112,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           </div>
         )}
 
-        {/* Tabs */}
         <div style={{ display:'flex', gap:'0.25rem', marginBottom:'1.5rem', borderBottom:'2px solid rgba(34,85,14,0.08)', paddingBottom:'0' }}>
           {([
             { value:'all', label:'All Sessions' },
@@ -120,7 +129,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           ))}
         </div>
 
-        {/* Sessions grid */}
         {filteredSessions.length === 0 ? (
           <div className="card" style={{ padding:'4rem 2rem', textAlign:'center' }}>
             <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'rgba(34,85,14,0.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
@@ -178,14 +186,21 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           </div>
         )}
       </div>
-    </div>
-  )
-}
 
-export default function DashboardClient(props: Props) {
-  return (
-    <Suspense fallback={<div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>Loading...</div>}>
-      <DashboardInner {...props} />
-    </Suspense>
-  )
-}
+      {/* Right sidebar ad */}
+      <div style={{ width:'160px', flexShrink:0, padding:'2rem 0' }} className="dash-ad-sidebar">
+        <AdSlot
+          isPremium={profile?.is_premium ?? false}
+          slot="3344556677"
+          format="vertical"
+          style={{ position:'sticky', top:'5rem' }}
+        />
+      </div>
+
+    </div>
+    <style>{`
+      .dash-ad-sidebar { display: none; }
+      @media (min-width: 1200px) { .dash-ad-sidebar { display: block; } }
+    `}</style>
+  </div>
+)
