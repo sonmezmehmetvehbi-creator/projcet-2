@@ -1,5 +1,5 @@
 'use client'
-
+import MathText from '@/components/ui/MathText'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, ArrowLeft, BookOpen, Download } from 'lucide-react'
@@ -217,7 +217,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
           <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>
             Question {i + 1} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
           </p>
-          <p style={{ fontSize:'1rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1rem' }}>{q.question}</p>
+          <MathText text={q.question} style={{ fontSize:'1rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1rem', display:'block' }} />
 
           {q.type === 'mc' ? (
             <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
@@ -238,7 +238,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                     <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.75rem', fontWeight:700, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgb(107,107,88)') : 'rgb(34,85,14)' }}>
                       {letter}
                     </div>
-                    <span style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>{option.substring(3)}</span>
+                   <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)' }} />
                     {answered && isCorrect && <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
                     {answered && isSelected && !isCorrect && <XCircle style={{ width:'1rem', height:'1rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
                   </button>
@@ -250,7 +250,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                     {answers[i].correct ? '🎉 Excellent!!!' : "💡 Here's the correct answer:"}
                   </p>
                   <p style={{ fontSize:'0.875rem', color: answers[i].correct ? 'rgba(59,109,17,0.9)' : 'rgba(163,45,45,0.9)', lineHeight:1.7 }}>
-                    {(q as MCQuestion).explanation}
+                    <MathText text={(q as MCQuestion).explanation} />
                   </p>
                 </div>
               )}

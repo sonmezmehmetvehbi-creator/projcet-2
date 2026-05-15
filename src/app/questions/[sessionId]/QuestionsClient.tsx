@@ -109,9 +109,7 @@ export default function QuestionsClient({ session }: Props) {
           <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
             Question {current + 1} of {total} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
           </p>
-          <p style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem' }}>
-            {q.question}
-          </p>
+          <MathText text={q.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
 
           {q.type === 'mc' ? (
             <MCOptions
@@ -177,9 +175,7 @@ function MCOptions({ question, answered, onSelect }: {
             }}>
               {letter}
             </div>
-            <span style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.5 }}>
-              {option.substring(3)}
-            </span>
+            <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.5 }} />
             {answered && isCorrect && <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
             {answered && isSelected && !isCorrect && <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
           </button>
