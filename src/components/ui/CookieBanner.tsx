@@ -9,14 +9,18 @@ export default function CookieBanner() {
   useEffect(() => {
     const accepted = localStorage.getItem('cookie_consent')
     if (!accepted) {
-      // Small delay so it doesn't flash immediately on load
       const timer = setTimeout(() => setVisible(true), 1500)
       return () => clearTimeout(timer)
     }
   }, [])
 
   function accept() {
-    localStorage.setItem('cookie_consent', 'true')
+    localStorage.setItem('cookie_consent', 'accepted')
+    setVisible(false)
+  }
+
+  function decline() {
+    localStorage.setItem('cookie_consent', 'declined')
     setVisible(false)
   }
 
@@ -24,17 +28,14 @@ export default function CookieBanner() {
 
   return (
     <>
-      {/* Subtle backdrop */}
-      <div
-        onClick={accept}
-        style={{
-          position:'fixed', inset:0,
-          background:'rgba(0,0,0,0.18)',
-          backdropFilter:'blur(2px)',
-          zIndex:998,
-          animation:'cookieFadeIn 0.4s ease forwards',
-        }}
-      />
+      {/* Backdrop — NOT clickable to dismiss */}
+      <div style={{
+        position:'fixed', inset:0,
+        background:'rgba(0,0,0,0.18)',
+        backdropFilter:'blur(2px)',
+        zIndex:998,
+        animation:'cookieFadeIn 0.4s ease forwards',
+      }} />
 
       {/* Banner */}
       <div style={{
@@ -44,10 +45,10 @@ export default function CookieBanner() {
         transform:'translateX(-50%)',
         zIndex:999,
         width:'calc(100% - 3rem)',
-        maxWidth:'38rem',
+        maxWidth:'40rem',
         background:'white',
         borderRadius:'1.25rem',
-        boxShadow:'0 12px 48px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow:'0 12px 48px rgba(0,0,0,0.14)',
         border:'1px solid rgba(34,85,14,0.1)',
         padding:'1.5rem',
         animation:'cookieSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards',
@@ -59,25 +60,40 @@ export default function CookieBanner() {
               We use cookies
             </p>
             <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-              We use essential cookies to keep you signed in. Free-tier users also see ads via Google AdSense, which may use cookies to personalize ads.{' '}
-              <Link href="/privacy" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
+              We use essential cookies to keep you signed in. Free users also see ads via Google AdSense, which may personalize ads using cookies.{' '}
+              <Link href="/privacy" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
                 Privacy Policy
               </Link>
               {' '}·{' '}
-              <Link href="/terms" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
+              <Link href="/terms" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
                 Terms
               </Link>
             </p>
           </div>
         </div>
 
-        <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end' }}>
+        <div style={{ display:'flex', gap:'0.75rem', justifyContent:'flex-end', flexWrap:'wrap' }}>
+          <button
+            onClick={decline}
+            style={{
+              padding:'0.5rem 1.25rem', borderRadius:'0.625rem',
+              fontSize:'0.875rem', fontWeight:500,
+              color:'rgb(107,107,88)', background:'transparent',
+              border:'1.5px solid rgba(34,85,14,0.2)', cursor:'pointer',
+              transition:'all 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.5)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.2)')}
+          >
+            Decline non-essential
+          </button>
           <Link href="/pricing" style={{
             display:'inline-flex', alignItems:'center', gap:'0.375rem',
-            padding:'0.5rem 1rem', borderRadius:'0.625rem',
-            fontSize:'0.8125rem', fontWeight:500, color:'rgb(107,107,88)',
-            textDecoration:'none', border:'1px solid rgba(34,85,14,0.15)',
-            background:'transparent',
+            padding:'0.5rem 1.25rem', borderRadius:'0.625rem',
+            fontSize:'0.875rem', fontWeight:500,
+            color:'rgb(34,85,14)', textDecoration:'none',
+            border:'1.5px solid rgba(34,85,14,0.3)',
+            background:'transparent', transition:'all 0.2s',
           }}>
             ⚡ Go ad-free
           </Link>
@@ -86,7 +102,7 @@ export default function CookieBanner() {
             className="btn-primary"
             style={{ padding:'0.5rem 1.5rem', fontSize:'0.9375rem' }}
           >
-            Got it
+            Accept all
           </button>
         </div>
       </div>
