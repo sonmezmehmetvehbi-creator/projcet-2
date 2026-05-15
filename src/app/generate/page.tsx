@@ -82,9 +82,15 @@ export default function GeneratePage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch('/api/parse-upload', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+const res = await fetch('/api/parse-upload', { method: 'POST', body: formData })
+const text = await res.text()
+let data: any
+try {
+  data = JSON.parse(text)
+} catch {
+  throw new Error('Server error reading file. Please try again.')
+}
+if (!res.ok) throw new Error(data.error || 'Failed to parse file')
       setUploadedText(data.text)
 
       // Auto-fill topic from filename if empty
