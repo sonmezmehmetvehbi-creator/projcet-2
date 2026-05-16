@@ -62,9 +62,7 @@ export default function WorksheetClient({ session }: Props) {
             <div style={{ width:'2rem', height:'2rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'0.875rem', fontWeight:700, flexShrink:0 }}>1</div>
             <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)' }}>Introduction</h2>
           </div>
-          <p style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1.5rem', fontSize:'1.0625rem' }}>
-            {worksheet.introduction.text}
-          </p>
+          <MathText text={worksheet.introduction.text} style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1.5rem', fontSize:'1.0625rem', display:'block' }} />
           {worksheet.introduction.vocabulary.length > 0 && (
             <>
               <h3 style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.75rem', fontSize:'0.9375rem' }}>Key Vocabulary</h3>
@@ -72,7 +70,7 @@ export default function WorksheetClient({ session }: Props) {
                 {worksheet.introduction.vocabulary.map((v, i) => (
                   <div key={i} style={{ display:'flex', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)' }}>
                     <span style={{ fontWeight:700, color:'rgb(34,85,14)', minWidth:'8rem', fontSize:'0.9375rem' }}>{v.term}</span>
-                    <span style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem', lineHeight:1.6 }}>{v.definition}</span>
+                    <MathText text={v.definition} style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem', lineHeight:1.6 }} />
                   </div>
                 ))}
               </div>
@@ -95,19 +93,17 @@ export default function WorksheetClient({ session }: Props) {
                   </div>
                   <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)' }}>{step.title}</h3>
                 </div>
-                <p style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1rem', fontSize:'1rem', paddingLeft:'2.5rem' }}>
-                  {step.explanation}
-                </p>
+                <MathText text={step.explanation} style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1rem', fontSize:'1rem', paddingLeft:'2.5rem', display:'block' }} />
                 {/* Visual */}
                 <div style={{ marginLeft:'2.5rem', padding:'1.25rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, rgba(34,85,14,0.04), rgba(232,160,32,0.04))', border:'1px dashed rgba(34,85,14,0.2)', marginBottom:'1rem' }}>
                   <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>📊 Visual Aid</p>
-                  <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, fontStyle:'italic' }}>{step.visualDescription}</p>
+                 <MathText text={step.visualDescription} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, fontStyle:'italic', display:'block' }} />>
                 </div>
                 {/* Key takeaway */}
                 <div style={{ marginLeft:'2.5rem', padding:'0.875rem 1rem', borderRadius:'0.75rem', background:'rgba(232,160,32,0.08)', border:'1px solid rgba(232,160,32,0.2)', display:'flex', gap:'0.5rem', alignItems:'flex-start' }}>
                   <span style={{ fontSize:'1rem' }}>💡</span>
                   <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.6 }}>
-                    <strong>Key takeaway:</strong> {step.keyTakeaway}
+                    <strong>Key takeaway:</strong> <MathText text={step.keyTakeaway} />
                   </p>
                 </div>
                 {i < worksheet.steps.length - 1 && (
@@ -127,9 +123,9 @@ export default function WorksheetClient({ session }: Props) {
           <ul style={{ listStyle:'none', padding:0, margin:'0 0 1.5rem', display:'flex', flexDirection:'column', gap:'0.625rem' }}>
             {worksheet.summary.bullets.map((bullet, i) => (
               <li key={i} style={{ display:'flex', alignItems:'flex-start', gap:'0.625rem', fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7 }}>
-                <span style={{ color:'rgb(34,85,14)', fontWeight:700, flexShrink:0, marginTop:'0.125rem' }}>✓</span>
-                {bullet}
-              </li>
+  <span style={{ color:'rgb(34,85,14)', fontWeight:700, flexShrink:0, marginTop:'0.125rem' }}>✓</span>
+  <MathText text={bullet} />
+</li>
             ))}
           </ul>
           {worksheet.summary.quickCheck.length > 0 && (
