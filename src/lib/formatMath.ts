@@ -32,7 +32,8 @@ export function formatMath(text: string): string {
 
     // Superscripts: x^{2} or x^2
     .replace(/\^{([^}]+)}/g, (_, n) => `<sup>${toSuperOrRaw(n)}</sup>`)
-    .replace(/\^([a-zA-Z0-9+\-])/g, (_, n) => `<sup>${toSuperOrRaw(n)}</sup>`)
+    .replace(/\^(-?\d+)/g, (_, n) => `<sup>${toSuperOrRaw(n)}</sup>`)
+.replace(/\^([a-zA-Z])/g, (_, n) => `<sup>${n}</sup>`)
 
     // Subscripts: x_{2} or x_2
     .replace(/_{([^}]+)}/g, (_, n) => `<sub>${toSubOrRaw(n)}</sub>`)
@@ -60,11 +61,12 @@ function toSuperOrRaw(n: string): string {
   return n.split('').map(c => superMap[c] || c).join('')
 }
 
-function toSubOrRaw(n: string): string {
-  const subMap: Record<string, string> = {
-    '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄',
-    '5':'₅','6':'₆','7':'₇','8':'₈','9':'₉',
+function toSuperOrRaw(n: string): string {
+  const superMap: Record<string, string> = {
+    '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴',
+    '5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹',
+    '+':'⁺','-':'⁻',
   }
-  if (n.length === 1 && subMap[n]) return subMap[n]
-  return n.split('').map(c => subMap[c] || c).join('')
+  // Handle negative numbers like -2 → ⁻²
+  return n.split('').map(c => superMap[c] || c).join('')
 }
