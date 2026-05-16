@@ -97,7 +97,7 @@ export default function WorksheetClient({ session }: Props) {
                 {/* Visual */}
                 <div style={{ marginLeft:'2.5rem', padding:'1.25rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, rgba(34,85,14,0.04), rgba(232,160,32,0.04))', border:'1px dashed rgba(34,85,14,0.2)', marginBottom:'1rem' }}>
                   <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>📊 Visual Aid</p>
-                 <MathText text={step.visualDescription} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, fontStyle:'italic', display:'block' }} />>
+                 <MathText text={step.visualDescription} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, fontStyle:'italic', display:'block' }} />
                 </div>
                 {/* Key takeaway */}
                 <div style={{ marginLeft:'2.5rem', padding:'0.875rem 1rem', borderRadius:'0.75rem', background:'rgba(232,160,32,0.08)', border:'1px solid rgba(232,160,32,0.2)', display:'flex', gap:'0.5rem', alignItems:'flex-start' }}>
