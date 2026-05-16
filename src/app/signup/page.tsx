@@ -38,6 +38,17 @@ export default function SignupPage() {
     else { setSuccess(true); setLoading(false) }
   }
 
+  async function handleGoogleSignup() {
+    if (!agreed) { setError('Please agree to the Terms of Service and Privacy Policy first.'); return }
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+  }
+
   if (success) return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1.5rem' }}>
       <div style={{ width:'100%', maxWidth:'26rem', textAlign:'center' }}>
@@ -75,6 +86,45 @@ export default function SignupPage() {
             </div>
           )}
 
+          {/* Terms agreement — shown at top so Google button requires it too */}
+          <div style={{ display:'flex', alignItems:'flex-start', gap:'0.75rem', padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'1.25rem' }}>
+            <input
+              type="checkbox"
+              id="agree"
+              checked={agreed}
+              onChange={e => setAgreed(e.target.checked)}
+              style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }}
+            />
+            <label htmlFor="agree" style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6, cursor:'pointer' }}>
+              I agree to AceForge's{' '}
+              <a href="/terms" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Privacy Policy</a>.
+              {' '}If I am under 13, I confirm my parent or guardian has reviewed and agreed on my behalf.
+            </label>
+          </div>
+
+          {/* Google Sign Up */}
+          <button type="button" onClick={handleGoogleSignup}
+            style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', border:'1.5px solid rgba(34,85,14,0.2)', background:'white', cursor:'pointer', fontSize:'0.9375rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'1.25rem', transition:'all 0.2s', opacity: agreed ? 1 : 0.5 }}
+            onMouseEnter={e => { if (agreed) e.currentTarget.style.borderColor = 'rgba(34,85,14,0.5)' }}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(34,85,14,0.2)')}>
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+              <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+              <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18z"/>
+              <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          {/* Divider */}
+          <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1.25rem' }}>
+            <div style={{ flex:1, height:'1px', background:'rgba(34,85,14,0.1)' }} />
+            <span style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>or</span>
+            <div style={{ flex:1, height:'1px', background:'rgba(34,85,14,0.1)' }} />
+          </div>
+
           <form onSubmit={handleSignup} style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
             <div>
               <label className="label" htmlFor="name">Full name</label>
@@ -106,24 +156,6 @@ export default function SignupPage() {
                   ))}
                 </ul>
               )}
-            </div>
-
-            {/* Terms agreement */}
-            <div style={{ display:'flex', alignItems:'flex-start', gap:'0.75rem', padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
-              <input
-                type="checkbox"
-                id="agree"
-                checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
-                style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }}
-              />
-              <label htmlFor="agree" style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6, cursor:'pointer' }}>
-                I agree to AceForge's{' '}
-                <a href="/terms" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Terms of Service</a>
-                {' '}and{' '}
-                <a href="/privacy" target="_blank" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Privacy Policy</a>.
-                {' '}If I am under 13, I confirm my parent or guardian has reviewed and agreed on my behalf.
-              </label>
             </div>
 
             <button type="submit" disabled={loading || !agreed} className="btn-primary" style={{ width:'100%', justifyContent:'center', marginTop:'0.25rem' }}>
