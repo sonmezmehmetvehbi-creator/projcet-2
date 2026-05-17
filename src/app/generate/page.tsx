@@ -22,7 +22,7 @@ export default function GeneratePage() {
   const [topic, setTopic] = useState('')
   const [focus, setFocus] = useState('')
   const [outputType, setOutputType] = useState<OutputType>('questions')
-  const [questionCount, setQuestionCount] = useState(10)
+  const [questionCount, setQuestionCount] = useState(profile?.is_premium ? 15 : 10)
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(['mc'])
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [error, setError] = useState('')
@@ -376,10 +376,14 @@ export default function GeneratePage() {
                 <>
                   <div>
                     <label className="label">Number of questions: <strong>{questionCount}</strong></label>
-                    <input type="range" min={3} max={20} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))}
+                    <input type="range" min={3} max={profile?.is_premium ? 30 : 12} value={questionCount} onChange={e => setQuestionCount(Number(e.target.value))}
                       style={{ width:'100%', accentColor:'rgb(34,85,14)', cursor:'pointer' }} />
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', color:'rgb(107,107,88)', marginTop:'0.25rem' }}>
-                      <span>3</span><span>20</span>
+                      <span>3</span>
+<span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>
+  {profile?.is_premium ? '30 (Premium)' : '12 — '}
+  {!profile?.is_premium && <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Upgrade for 30 ⚡</a>}
+</span>
                     </div>
                   </div>
 

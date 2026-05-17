@@ -93,25 +93,25 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
         <div style={{ marginBottom:'1.5rem' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem', flexWrap:'wrap', gap:'0.5rem' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap' }}>
-  <span className="badge badge-primary">{session.subject}</span>
-  <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{session.topic}</span>
-  {session.difficulty && (
-    <span className="badge" style={{
-      background: session.difficulty === 'easy' ? 'rgba(34,85,14,0.08)' :
-        session.difficulty === 'medium' ? 'rgba(59,130,246,0.1)' :
-        session.difficulty === 'hard' ? 'rgba(245,158,11,0.12)' :
-        'rgba(239,68,68,0.1)',
-      color: session.difficulty === 'easy' ? 'rgb(34,85,14)' :
-        session.difficulty === 'medium' ? 'rgb(37,99,235)' :
-        session.difficulty === 'hard' ? 'rgb(180,120,10)' :
-        'rgb(185,28,28)',
-    }}>
-      {session.difficulty === 'easy' ? '🌱 Easy' :
-       session.difficulty === 'medium' ? '📚 Medium' :
-       session.difficulty === 'hard' ? '🔥 Hard' : '⚡ Expert'}
-    </span>
-  )}
-</div>
+              <span className="badge badge-primary">{session.subject}</span>
+              <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{session.topic}</span>
+              {session.difficulty && (
+                <span className="badge" style={{
+                  background: session.difficulty === 'easy' ? 'rgba(34,85,14,0.08)' :
+                    session.difficulty === 'medium' ? 'rgba(59,130,246,0.1)' :
+                    session.difficulty === 'hard' ? 'rgba(245,158,11,0.12)' :
+                    'rgba(239,68,68,0.1)',
+                  color: session.difficulty === 'easy' ? 'rgb(34,85,14)' :
+                    session.difficulty === 'medium' ? 'rgb(37,99,235)' :
+                    session.difficulty === 'hard' ? 'rgb(180,120,10)' :
+                    'rgb(185,28,28)',
+                }}>
+                  {session.difficulty === 'easy' ? '🌱 Easy' :
+                   session.difficulty === 'medium' ? '📚 Medium' :
+                   session.difficulty === 'hard' ? '🔥 Hard' : '⚡ Expert'}
+                </span>
+              )}
+            </div>
             <span style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)' }}>
               {Object.keys(answers).length}/{total} answered
             </span>
@@ -214,11 +214,23 @@ function MCOptions({ question, answered, onSelect }: {
   )
 }
 
+function getFRColors(score: string) {
+  switch(score) {
+    case '4/4': return { bg:'rgb(234,243,222)', border:'rgba(59,109,17,0.2)', title:'rgb(59,109,17)', text:'rgba(59,109,17,0.9)', emoji:'🎉' }
+    case '3/4': return { bg:'rgba(34,85,14,0.06)', border:'rgba(34,85,14,0.15)', title:'rgb(34,85,14)', text:'rgba(34,85,14,0.8)', emoji:'👍' }
+    case '2/4': return { bg:'rgba(232,160,32,0.08)', border:'rgba(232,160,32,0.3)', title:'rgb(180,120,10)', text:'rgba(180,120,10,0.9)', emoji:'📚' }
+    case '1/4': return { bg:'rgba(220,80,20,0.08)', border:'rgba(220,80,20,0.25)', title:'rgb(200,80,20)', text:'rgba(200,80,20,0.9)', emoji:'💪' }
+    default:    return { bg:'rgb(252,235,235)', border:'rgba(163,45,45,0.2)', title:'rgb(163,45,45)', text:'rgba(163,45,45,0.9)', emoji:'❌' }
+  }
+}
+
 function FRInput({ question, value, onChange, onSubmit, loading, feedback, answered }: {
   question: FRQuestion; value: string; onChange: (v: string) => void
   onSubmit: () => void; loading: boolean
   feedback?: { score: string; feedback: string }; answered: boolean
 }) {
+  const colors = feedback ? getFRColors(feedback.score) : null
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
       <textarea value={value} onChange={e => onChange(e.target.value)} disabled={answered}
@@ -229,10 +241,16 @@ function FRInput({ question, value, onChange, onSubmit, loading, feedback, answe
           {loading ? 'Checking...' : 'Check My Answer'}
         </button>
       )}
-      {feedback && (
-        <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:'rgb(234,243,222)', border:'1px solid rgba(59,109,17,0.2)' }}>
-          <p style={{ fontWeight:700, color:'rgb(59,109,17)', marginBottom:'0.5rem' }}>Score: {feedback.score}</p>
-          <p style={{ fontSize:'0.9375rem', color:'rgba(59,109,17,0.9)', lineHeight:1.7 }}>{feedback.feedback}</p>
+      {feedback && colors && (
+        <div style={{
+          padding:'1.25rem', borderRadius:'0.875rem',
+          background: colors.bg,
+          border: `1px solid ${colors.border}`,
+        }}>
+          <p style={{ fontWeight:700, color: colors.title, marginBottom:'0.5rem' }}>
+            {colors.emoji} Score: {feedback.score}
+          </p>
+          <p style={{ fontSize:'0.9375rem', color: colors.text, lineHeight:1.7 }}>{feedback.feedback}</p>
         </div>
       )}
     </div>
@@ -253,7 +271,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
 
   const pct = Math.round((score / total) * 100)
 
-  // Analyze wrong answers by topic
   const wrongByTopic: Record<string, { count: number; questions: Question[] }> = {}
   const correctTopics: string[] = []
 
@@ -282,38 +299,36 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
   const msg = getMessage()
 
   async function handlePracticeWeakSpots() {
-  setRetryLoading(true)
-  try {
-    const wrongTopicNames = wrongTopics.map(([t]) => t).join(', ')
-    const retryCount = totalWrong <= 3 ? 5 : wrongTopics.length * 2
-
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subject: session.subject,
-        grade: session.grade,
-        topic: session.topic,
-        focus: `Focus ONLY on these weak areas: ${wrongTopicNames}. Mix in some questions similar to the ones the student got wrong.`,
-        outputType: 'questions',
-        questionCount: retryCount,
-        questionTypes: ['mc'],
-        isRetry: true,
-      }),
-    })
-    const data = await res.json()
-    if (data.content?.questions) {
-      setRetryQuestions(data.content.questions)
-      setRetryCurrent(0)
-      setRetryAnswers({})
+    setRetryLoading(true)
+    try {
+      const wrongTopicNames = wrongTopics.map(([t]) => t).join(', ')
+      const retryCount = totalWrong <= 3 ? 5 : wrongTopics.length * 2
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: session.subject,
+          grade: session.grade,
+          topic: session.topic,
+          focus: `Focus ONLY on these weak areas: ${wrongTopicNames}. Mix in some questions similar to the ones the student got wrong.`,
+          outputType: 'questions',
+          questionCount: retryCount,
+          questionTypes: ['mc'],
+          isRetry: true,
+        }),
+      })
+      const data = await res.json()
+      if (data.content?.questions) {
+        setRetryQuestions(data.content.questions)
+        setRetryCurrent(0)
+        setRetryAnswers({})
+      }
+    } catch (err) {
+      console.error('Retry error:', err)
     }
-  } catch (err) {
-    console.error('Retry error:', err)
+    setRetryLoading(false)
   }
-  setRetryLoading(false)
-}
 
-  // Retry session UI
   if (retryQuestions) {
     const rq = retryQuestions[retryCurrent]
     const retryScore = Object.values(retryAnswers).filter((a: any) => a.correct === true).length
@@ -415,7 +430,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'44rem' }}>
 
-        {/* Score card */}
         <div className="card" style={{ padding:'2.5rem', textAlign:'center', marginBottom:'1.5rem' }}>
           <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>{msg.emoji}</div>
           <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>{msg.title}</h1>
@@ -424,20 +438,11 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           <p style={{ color:'rgb(107,107,88)' }}>{pct}% correct</p>
         </div>
 
-        {/* Analytics */}
         {(wrongTopics.length > 0 || correctTopics.length > 0) && (
           <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
             <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1.5rem' }}>📊 Performance Breakdown</h2>
-
-            {/* Bar chart by topic */}
             <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem', marginBottom:'1.5rem' }}>
-              {questions.reduce((acc: Record<string, { correct: number; total: number }>, q, i) => {
-                const topic = (q as any).topic || session.topic
-                if (!acc[topic]) acc[topic] = { correct: 0, total: 0 }
-                acc[topic].total++
-                if (answers[i]?.correct === true) acc[topic].correct++
-                return acc
-              }, {}) && Object.entries(
+              {Object.entries(
                 questions.reduce((acc: Record<string, { correct: number; total: number }>, q, i) => {
                   const topic = (q as any).topic || session.topic
                   if (!acc[topic]) acc[topic] = { correct: 0, total: 0 }
@@ -468,8 +473,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                 )
               })}
             </div>
-
-            {/* Strong vs weak summary */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
               {correctTopics.length > 0 && (
                 <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgb(234,243,222)', border:'1px solid rgba(59,109,17,0.2)' }}>
@@ -491,34 +494,26 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           </div>
         )}
 
-        {/* Weak spot practice CTA */}
         {wrongTopics.length > 0 && (
           <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', background:'linear-gradient(135deg, rgba(34,85,14,0.03), rgba(232,160,32,0.05))', border:'1px solid rgba(34,85,14,0.12)' }}>
             <div style={{ display:'flex', alignItems:'flex-start', gap:'1rem', flexWrap:'wrap' }}>
               <div style={{ flex:1 }}>
                 <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem', fontSize:'1rem' }}>
-                  {totalWrong <= 3
-                    ? "You're almost perfect! 🎯 Let's nail those last few"
-                    : "Let's strengthen those weak spots! 💪 You've got this"}
+                  {totalWrong <= 3 ? "You're almost perfect! 🎯 Let's nail those last few" : "Let's strengthen those weak spots! 💪 You've got this"}
                 </p>
                 <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
-                  {totalWrong <= 3
-                    ? `Practice ${Math.min(5, totalWrong + 2)} targeted questions on your weak areas`
-                    : `Practice ${wrongTopics.length * 2} questions — 2 per topic you missed`}
+                  {totalWrong <= 3 ? `Practice ${Math.min(5, totalWrong + 2)} targeted questions on your weak areas` : `Practice ${wrongTopics.length * 2} questions — 2 per topic you missed`}
                 </p>
               </div>
               <button onClick={handlePracticeWeakSpots} disabled={retryLoading} className="btn-primary" style={{ flexShrink:0, fontSize:'0.9375rem' }}>
                 {retryLoading ? (
                   <><div style={{ width:'1rem', height:'1rem', border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} /> Generating...</>
-                ) : (
-                  '🎯 Practice weak spots'
-                )}
+                ) : '🎯 Practice weak spots'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Question review list */}
         <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', marginBottom:'1.5rem' }}>
           {questions.map((q, i) => {
             const a = answers[i]

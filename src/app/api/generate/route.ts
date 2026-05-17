@@ -37,10 +37,7 @@ export async function POST(request: Request) {
       expert: 'Test synthesis and evaluation at AP/college level. Questions should involve edge cases, non-obvious applications, or require the student to evaluate competing approaches. Distractors should be sophisticated and reflect deep misconceptions.',
     }
 
-    // Subject-specific instruction sets that guide GPT-4o on question style,
-    // structure, and common pitfalls — without hardcoding example questions.
     const subjectInstructions: Record<string, string> = {
-      // ── MATHEMATICS ──────────────────────────────────────────────────────
       mathematics: `
 - Always present a concrete problem, not a definition question ("Solve..." not "What is...").
 - For MC: make sure exactly one answer is mathematically correct; verify all distractors are wrong.
@@ -81,7 +78,6 @@ export async function POST(request: Request) {
 - Distractors: confusing p-value with probability of H0, wrong degrees of freedom, correlation vs causation errors.
 - Avoid questions with ambiguous interpretations of probability.`,
 
-      // ── SCIENCES ──────────────────────────────────────────────────────────
       biology: `
 - Frame questions around a scenario, organism, or experimental result — not pure definition recall at medium+.
 - Cover cellular processes, genetics, evolution, ecology, physiology, and molecular biology as appropriate to topic.
@@ -106,7 +102,6 @@ export async function POST(request: Request) {
 - Distractors: sign errors on direction, forgetting to square in kinetic energy, confusing mass and weight.
 - Free response: require a free body diagram description, equation setup, substitution, and final answer with units.`,
 
-      // ── HISTORY & SOCIAL STUDIES ──────────────────────────────────────────
       'us history': `
 - Ground every question in a specific event, period, person, document, or turning point — no vague generalities.
 - Periods to draw from: Colonial, Revolution, Early Republic, Civil War, Reconstruction, Gilded Age, Progressive Era, WWI, Great Depression, WWII, Cold War, Civil Rights, Modern.
@@ -131,7 +126,6 @@ export async function POST(request: Request) {
 - Distractors: must reflect actual common APUSH student misconceptions.
 - Use APUSH vocabulary: continuity and change over time, periodization, causation, contextualization.`,
 
-      // ── ENGLISH & LITERATURE ──────────────────────────────────────────────
       literature: `
 - Questions must reference specific literary elements: theme, motif, character development, narrative structure, point of view, symbolism, tone, diction, imagery.
 - At medium+: ask the student to interpret or analyze — not just identify.
@@ -147,7 +141,6 @@ export async function POST(request: Request) {
 - Distractors: grammatically plausible but technically incorrect alternatives.
 - At hard/expert: combine multiple grammar issues in one sentence and ask which revision is best.`,
 
-      // ── SAT / ACT / STANDARDIZED ─────────────────────────────────────────
       'sat math': `
 - Mirror College Board SAT Math format exactly.
 - Two modules: no-calculator concepts (algebra, advanced math) and calculator-permitted (problem solving, data analysis).
@@ -171,7 +164,6 @@ export async function POST(request: Request) {
 - Distractors: wrong formula, arithmetic error, misread question.
 - Always provide 5 answer choices (A-E) for ACT Math.`,
 
-      // ── ECONOMICS ─────────────────────────────────────────────────────────
       economics: `
 - Frame questions around a real-world economic scenario, graph description, or policy decision.
 - Cover: supply/demand, elasticity, market structures, GDP, inflation, monetary/fiscal policy, trade, opportunity cost.
@@ -179,7 +171,6 @@ export async function POST(request: Request) {
 - Distractors: confusing shifts of vs movements along curves, wrong direction of policy effects, mixing micro/macro.
 - Free response: require the student to draw (describe) a graph, explain the shift, and predict the outcome.`,
 
-      // ── GEOGRAPHY ─────────────────────────────────────────────────────────
       geography: `
 - Questions must reference specific regions, countries, physical features, or geographic concepts.
 - Cover: physical geography, human geography, population, urbanization, political geography, economic geography, environmental issues.
@@ -187,12 +178,10 @@ export async function POST(request: Request) {
 - Distractors: plausible-sounding but factually incorrect locations, statistics, or cause-effect relationships.`,
     }
 
-    // Normalize subject name to match keys
     const subjectKey = subject?.toLowerCase().trim()
     const mathSubjects = ['math', 'mathematics', 'calculus', 'algebra', 'pre-calculus', 'statistics', 'geometry', 'trigonometry']
     const isMathSubject = mathSubjects.some(s => subjectKey?.includes(s))
 
-    // Get subject-specific instructions — fall back to math or generic
     const specificInstructions = subjectInstructions[subjectKey]
       || (isMathSubject ? subjectInstructions['mathematics'] : '')
 
@@ -200,7 +189,7 @@ export async function POST(request: Request) {
 
     const systemPrompt = `You are AceForge, an expert educational content creator with deep knowledge of standardized exams, curriculum standards, and pedagogical best practices.
 
-Your job is to generate high-quality, accurate study questions that genuinely challenge students at the right level.
+Your job is to generate high-quality, accurate study questions that genuinely challenge students at the right level AND provide explanations that are genuinely educational — not just "the answer is X because X is correct."
 
 DIFFICULTY: ${activeDifficulty.toUpperCase()}
 ${difficultyGuide[activeDifficulty]}
@@ -213,6 +202,29 @@ ${specificInstructions || `
 - Vary the cognitive level: recall, comprehension, application, analysis.
 - Free response answers must be substantive and model excellent student work.`}
 
+EXPLANATION QUALITY RULES (CRITICAL — this is what separates AceForge from other apps):
+
+For CORRECT answers — the explanation must:
+1. State the underlying concept, rule, or principle being tested (not just "the answer is B")
+2. Walk through the reasoning step by step — show HOW you arrive at the answer
+3. Explain WHY this is correct using the actual subject knowledge
+4. For math/science: show the key step or formula that makes it work
+5. End with a memorable tip or pattern the student can apply to similar questions
+
+For WRONG answers — the explanation must also:
+6. Identify the most tempting wrong answer and explain exactly why students pick it
+7. Clarify the misconception behind that wrong choice
+8. If relevant, explain the difference between the correct and most-tempting answer
+
+EXPLANATION EXAMPLES OF WHAT NOT TO DO:
+BAD: "The answer is B. Thylakoid membranes are where light reactions occur."
+BAD: "Correct! The answer is mitosis because cells divide during mitosis."
+BAD: "The Battle of Gettysburg was in 1863, making A correct."
+
+EXPLANATION EXAMPLES OF WHAT TO DO:
+GOOD: "The light-dependent reactions require direct access to sunlight, which means they must occur in the part of the chloroplast that contains chlorophyll — the thylakoid membrane. Chlorophyll is embedded in the thylakoid membrane's protein complexes (Photosystem I and II), where it absorbs photons to split water molecules and generate ATP and NADPH. The stroma (choice A) is where the Calvin cycle occurs — a common mix-up because both stages happen in the chloroplast. Remember: thylakoid = light, stroma = dark (Calvin cycle)."
+GOOD: "To solve 3x + 7 = 22, first isolate the variable term by subtracting 7 from both sides: 3x = 15. Then divide both sides by 3: x = 5. The most common mistake is dividing before subtracting (getting x = 22/3 - 7), which violates order of operations. Always eliminate addition/subtraction before multiplication/division when isolating a variable."
+
 FORMATTING RULES (STRICTLY ENFORCED):
 - Do NOT use LaTeX notation. Write math in plain text: ^ for exponents (x^2), / for fractions (1/2), * for multiplication.
 - Never use \\frac, \\times, \\( \\), \\[ \\], or any LaTeX commands.
@@ -223,7 +235,7 @@ FORMATTING RULES (STRICTLY ENFORCED):
 QUALITY CHECKS before responding:
 - Every MC question has exactly one correct answer — verify this.
 - No two questions test the exact same concept or skill.
-- Each explanation teaches, not just states the answer.
+- Each explanation teaches the underlying concept, not just states the answer.
 - Distractors are plausible but unambiguously wrong.`
 
     const notesContext = uploadedText
@@ -250,52 +262,108 @@ For each MC question provide:
 - question (string) — must be a complete, specific question
 - options (array of 4 strings like ["A. ...", "B. ...", "C. ...", "D. ..."])
 - correctAnswer (string: "A", "B", "C", or "D")
-- explanation (3-5 sentences: state the correct answer, explain WHY it's correct step by step, then briefly explain why the main distractor is wrong)
+- explanation (string) — MUST follow this structure:
+  * Sentence 1-2: Explain the underlying concept/rule/principle and WHY the correct answer is right — use subject knowledge, not circular reasoning
+  * Sentence 3-4: Walk through the key reasoning step or calculation that confirms the answer
+  * Sentence 5: Identify the most tempting wrong answer and explain the specific misconception behind it
+  * End with a memory tip or pattern rule the student can reuse (e.g. "Remember: X always means Y in this context")
+  * Total: 5-7 sentences. Be specific, educational, and thorough.
 - topic (string: the specific subtopic this question covers, e.g. "Chain Rule", "Mitosis", "Supply and Demand")
 
 For each FR question provide:
 - id (number)
 - type: "fr"
-- question (string) — must be a complete, specific, multi-part question where appropriate
-- modelAnswer (4-6 sentences: a model response showing full reasoning, not just the final answer)
+- question (string) — must be a complete, specific, thought-provoking question
+- modelAnswer (string) — MUST follow this structure:
+  * Sentence 1: State the direct answer clearly
+  * Sentence 2-3: Explain the underlying mechanism, process, or reasoning in detail
+  * Sentence 4-5: Support with specific evidence, examples, steps, or data
+  * Sentence 6: Connect to a broader concept or real-world significance
+  * Total: 5-7 sentences. This should model what an A+ student response looks like.
 - topic (string: the specific subtopic this question covers)
 
 Ensure questions span different aspects of "${topic}" — do not repeat the same concept.
 
 Return JSON: { "questions": [...] }`
     } else {
-      userPrompt = `Create a complete ${activeDifficulty.toUpperCase()} difficulty study worksheet about "${topic}" in ${subject} for a ${grade} student.${focus ? ` Focus on: ${focus}.` : ''}${notesContext}
+      userPrompt = `Create a COMPREHENSIVE and DEEPLY EDUCATIONAL study worksheet about "${topic}" in ${subject} for a ${grade} student at ${activeDifficulty.toUpperCase()} difficulty.${focus ? ` Focus on: ${focus}.` : ''}${notesContext}
 
-The worksheet must be substantive and educational — not generic. Every section should contain specific, accurate content about "${topic}".
+${uploadedText ? `CRITICAL: The student uploaded their own notes/materials. Your worksheet must be built ENTIRELY from the content in those notes. Every concept, vocabulary term, step, and practice question must come directly from the uploaded content. Do not add outside information. Cover every major topic and subtopic mentioned in the notes thoroughly.` : `Build a thorough, curriculum-aligned worksheet that covers "${topic}" in depth — not a surface-level overview. Include specific facts, formulas, processes, and examples a student would actually need to know for an exam.`}
+
+The worksheet must have:
+- A vocabulary section with ALL key terms relevant to the topic (minimum 5 terms), each with a precise, educational definition
+- At least 4 detailed steps/sections that cover the topic thoroughly — each with real educational content, not generic filler
+- A summary with specific, memorable bullet points
+- Exactly 5 practice questions (mix of MC and FR)
+
+Each explanation section must:
+- Include specific facts, data, formulas, or processes — not vague descriptions
+- Explain the WHY behind concepts, not just the WHAT
+- Use examples where helpful
+- Be detailed enough that a student could learn this topic from scratch just from the worksheet
 
 Return JSON with this exact structure:
 {
   "worksheet": {
     "introduction": {
-      "text": "2-3 sentence engaging intro that explains what this topic is and why it matters",
-      "vocabulary": [{"term": "...", "definition": "clear, specific definition relevant to ${topic}"}]
+      "text": "3-4 sentence engaging intro that explains what this topic is, why it matters, and what the student will learn",
+      "vocabulary": [
+        {"term": "...", "definition": "precise, educational definition with context — not a dictionary definition"}
+      ]
     },
     "steps": [
       {
-        "title": "Specific step or concept title",
-        "explanation": "Clear, detailed explanation with specific facts, formulas, or processes — not generic filler",
-        "visualDescription": "Describe a specific diagram, table, graph, or visual that illustrates this concept",
-        "keyTakeaway": "One precise sentence capturing the core idea"
+        "title": "Specific concept or section title",
+        "explanation": "4-6 sentences of detailed, specific educational content. Include actual facts, formulas, processes, or mechanisms. Explain the concept deeply enough that a student learns something, not just recalls a label.",
+        "visualDescription": "Describe a specific diagram, table, graph, or visual aid that would help illustrate this concept — be specific about what it shows",
+        "keyTakeaway": "One precise, memorable sentence the student should remember"
       }
     ],
     "summary": {
-      "bullets": ["Specific fact or rule about ${topic}", "Another key point"],
-      "quickCheck": ["Specific true/false about ${topic}", "Fill in the blank about ${topic}"]
+      "bullets": ["Specific, testable fact or rule — not vague summaries", "Another key point with actual content"],
+      "quickCheck": ["True or False: [specific statement about ${topic}]", "Fill in the blank: [specific sentence about ${topic}]", "Quick question: [something testable from the worksheet]"]
     },
     "practiceQuestions": [
       {
         "id": 1,
         "type": "mc",
-        "question": "...",
+        "question": "Specific question grounded in the worksheet content",
         "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
         "correctAnswer": "A",
-        "explanation": "State the correct answer, explain why step by step, address the main wrong answer",
+        "explanation": "Explain the underlying concept, walk through the reasoning step by step, identify the main wrong answer and its misconception, end with a reusable tip",
         "topic": "specific subtopic"
+      },
+      {
+        "id": 2,
+        "type": "mc",
+        "question": "...",
+        "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+        "correctAnswer": "B",
+        "explanation": "...",
+        "topic": "..."
+      },
+      {
+        "id": 3,
+        "type": "mc",
+        "question": "...",
+        "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+        "correctAnswer": "C",
+        "explanation": "...",
+        "topic": "..."
+      },
+      {
+        "id": 4,
+        "type": "fr",
+        "question": "A thoughtful free response question that requires the student to explain, analyze, or apply a concept from this worksheet",
+        "modelAnswer": "5-6 sentence model answer: state the answer directly, explain the mechanism/reasoning in depth, support with specific evidence or examples from the topic, connect to a broader concept",
+        "topic": "..."
+      },
+      {
+        "id": 5,
+        "type": "fr",
+        "question": "Another free response question testing a different concept from the worksheet",
+        "modelAnswer": "5-6 sentence model answer following the same quality standard",
+        "topic": "..."
       }
     ]
   }
@@ -309,7 +377,7 @@ Return JSON with this exact structure:
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 6000,
     })
 
     const raw = completion.choices[0].message.content ?? '{}'
