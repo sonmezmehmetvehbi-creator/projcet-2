@@ -5,7 +5,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const cookieStore = cookies()
@@ -25,11 +24,25 @@ export async function GET(request: NextRequest) {
         },
       }
     )
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
-      return NextResponse.redirect(new URL(next, 'https://aceforge.app'))
+      const response = NextResponse.redirect(new URL('/dashboard', 'https://aceforge.app'))
+      
+      // Manually copy all cookies to the response
+      cookieStore.getAll().forEach(cookie => {
+        response.cookies.set(cookie.name, cookie.value, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          path: '/',
+        })
+      })
+      
+      return response
     }
   }
 
-  return NextResponse.redirect(new URL('/login?error=auth_callback_error', 'https://aceforge.app'))
+  return NextResponse.redirect(new URL('/login', 'https://aceforge.app'))
 }
