@@ -120,11 +120,20 @@ export default async function HomePage() {
         }
         @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
 
+        /* ── FIXED TITLE ─────────────────────────────────────────────────
+           • Reduced max size: 4rem cap instead of 5rem
+           • font-weight 700 instead of 800 — less slab-like, easier to scan
+           • letter-spacing slightly relaxed (-0.02em → -0.015em)
+           • font-feature-settings for ligatures & kerning
+        ──────────────────────────────────────────────────────────────── */
         .af-title {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(2.75rem, 6vw, 5rem);
-          font-weight: 800; line-height: 1.0;
-          color: #0a1a06; letter-spacing: -0.03em;
+          font-size: clamp(2.25rem, 4.5vw, 4rem);
+          font-weight: 700;
+          line-height: 1.08;
+          color: #0a1a06;
+          letter-spacing: -0.015em;
+          font-feature-settings: "kern" 1, "liga" 1;
           margin-bottom: 1.5rem;
         }
         .af-title .accent {
@@ -175,10 +184,21 @@ export default async function HomePage() {
         .af-trust { display: flex; flex-wrap: wrap; gap: 1.25rem; font-family: 'Syne', sans-serif; font-size: 0.875rem; color: #5a7a52; }
         .af-trust-item { display: flex; align-items: center; gap: 0.4rem; }
 
-        /* Demo card */
-        .af-demo-wrap { position: relative; }
+        /* ── FIXED DEMO CARD + BADGES ────────────────────────────────────
+           The wrapper is now position:relative with enough padding so the
+           absolutely-positioned badges sit outside the card but inside the
+           wrapper — no clipping, no overflow issues.
+        ──────────────────────────────────────────────────────────────── */
+        .af-demo-wrap {
+          position: relative;
+          /* padding gives space for the badges that hang outside the card */
+          padding: 2rem 1rem 1rem 1rem;
+        }
         .af-demo-wrap::before {
-          content: ''; position: absolute; inset: -2px; border-radius: 1.375rem;
+          content: ''; position: absolute;
+          /* inset adjusted to match the inner card, not the padded wrapper */
+          top: 2rem; left: 1rem; right: 1rem; bottom: 1rem;
+          border-radius: 1.375rem;
           background: linear-gradient(135deg, var(--g), var(--g3), rgba(34,85,14,0.1));
           z-index: -1; opacity: 0.3; animation: glowPulse 3s ease-in-out infinite alternate;
         }
@@ -228,14 +248,32 @@ export default async function HomePage() {
         .af-demo-fb-title { font-family:'Syne',sans-serif; font-size:0.8125rem; font-weight:700; color:var(--g); margin-bottom:0.25rem; }
         .af-demo-fb-text { font-size:0.8125rem; color:#3d5c35; line-height:1.6; }
 
+        /* Badges that float around the demo card */
         .af-float {
-          position: absolute; background: white;
-          border: 1px solid rgba(34,85,14,0.12); border-radius: 0.875rem;
-          padding: 0.625rem 0.875rem; box-shadow: 0 8px 24px rgba(34,85,14,0.1);
-          font-family: 'Syne', sans-serif; animation: floatUp 4s ease-in-out infinite;
+          position: absolute;
+          background: white;
+          border: 1px solid rgba(34,85,14,0.12);
+          border-radius: 0.875rem;
+          padding: 0.625rem 0.875rem;
+          box-shadow: 0 8px 24px rgba(34,85,14,0.12);
+          font-family: 'Syne', sans-serif;
+          animation: floatUp 4s ease-in-out infinite;
+          z-index: 10;
+          /* prevent the badges from being cut off */
+          white-space: nowrap;
         }
-        .af-float-1 { top: -0.75rem; right: 1rem; animation-delay: 0s; }
-        .af-float-2 { bottom: 1rem; left: -0.5rem; animation-delay: -2s; }
+        /* Top-right badge: sits above & to the right of the card */
+        .af-float-1 {
+          top: 0;
+          right: 0;
+          animation-delay: 0s;
+        }
+        /* Bottom-left badge: sits below & slightly left of the card */
+        .af-float-2 {
+          bottom: -0.25rem;
+          left: 0;
+          animation-delay: -2s;
+        }
         @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
         .af-float-num { font-size:1.125rem; font-weight:800; color:var(--g); }
         .af-float-label { font-size:0.625rem; color:#7a9470; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
@@ -415,8 +453,9 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right — demo card */}
+            {/* Right — demo card + properly contained floating badges */}
             <div className="af-demo-wrap af-anim-5">
+              {/* Badges are siblings of af-demo, positioned within the padded wrapper */}
               <div className="af-float af-float-1">
                 <div className="af-float-num">98%</div>
                 <div className="af-float-label">Accuracy</div>
@@ -425,6 +464,7 @@ export default async function HomePage() {
                 <div className="af-float-num">⚡ Fast</div>
                 <div className="af-float-label">AI Generation</div>
               </div>
+
               <div className="af-demo">
                 <div className="af-demo-dots">
                   <div className="af-demo-dot" style={{ background:'#ff5f57' }} />
