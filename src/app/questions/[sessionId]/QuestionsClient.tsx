@@ -11,7 +11,7 @@ interface Props { session: any; isPremium?: boolean }
 export default function QuestionsClient({ session, isPremium = false }: Props) {
   const questions: Question[] = session.content?.questions ?? []
   const [current, setCurrent] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, { answer: string; correct: boolean | null; topic?: string }>>({})
+  const [answers, setAnswers] = useState<Record<number, { answer: string; correct: boolean | null; topic?: string; frScore?: string }>>({})
   const [frInputs, setFrInputs] = useState<Record<number, string>>({})
   const [frFeedback, setFrFeedback] = useState<Record<number, { score: string; feedback: string }>>({})
   const [frLoading, setFrLoading] = useState<Record<number, boolean>>({})
@@ -46,7 +46,8 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
       })
       const data = await res.json()
       setFrFeedback(prev => ({ ...prev, [current]: data }))
-      setAnswers(prev => ({ ...prev, [current]: { answer: studentAnswer, correct: null, topic: (question as any).topic } }))
+      // Store frScore so summary can use it for color/label
+      setAnswers(prev => ({ ...prev, [current]: { answer: studentAnswer, correct: null, topic: (question as any).topic, frScore: data.score } }))
     } catch {}
     setFrLoading(prev => ({ ...prev, [current]: false }))
   }
@@ -214,13 +215,25 @@ function MCOptions({ question, answered, onSelect }: {
   )
 }
 
+// Returns colors/label based on FR score string e.g. "3/4"
 function getFRColors(score: string) {
-  switch(score) {
-    case '4/4': return { bg:'rgb(234,243,222)', border:'rgba(59,109,17,0.2)', title:'rgb(59,109,17)', text:'rgba(59,109,17,0.9)', emoji:'🎉' }
-    case '3/4': return { bg:'rgba(34,85,14,0.06)', border:'rgba(34,85,14,0.15)', title:'rgb(34,85,14)', text:'rgba(34,85,14,0.8)', emoji:'👍' }
-    case '2/4': return { bg:'rgba(232,160,32,0.08)', border:'rgba(232,160,32,0.3)', title:'rgb(180,120,10)', text:'rgba(180,120,10,0.9)', emoji:'📚' }
-    case '1/4': return { bg:'rgba(220,80,20,0.08)', border:'rgba(220,80,20,0.25)', title:'rgb(200,80,20)', text:'rgba(200,80,20,0.9)', emoji:'💪' }
-    default:    return { bg:'rgb(252,235,235)', border:'rgba(163,45,45,0.2)', title:'rgb(163,45,45)', text:'rgba(163,45,45,0.9)', emoji:'❌' }
+  switch (score) {
+    case '4/4': return { bg:'rgb(234,243,222)',          border:'rgba(59,109,17,0.2)',    title:'rgb(59,109,17)',    text:'rgba(59,109,17,0.85)',   emoji:'🎉', label:'Excellent!' }
+    case '3/4': return { bg:'rgba(34,85,14,0.06)',       border:'rgba(34,85,14,0.18)',    title:'rgb(34,85,14)',     text:'rgba(34,85,14,0.8)',     emoji:'👍', label:'Good work!' }
+    case '2/4': return { bg:'rgba(232,160,32,0.08)',     border:'rgba(232,160,32,0.3)',   title:'rgb(180,120,10)',   text:'rgba(180,120,10,0.9)',   emoji:'📚', label:'Halfway there' }
+    case '1/4': return { bg:'rgba(220,80,20,0.07)',      border:'rgba(220,80,20,0.22)',   title:'rgb(200,75,20)',    text:'rgba(200,75,20,0.85)',   emoji:'💪', label:'Keep practicing' }
+    default:    return { bg:'rgb(252,235,235)',           border:'rgba(163,45,45,0.2)',    title:'rgb(163,45,45)',    text:'rgba(163,45,45,0.85)',   emoji:'❌', label:'Needs review' }
+  }
+}
+
+// Maps a score string to a summary badge style (used in question list at end)
+function getFRSummaryStyle(score: string): { bg: string; color: string; label: string } {
+  switch (score) {
+    case '4/4': return { bg:'rgb(234,243,222)',      color:'rgb(59,109,17)',   label:`✓ ${score}` }
+    case '3/4': return { bg:'rgba(34,85,14,0.08)',   color:'rgb(34,85,14)',    label:`✓ ${score}` }
+    case '2/4': return { bg:'rgba(232,160,32,0.12)', color:'rgb(180,120,10)', label:`~ ${score}` }
+    case '1/4': return { bg:'rgba(220,80,20,0.09)',  color:'rgb(200,75,20)',   label:`✗ ${score}` }
+    default:    return { bg:'rgb(252,235,235)',       color:'rgb(163,45,45)',   label:'Review' }
   }
 }
 
@@ -247,8 +260,8 @@ function FRInput({ question, value, onChange, onSubmit, loading, feedback, answe
           background: colors.bg,
           border: `1px solid ${colors.border}`,
         }}>
-          <p style={{ fontWeight:700, color: colors.title, marginBottom:'0.5rem' }}>
-            {colors.emoji} Score: {feedback.score}
+          <p style={{ fontWeight:700, color: colors.title, marginBottom:'0.5rem', fontSize:'1rem' }}>
+            {colors.emoji} {colors.label} — Score: {feedback.score}
           </p>
           <p style={{ fontSize:'0.9375rem', color: colors.text, lineHeight:1.7 }}>{feedback.feedback}</p>
         </div>
@@ -283,6 +296,10 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
       wrongByTopic[topic].count++
       wrongByTopic[topic].questions.push(q)
     } else if (a.correct === true) {
+      if (!correctTopics.includes(topic)) correctTopics.push(topic)
+    }
+    // FR with score 3/4 or 4/4 counts as a strong area
+    else if (a.correct === null && (a.frScore === '4/4' || a.frScore === '3/4')) {
       if (!correctTopics.includes(topic)) correctTopics.push(topic)
     }
   })
@@ -402,7 +419,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                     })
                     const data = await res.json()
                     setRetryFrFeedback((prev: any) => ({ ...prev, [retryCurrent]: data }))
-                    setRetryAnswers((prev: any) => ({ ...prev, [retryCurrent]: { answer: studentAnswer, correct: null } }))
+                    setRetryAnswers((prev: any) => ({ ...prev, [retryCurrent]: { answer: studentAnswer, correct: null, frScore: data.score } }))
                   } catch {}
                   setRetryFrLoading(prev => ({ ...prev, [retryCurrent]: false }))
                 }}
@@ -448,6 +465,8 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                   if (!acc[topic]) acc[topic] = { correct: 0, total: 0 }
                   acc[topic].total++
                   if (answers[i]?.correct === true) acc[topic].correct++
+                  // Count FR 3/4 and 4/4 as correct in the breakdown bar
+                  else if (answers[i]?.frScore === '4/4' || answers[i]?.frScore === '3/4') acc[topic].correct++
                   return acc
                 }, {})
               ).map(([topic, data]) => {
@@ -514,24 +533,51 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           </div>
         )}
 
+        {/* Question list — now with proper FR score colors */}
         <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', marginBottom:'1.5rem' }}>
           {questions.map((q, i) => {
             const a = answers[i]
-            const correct = a?.correct === true
+            const isMC = q.type === 'mc'
             const wasAnswered = !!a
+
+            // Determine icon + badge for this row
+            let icon: React.ReactNode
+            let badgeStyle: { bg: string; color: string; label: string }
+
+            if (!wasAnswered) {
+              icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', border:'2px solid rgba(34,85,14,0.2)', flexShrink:0 }} />
+              badgeStyle = { bg:'rgba(34,85,14,0.05)', color:'rgb(107,107,88)', label:'Skipped' }
+            } else if (isMC) {
+              if (a.correct) {
+                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
+                badgeStyle = { bg:'rgb(234,243,222)', color:'rgb(59,109,17)', label:'Correct' }
+              } else {
+                icon = <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
+                badgeStyle = { bg:'rgb(252,235,235)', color:'rgb(163,45,45)', label:'Review' }
+              }
+            } else {
+              // FR question — use score-based colors
+              const frStyle = getFRSummaryStyle(a.frScore ?? '')
+              badgeStyle = frStyle
+              if (a.frScore === '4/4' || a.frScore === '3/4') {
+                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color: a.frScore === '4/4' ? 'rgb(59,109,17)' : 'rgb(34,85,14)', flexShrink:0 }} />
+              } else if (a.frScore === '2/4') {
+                icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', background:'rgba(232,160,32,0.2)', border:'2px solid rgb(232,160,32)', flexShrink:0 }} />
+              } else if (a.frScore === '1/4') {
+                icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', background:'rgba(220,80,20,0.15)', border:'2px solid rgb(200,75,20)', flexShrink:0 }} />
+              } else {
+                icon = <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
+              }
+            }
+
             return (
               <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'white', border:'1px solid rgba(34,85,14,0.08)' }}>
-                {wasAnswered
-                  ? correct
-                    ? <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
-                    : <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
-                  : <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', border:'2px solid rgba(34,85,14,0.2)', flexShrink:0 }} />
-                }
+                {icon}
                 <span style={{ fontSize:'0.875rem', color:'rgb(26,26,20)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   Q{i + 1}: {q.question}
                 </span>
-                <span className="badge" style={{ background: !wasAnswered ? 'rgba(34,85,14,0.05)' : correct ? 'rgb(234,243,222)' : 'rgb(252,235,235)', color: !wasAnswered ? 'rgb(107,107,88)' : correct ? 'rgb(59,109,17)' : 'rgb(163,45,45)', flexShrink:0 }}>
-                  {!wasAnswered ? 'Skipped' : correct ? 'Correct' : 'Review'}
+                <span className="badge" style={{ background: badgeStyle.bg, color: badgeStyle.color, flexShrink:0 }}>
+                  {badgeStyle.label}
                 </span>
               </div>
             )
