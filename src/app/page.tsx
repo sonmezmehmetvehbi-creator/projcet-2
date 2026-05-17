@@ -802,19 +802,8 @@ export default async function HomePage() {
         }
         drawParticles();
 
-        // Scroll reveal
-        // Scroll reveal
-const reveals = document.querySelectorAll('.af-reveal');
-// Make all visible immediately as fallback
-reveals.forEach(el => el.classList.add('visible'));
-// Also use intersection observer for animated reveal
-if ('IntersectionObserver' in window) {
-  reveals.forEach(el => { el.classList.remove('visible'); });
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
-  }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
-  reveals.forEach(el => observer.observe(el));
-}
+        // Make all sections visible
+        document.querySelectorAll('.af-reveal').forEach(el => el.classList.add('visible'));
       `}} />
     </>
   )
