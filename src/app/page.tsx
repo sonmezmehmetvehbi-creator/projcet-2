@@ -291,8 +291,8 @@ export default async function HomePage() {
           animation: statFloat 4s ease-in-out infinite;
           backdrop-filter: blur(10px);
         }
-        .af-stat-float-1 { top: -1rem; right: -1rem; animation-delay: 0s; }
-        .af-stat-float-2 { bottom: 1rem; left: -1.5rem; animation-delay: -2s; }
+        .af-stat-float-1 { top: -1rem; right: 0.5rem; animation-delay: 0s; }
+.af-stat-float-2 { bottom: 1rem; left: 0; animation-delay: -2s; }
         @keyframes statFloat {
           0%,100% { transform: translateY(0); }
           50% { transform: translateY(-8px); }
@@ -803,11 +803,18 @@ export default async function HomePage() {
         drawParticles();
 
         // Scroll reveal
-        const reveals = document.querySelectorAll('.af-reveal');
-        const observer = new IntersectionObserver(entries => {
-          entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
-        }, { threshold: 0.1 });
-        reveals.forEach(el => observer.observe(el));
+        // Scroll reveal
+const reveals = document.querySelectorAll('.af-reveal');
+// Make all visible immediately as fallback
+reveals.forEach(el => el.classList.add('visible'));
+// Also use intersection observer for animated reveal
+if ('IntersectionObserver' in window) {
+  reveals.forEach(el => { el.classList.remove('visible'); });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+  reveals.forEach(el => observer.observe(el));
+}
       `}} />
     </>
   )
