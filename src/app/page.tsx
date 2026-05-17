@@ -292,9 +292,11 @@ export default async function HomePage() {
 
         .af-h2 {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(1.875rem, 4vw, 2.75rem);
-          font-weight: 800; color: #0a1a06; line-height: 1.1;
-          letter-spacing: -0.02em; margin-bottom: 1rem;
+          font-size: clamp(2rem, 4.5vw, 3.5rem);
+          font-weight: 700; color: #0a1a06; line-height: 1.08;
+          letter-spacing: -0.015em;
+          font-feature-settings: "kern" 1, "liga" 1;
+          margin-bottom: 1rem;
         }
         .af-p { font-size: 1.0625rem; color: #3d5c35; line-height: 1.7; max-width: 36rem; }
 
@@ -362,7 +364,7 @@ export default async function HomePage() {
           padding: 0.375rem 1.25rem; border-radius: 9999px; white-space: nowrap;
         }
         .af-pc-name { font-family:'Syne',sans-serif; font-size:1.25rem; font-weight:700; color:#0a1a06; margin-bottom:1rem; }
-        .af-pc-price { font-family:'Syne',sans-serif; font-size:2.75rem; font-weight:800; color:#0a1a06; line-height:1; }
+        .af-pc-price { font-family:'Syne',sans-serif; font-size:2.75rem; font-weight:700; color:#0a1a06; line-height:1; letter-spacing:-0.015em; font-feature-settings:"kern" 1,"liga" 1; }
         .af-pc-per { font-size:0.9375rem; font-weight:400; color:#7a9470; }
         .af-pc-list { list-style:none; padding:0; margin:1.5rem 0; display:flex; flex-direction:column; gap:0.625rem; }
         .af-pc-item { display:flex; align-items:center; gap:0.625rem; font-family:'Syne',sans-serif; font-size:0.9375rem; color:#3d5c35; }
@@ -378,7 +380,7 @@ export default async function HomePage() {
                             radial-gradient(circle at 80% 20%, rgba(122,182,72,0.06) 0%, transparent 50%);
         }
         .af-cta-inner { position:relative; z-index:1; max-width:48rem; margin:0 auto; }
-        .af-cta-h { font-family:'Syne',sans-serif; font-size:clamp(2rem,5vw,3.5rem); font-weight:800; color:white; line-height:1.1; letter-spacing:-0.02em; margin-bottom:1rem; }
+        .af-cta-h { font-family:'Syne',sans-serif; font-size:clamp(2rem,4.5vw,3.5rem); font-weight:700; color:white; line-height:1.08; letter-spacing:-0.015em; font-feature-settings:"kern" 1,"liga" 1; margin-bottom:1rem; }
         .af-cta-p { font-size:1.125rem; color:rgba(255,255,255,0.65); margin-bottom:2.5rem; line-height:1.7; }
         .af-cta-btn {
           display:inline-flex; align-items:center; gap:0.625rem;
