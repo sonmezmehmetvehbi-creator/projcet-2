@@ -17,7 +17,7 @@ export default async function PricingPage() {
   } catch {}
 
   const FREE = [
-    'Up to 12 questions per set'
+    'Up to 12 questions per set',
     '2 question sets per day',
     '2 worksheets per day',
     'All subjects & grade levels',
@@ -27,7 +27,7 @@ export default async function PricingPage() {
   ]
 
   const PREMIUM = [
-    'Up to 30 questions per set'
+    'Up to 30 questions per set',
     'Unlimited question sets',
     'Unlimited worksheets',
     'All subjects & grade levels',
