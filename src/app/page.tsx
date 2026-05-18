@@ -575,7 +575,7 @@ export default async function HomePage() {
                 <div className="af-pc-name">Free</div>
                 <div><span className="af-pc-price">$0</span><span className="af-pc-per"> / month</span></div>
                 <ul className="af-pc-list">
-                  {['2 question sets per day','2 worksheets per day','All subjects & grades','PDF download','Session history'].map(f => (
+                  {['Up to 12 questions per set','2 question sets per day','2 worksheets per day','All subjects & grades','PDF download','Session history'].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g3)', flexShrink:0 }} />{f}
                     </li>
@@ -594,7 +594,7 @@ export default async function HomePage() {
                 </div>
                 <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.8125rem', color:'#7a9470', margin:'0.25rem 0 0' }}>Billed monthly · Cancel anytime</p>
                 <ul className="af-pc-list">
-                  {['Unlimited question sets','Unlimited worksheets','Faster generation (~15s)','No ads','Priority support','All subjects & grades'].map(f => (
+                  {['Up to 30 questions per set','Unlimited question sets','Unlimited worksheets','Faster generation (~15s)','No ads','Priority support','All subjects & grades'].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g)', flexShrink:0 }} />{f}
                     </li>
