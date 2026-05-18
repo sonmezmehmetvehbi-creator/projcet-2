@@ -20,7 +20,9 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
 
   const q = questions[current]
   const total = questions.length
-  const score = Object.values(answers).filter(a => a.correct === true).length
+  const score = Object.values(answers).filter(a =>
+  a.correct === true || a.frScore === '4/4' || a.frScore === '3/4'
+).length
 
   function selectMC(question: MCQuestion, choice: string) {
     if (answers[current]) return
