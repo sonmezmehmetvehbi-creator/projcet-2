@@ -472,27 +472,37 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                   return acc
                 }, {})
               ).map(([topic, data]) => {
-                const topicPct = Math.round((data.correct / data.total) * 100)
-                const isStrong = topicPct >= 70
-                return (
-                  <div key={topic}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.375rem' }}>
-                      <span style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)' }}>{topic}</span>
-                      <span style={{ fontSize:'0.8125rem', fontWeight:600, color: isStrong ? 'rgb(59,109,17)' : 'rgb(163,45,45)' }}>
-                        {data.correct}/{data.total} {isStrong ? '✓' : '✗'}
-                      </span>
-                    </div>
-                    <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.08)', borderRadius:'9999px', overflow:'hidden' }}>
-                      <div style={{
-                        height:'100%', borderRadius:'9999px',
-                        background: isStrong ? 'rgb(59,109,17)' : topicPct >= 40 ? 'rgb(232,160,32)' : 'rgb(163,45,45)',
-                        width:`${topicPct}%`,
-                        transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)',
-                      }} />
-                    </div>
-                  </div>
-                )
-              })}
+  const topicPct = Math.round((data.correct / data.total) * 100)
+  const barColor =
+    topicPct === 100 ? 'rgb(59,109,17)' :
+    topicPct >= 75  ? 'rgb(34,85,14)' :
+    topicPct >= 50  ? 'rgb(122,182,72)' :
+    topicPct >= 25  ? 'rgb(232,160,32)' :
+    topicPct > 0    ? 'rgb(200,75,20)' :
+                      'rgb(163,45,45)'
+  const labelColor =
+    topicPct >= 50 ? barColor : 'rgb(163,45,45)'
+  const checkmark = topicPct >= 50 ? '✓' : '✗'
+
+  return (
+    <div key={topic}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.375rem' }}>
+        <span style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)' }}>{topic}</span>
+        <span style={{ fontSize:'0.8125rem', fontWeight:600, color: labelColor }}>
+          {data.correct}/{data.total} {checkmark}
+        </span>
+      </div>
+      <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.08)', borderRadius:'9999px', overflow:'hidden' }}>
+        <div style={{
+          height:'100%', borderRadius:'9999px',
+          background: barColor,
+          width: `${topicPct}%`,
+          transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)',
+        }} />
+      </div>
+    </div>
+  )
+})}
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
               {correctTopics.length > 0 && (
