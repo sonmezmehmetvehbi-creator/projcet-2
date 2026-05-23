@@ -22,7 +22,7 @@ export default function GeneratePage() {
   const [topic, setTopic] = useState('')
   const [focus, setFocus] = useState('')
   const [outputType, setOutputType] = useState<OutputType>('questions')
-  const [questionCount, setQuestionCount] = useState(profile?.is_premium ? 15 : 10)
+  const [questionCount, setQuestionCount] = useState(10)
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>(['mc'])
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [error, setError] = useState('')
@@ -380,10 +380,9 @@ export default function GeneratePage() {
                       style={{ width:'100%', accentColor:'rgb(34,85,14)', cursor:'pointer' }} />
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', color:'rgb(107,107,88)', marginTop:'0.25rem' }}>
                       <span>3</span>
-<span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>
-  {profile?.is_premium ? '30 (Premium)' : '12 — '}
-  {!profile?.is_premium && <a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Upgrade for 30 ⚡</a>}
-</span>
+                      <span>
+                        {profile?.is_premium ? '30 (Premium)' : <><span>12 — </span><a href="/pricing" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Upgrade for 30 ⚡</a></>}
+                      </span>
                     </div>
                   </div>
 
@@ -450,6 +449,7 @@ export default function GeneratePage() {
 
 function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPremium: boolean }) {
   const [messageIndex, setMessageIndex] = useState(0)
+  const [triviaIndex, setTriviaIndex] = useState(() => Math.floor(Math.random() * 20))
   const [countdown, setCountdown] = useState(isPremium ? 18 : 30)
   const duration = isPremium ? 18 : 30
 
@@ -457,8 +457,36 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
     ? ['Reading up on your topic...', 'Writing your first question...', 'Mixing in some tricky ones...', 'Double-checking the answers...', 'Almost ready for you!']
     : ['Opening the textbooks...', 'Sketching out your worksheet...', 'Building the step-by-step guide...', 'Adding visuals and examples...', 'Polishing the final touches...']
 
+  const trivia = [
+    { emoji:'🧠', fact:'Your brain uses about 20% of your body\'s total energy — even though it\'s only 2% of your body weight.' },
+    { emoji:'😴', fact:'Sleeping after studying helps your brain consolidate memories up to 3x more effectively than staying awake.' },
+    { emoji:'✏️', fact:'Writing notes by hand beats typing — the slower pace forces your brain to process and summarize, boosting retention.' },
+    { emoji:'🎵', fact:'Studying with classical or lo-fi music at 60-70 BPM can improve focus by syncing with your brain\'s alpha waves.' },
+    { emoji:'🍅', fact:'The Pomodoro Technique — 25 min study, 5 min break — is scientifically proven to reduce mental fatigue and boost output.' },
+    { emoji:'🔁', fact:'The "spacing effect" shows that studying the same material across multiple days beats cramming it all in one session.' },
+    { emoji:'🧪', fact:'Testing yourself (like with flashcards or practice questions) is 50% more effective for long-term memory than re-reading.' },
+    { emoji:'💧', fact:'Being just 1-2% dehydrated can reduce cognitive performance by up to 10%. Keep water nearby when studying.' },
+    { emoji:'🏃', fact:'Even a 10-minute walk before studying increases blood flow to the brain and can improve focus for up to 2 hours.' },
+    { emoji:'🌙', fact:'The best time to review difficult material is right before bed — your brain actively consolidates it during deep sleep.' },
+    { emoji:'📖', fact:'The average person forgets 70% of new information within 24 hours without review. That\'s why practice questions matter.' },
+    { emoji:'🎯', fact:'Breaking a big topic into smaller chunks ("chunking") helps your brain store information more efficiently.' },
+    { emoji:'👁️', fact:'The human brain processes visual information 60,000 times faster than text — that\'s why diagrams and worksheets work so well.' },
+    { emoji:'☕', fact:'Caffeine improves short-term memory and focus, but only works if you don\'t consume it daily — tolerance builds fast.' },
+    { emoji:'🔗', fact:'Connecting new information to something you already know is the fastest way to make it stick permanently.' },
+    { emoji:'😅', fact:'Mild stress (like a test deadline) can actually sharpen focus — it triggers cortisol which boosts memory formation.' },
+    { emoji:'🗣️', fact:'Explaining a concept out loud as if teaching someone else — the "Feynman Technique" — is one of the most powerful study methods.' },
+    { emoji:'📱', fact:'Just having your phone visible (even face down) reduces working memory capacity by 10%, even if you\'re not using it.' },
+    { emoji:'🌿', fact:'Studying in natural light improves alertness and mood. Students in naturally lit rooms score 20% higher on tests.' },
+    { emoji:'🔢', fact:'The brain can only hold 4-7 pieces of new information in working memory at once — so short study sessions beat long marathons.' },
+  ]
+
   useEffect(() => {
     const interval = setInterval(() => setMessageIndex(i => (i + 1) % messages.length), 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const interval = setInterval(() => setTriviaIndex(i => (i + 1) % trivia.length), 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -468,9 +496,12 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
     return () => clearInterval(interval)
   }, [isPremium])
 
+  const currentTrivia = trivia[triviaIndex]
+
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1.5rem' }}>
-      <div style={{ textAlign:'center', maxWidth:'28rem', width:'100%' }}>
+      <div style={{ textAlign:'center', maxWidth:'32rem', width:'100%' }}>
+
         <div className="notebook-breathe" style={{ width:'200px', height:'160px', margin:'0 auto 2rem', position:'relative' }}>
           <svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" style={{ width:'100%', height:'100%' }}>
             <rect x="20" y="20" width="160" height="120" rx="8" fill="rgb(34,85,14)" />
@@ -503,16 +534,38 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
         <p style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.5rem', minHeight:'1.75rem' }}>
           {messages[messageIndex]}
         </p>
-        <p style={{ fontSize:'0.9375rem', color:'rgb(107,107,88)', marginBottom:'2rem' }}>
+        <p style={{ fontSize:'0.9375rem', color:'rgb(107,107,88)', marginBottom:'1.75rem' }}>
           {isPremium ? 'Generating your content...' : `Ready in ${countdown} second${countdown !== 1 ? 's' : ''}...`}
         </p>
 
-        <div style={{ width:'100%', height:'6px', background:'rgba(34,85,14,0.12)', borderRadius:'9999px', overflow:'hidden', marginBottom:'1.5rem' }}>
+        <div style={{ width:'100%', height:'6px', background:'rgba(34,85,14,0.12)', borderRadius:'9999px', overflow:'hidden', marginBottom:'2rem' }}>
           <div style={{
             height:'100%', borderRadius:'9999px',
             background:'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))',
             animation: `progressFill ${duration}s linear forwards`,
           }} />
+        </div>
+
+        {/* Trivia card */}
+        <div key={triviaIndex} style={{
+          padding:'1.25rem 1.5rem', borderRadius:'1rem',
+          background:'white', border:'1px solid rgba(34,85,14,0.1)',
+          boxShadow:'0 4px 16px rgba(34,85,14,0.06)',
+          marginBottom: !isPremium ? '1.25rem' : 0,
+          animation:'triviaFade 0.5s ease-in-out',
+          textAlign:'left',
+        }}>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:'0.75rem' }}>
+            <span style={{ fontSize:'1.5rem', flexShrink:0, marginTop:'0.125rem' }}>{currentTrivia.emoji}</span>
+            <div>
+              <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.375rem' }}>
+                Did you know?
+              </p>
+              <p style={{ fontSize:'0.9rem', color:'rgb(26,26,20)', lineHeight:1.65 }}>
+                {currentTrivia.fact}
+              </p>
+            </div>
+          </div>
         </div>
 
         {!isPremium && (
@@ -524,6 +577,11 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
           </div>
         )}
       </div>
+      <style>{`
+        @keyframes progressFill { from { width: 0% } to { width: 100% } }
+        @keyframes triviaFade { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+        @keyframes spin { to { transform: rotate(360deg) } }
+      `}</style>
     </div>
   )
 }
