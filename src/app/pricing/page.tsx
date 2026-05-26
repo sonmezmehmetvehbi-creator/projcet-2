@@ -21,9 +21,11 @@ export default async function PricingPage() {
     '2 question sets per day',
     '2 worksheets per day',
     'All subjects & grade levels',
-    'Session history',
-    'PDF download',
+    'Session history & PDF download',
     '30-second generation wait',
+    'Bonus generations on level up 🎁',
+    'XP & level system',
+    'Daily streak rewards 🔥',
   ]
 
   const PREMIUM = [
@@ -31,22 +33,35 @@ export default async function PricingPage() {
     'Unlimited question sets',
     'Unlimited worksheets',
     'All subjects & grade levels',
-    'Session history',
-    'PDF download',
-    '~15 second generation',
+    'Session history & PDF download',
+    '~15 second generation ⚡',
+    'No ads',
     'Priority support',
     'Early access to new features',
+    'XP & level system',
+    'Daily streak rewards 🔥',
+    'Streak XP multiplier boost 🔥',
+    'Dark mode at Level 5 🌙',
+    'Speed Mode at Level 8 ⚡',
+    'Legend border at Level 9 👑',
   ]
 
   const COMPARISON = [
-     { feature: 'Max Questions / sheet', free: '12', premium: '30' },
-    { feature: 'Questions / day', free: '2', premium: 'Unlimited' },
-    { feature: 'Worksheets / day', free: '2', premium: 'Unlimited' },
-    { feature: 'Generation wait', free: '30 seconds ⏱', premium: '~15 seconds ⚡' },
+    { feature: 'Max questions per set', free: '12', premium: '30' },
+    { feature: 'Question sets per day', free: '2', premium: 'Unlimited' },
+    { feature: 'Worksheets per day', free: '2', premium: 'Unlimited' },
+    { feature: 'Generation wait', free: '30 seconds', premium: '~15 seconds ⚡' },
+    { feature: 'Ads', free: '✓', premium: '✗ (No ads)' },
     { feature: 'Session history', free: '✓', premium: '✓' },
     { feature: 'PDF download', free: '✓', premium: '✓' },
     { feature: 'All subjects & grades', free: '✓', premium: '✓' },
-    { feature: 'Custom profile picture', free: '✓', premium: '✓' },
+    { feature: 'XP & level system', free: '✓', premium: '✓' },
+    { feature: 'Daily streak rewards', free: '✓', premium: '✓' },
+    { feature: 'Streak XP multiplier', free: '1x–2x', premium: 'Up to 5x 🔥' },
+    { feature: 'Bonus generations on level up', free: '✓ (one-time gifts)', premium: '✗ (unlimited anyway)' },
+    { feature: 'Dark mode (Level 5)', free: '✗', premium: '✓ 🌙' },
+    { feature: 'Speed Mode at Level 8', free: '✗', premium: '✓ ⚡' },
+    { feature: 'Legend border at Level 9', free: '✗', premium: '✓ 👑' },
     { feature: 'Priority support', free: '✗', premium: '✓' },
     { feature: 'Early access to features', free: '✗', premium: '✓' },
   ]
@@ -55,7 +70,7 @@ export default async function PricingPage() {
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
       <Navbar profile={profile} />
 
-      <div style={{ paddingTop:'6rem', paddingBottom:'5rem', padding:'6rem 1.5rem 5rem' }}>
+      <div style={{ padding:'6rem 1.5rem 5rem' }}>
         <div className="container-base" style={{ maxWidth:'56rem' }}>
 
           {/* Header */}
@@ -76,8 +91,7 @@ export default async function PricingPage() {
             <div className="card" style={{ padding:'2.5rem' }}>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>Free</h2>
               <div style={{ fontSize:'2.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'2rem' }}>
-                $0
-                <span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
+                $0<span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
               </div>
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 2rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
                 {FREE.map(f => (
@@ -113,8 +127,7 @@ export default async function PricingPage() {
                 Premium <span style={{ color:'rgb(217,119,6)' }}>⚡</span>
               </h2>
               <div style={{ fontSize:'2.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
-                $5.99
-                <span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
+                $5.99<span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
               </div>
               <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginBottom:'2rem' }}>Billed monthly · Cancel anytime</p>
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 2rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
@@ -137,6 +150,48 @@ export default async function PricingPage() {
                   Get Started →
                 </Link>
               )}
+            </div>
+          </div>
+
+          {/* Level rewards section */}
+          <div className="card" style={{ padding:'2rem', marginBottom:'2rem', background:'linear-gradient(135deg, rgba(34,85,14,0.02), rgba(122,182,72,0.03))' }}>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.375rem' }}>
+              🎮 Level Rewards
+            </h2>
+            <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'1.5rem' }}>
+              Earn XP by studying and unlock rewards as you level up. Takes months to reach the top — that's the point.
+            </p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'0.75rem' }}>
+              {[
+                { level:1, name:'Freshman', emoji:'📚', free:'Starting rank', premium:'Starting rank' },
+                { level:2, name:'Apprentice', emoji:'✏️', free:'🎁 +1 bonus generation', premium:'Level badge unlocked' },
+                { level:3, name:'Scholar', emoji:'🎓', free:'🎁 +2 bonus generations', premium:'Level badge unlocked' },
+                { level:4, name:'Analyst', emoji:'🔍', free:'Level badge', premium:'Level badge unlocked' },
+                { level:5, name:'Achiever', emoji:'⭐', free:'🎁 +3 bonus generations', premium:'🌙 Dark mode unlocked' },
+                { level:6, name:'Expert', emoji:'🧠', free:'Level badge', premium:'Level badge unlocked' },
+                { level:7, name:'Master', emoji:'🏆', free:'🎁 +5 bonus generations', premium:'Level badge unlocked' },
+                { level:8, name:'Prodigy', emoji:'⚡', free:'Level badge', premium:'⚡ Speed Mode (10s gen)' },
+                { level:9, name:'Sage', emoji:'🌟', free:'Level badge', premium:'👑 Legend border' },
+                { level:10, name:'Legend', emoji:'👑', free:'Legend status', premium:'Legend status + all rewards' },
+              ].map(l => (
+                <div key={l.level} style={{ padding:'1rem', borderRadius:'0.875rem', background:'white', border:'1px solid rgba(34,85,14,0.08)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.5rem' }}>
+                    <span style={{ fontSize:'1.25rem' }}>{l.emoji}</span>
+                    <div>
+                      <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>Level {l.level}</p>
+                      <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(26,26,20)' }}>{l.name}</p>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.25rem' }}>
+                    <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>
+                      <span style={{ fontWeight:600, color:'rgb(26,26,20)' }}>Free:</span> {l.free}
+                    </p>
+                    <p style={{ fontSize:'0.75rem', color:'rgb(34,85,14)' }}>
+                      <span style={{ fontWeight:600 }}>Premium:</span> {l.premium}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
