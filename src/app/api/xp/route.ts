@@ -14,7 +14,6 @@ const LEVELS = [
   { level: 10, name: 'Legend', emoji: '👑', xpRequired: 13000 },
 ]
 
-// Bonus generations awarded at level up for free users
 const FREE_LEVEL_REWARDS: Record<number, number> = {
   2: 1,
   3: 2,
@@ -44,8 +43,8 @@ export async function POST(request: Request) {
     const {
       correctAnswers,
       totalAnswers,
-      frScores, // array of strings like ["4/4", "2/4", "0/4"]
-      outputType, // 'questions' or 'worksheet'
+      frScores,
+      outputType,
       isFirstSessionToday,
     } = await request.json()
 
@@ -57,18 +56,34 @@ export async function POST(request: Request) {
 
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
-    // ── Calculate XP earned ──────────────────────────────────────────────
+    // ── Streak multiplier ────────────────────────────────────────────────
+    const streakCount = profile.streak_count ?? 0
+    const getMultiplierTier = (streak: number) => {
+      if (streak >= 30) return 5
+      if (streak >= 14) return 4
+      if (streak >= 7) return 3
+      if (streak >= 3) return 2
+      return 1
+    }
+    const multiplierTier = getMultiplierTier(streakCount)
+    const mcCorrectBonus  = [5, 6, 7, 8, 10][multiplierTier - 1]
+    const fr4Bonus        = [10, 12, 14, 16, 18][multiplierTier - 1]
+    const fr3Bonus        = [7,  8,  9, 11, 13][multiplierTier - 1]
+    const fr2Bonus        = [4,  5,  6,  7,  8][multiplierTier - 1]
 
+    // ── Calculate XP earned ──────────────────────────────────────────────
     let xpEarned = 0
     const breakdown: { reason: string; amount: number }[] = []
 
     if (outputType === 'questions') {
-      // +5 per correct MC, +1 per incorrect
-      const mcCorrect = correctAnswers ?? 0
+      const mcCorrect   = correctAnswers ?? 0
       const mcIncorrect = (totalAnswers ?? 0) - mcCorrect - (frScores?.length ?? 0)
+
       if (mcCorrect > 0) {
-        xpEarned += mcCorrect * 5
-        breakdown.push({ reason: `${mcCorrect} correct answers`, amount: mcCorrect * 5 })
+        const amount = mcCorrect * mcCorrectBonus
+        xpEarned += amount
+        const streakLabel = streakCount >= 3 ? ' 🔥' : ''
+        breakdown.push({ reason: `${mcCorrect} correct answers (+${mcCorrectBonus} each${streakLabel})`, amount })
       }
       if (mcIncorrect > 0) {
         xpEarned += mcIncorrect * 1
@@ -78,24 +93,24 @@ export async function POST(request: Request) {
       // FR scoring
       if (frScores && frScores.length > 0) {
         for (const score of frScores) {
-  const numerator = parseInt(score.split('/')[0])
-  if (numerator === 4) {
-    xpEarned += 23
-    breakdown.push({ reason: 'Perfect FR answer (4/4)', amount: 23 })
-  } else if (numerator === 3) {
-    xpEarned += 16
-    breakdown.push({ reason: 'Great FR answer (3/4)', amount: 16 })
-  } else if (numerator === 2) {
-    xpEarned += 8
-    breakdown.push({ reason: 'Good FR answer (2/4)', amount: 8 })
-  } else if (numerator === 1) {
-    xpEarned += 3
-    breakdown.push({ reason: 'FR answer attempted (1/4)', amount: 3 })
-  } else {
-    xpEarned += 1
-    breakdown.push({ reason: 'FR answer attempted (0/4)', amount: 1 })
-  }
-}
+          const numerator = parseInt(score.split('/')[0])
+          if (numerator === 4) {
+            xpEarned += fr4Bonus
+            breakdown.push({ reason: `Perfect FR answer (4/4)${streakCount >= 3 ? ' 🔥' : ''}`, amount: fr4Bonus })
+          } else if (numerator === 3) {
+            xpEarned += fr3Bonus
+            breakdown.push({ reason: `Great FR answer (3/4)${streakCount >= 3 ? ' 🔥' : ''}`, amount: fr3Bonus })
+          } else if (numerator === 2) {
+            xpEarned += fr2Bonus
+            breakdown.push({ reason: 'Good FR answer (2/4)', amount: fr2Bonus })
+          } else if (numerator === 1) {
+            xpEarned += 3
+            breakdown.push({ reason: 'FR answer attempted (1/4)', amount: 3 })
+          } else {
+            xpEarned += 1
+            breakdown.push({ reason: 'FR answer attempted (0/4)', amount: 1 })
+          }
+        }
       }
 
       // Session completion bonus
@@ -115,7 +130,6 @@ export async function POST(request: Request) {
     }
 
     // ── Streak calculation ───────────────────────────────────────────────
-
     const today = new Date().toISOString().split('T')[0]
     const lastStudy = profile.last_study_date
     let newStreak = profile.streak_count ?? 0
@@ -135,33 +149,32 @@ export async function POST(request: Request) {
         } else if (lastStudy === today) {
           newStreak = profile.streak_count ?? 1
         } else {
-          newStreak = 1 // reset
+          newStreak = 1
         }
       }
 
       // Streak bonuses
-      if (newStreak === 3) { streakBonus = 15; streakMessage = '3-day streak bonus!' }
-      else if (newStreak === 7) { streakBonus = 40; streakMessage = '7-day streak bonus!' }
+      if (newStreak === 3)       { streakBonus = 15;  streakMessage = '3-day streak bonus!' }
+      else if (newStreak === 7)  { streakBonus = 40;  streakMessage = '7-day streak bonus!' }
+      else if (newStreak === 14) { streakBonus = 75;  streakMessage = '14-day streak bonus!' }
       else if (newStreak === 30) { streakBonus = 150; streakMessage = '30-day streak!' }
-      else if (newStreak > 1) { streakBonus = 10; streakMessage = `${newStreak}-day streak!` }
+      else if (newStreak > 1)    { streakBonus = 10;  streakMessage = `${newStreak}-day streak!` }
 
       if (streakBonus > 0) {
         xpEarned += streakBonus
-        breakdown.push({ reason: streakMessage, amount: streakBonus })
+        breakdown.push({ reason: `🔥 ${streakMessage}`, amount: streakBonus })
       }
     }
 
     // ── Level up check ───────────────────────────────────────────────────
-
-    const oldXP = profile.xp ?? 0
-    const newXP = oldXP + xpEarned
+    const oldXP    = profile.xp ?? 0
+    const newXP    = oldXP + xpEarned
     const oldLevel = getLevelFromXP(oldXP)
     const newLevel = getLevelFromXP(newXP)
     const didLevelUp = newLevel.level > oldLevel.level
-    const nextLevel = getNextLevel(newLevel.level)
+    const nextLevel  = getNextLevel(newLevel.level)
 
-    // ── Bonus generations for free users ─────────────────────────────────
-
+    // ── Bonus generations for free users on level up ──────────────────────
     let bonusGenerationsAdded = 0
     if (didLevelUp && !profile.is_premium) {
       for (let l = oldLevel.level + 1; l <= newLevel.level; l++) {
@@ -172,7 +185,6 @@ export async function POST(request: Request) {
     }
 
     // ── Update profile ───────────────────────────────────────────────────
-
     await supabase
       .from('profiles')
       .update({
