@@ -569,13 +569,23 @@ export default async function HomePage() {
           <div className="af-section-inner" style={{ textAlign:'center' }}>
             <div className="af-label" style={{ justifyContent:'center' }}>Pricing</div>
             <h2 className="af-h2">Simple, honest pricing</h2>
-            <p className="af-p" style={{ margin:'0 auto' }}>Start free, upgrade when you need more.</p>
+            <p className="af-p" style={{ margin:'0 auto' }}>Start free, upgrade when you need more. No hidden fees.</p>
             <div className="af-pricing">
+              {/* Free */}
               <div className="af-pc">
                 <div className="af-pc-name">Free</div>
                 <div><span className="af-pc-price">$0</span><span className="af-pc-per"> / month</span></div>
                 <ul className="af-pc-list">
-                  {['Up to 12 questions per set','2 question sets per day','2 worksheets per day','All subjects & grades','PDF download','Session history'].map(f => (
+                  {[
+                    'Up to 12 questions per set',
+                    '2 question sets per day',
+                    '2 worksheets per day',
+                    'All subjects & grades',
+                    'PDF download & session history',
+                    'XP & level system 🎮',
+                    'Daily streak rewards 🔥',
+                    'Bonus generations on level up 🎁',
+                  ].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g3)', flexShrink:0 }} />{f}
                     </li>
@@ -585,6 +595,8 @@ export default async function HomePage() {
                   Get started free
                 </Link>
               </div>
+
+              {/* Premium */}
               <div className="af-pc hot">
                 <div className="af-pc-badge">MOST POPULAR</div>
                 <div className="af-pc-name">Premium ⚡</div>
@@ -592,9 +604,20 @@ export default async function HomePage() {
                   <span className="af-pc-price">$5.99</span>
                   <span className="af-pc-per"> / month</span>
                 </div>
-                <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.8125rem', color:'#7a9470', margin:'0.25rem 0 0' }}>Billed monthly · Cancel anytime</p>
+                <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.8125rem', color:'#7a9470', margin:'0.25rem 0 0.5rem' }}>Billed monthly · Cancel anytime</p>
                 <ul className="af-pc-list">
-                  {['Up to 30 questions per set','Unlimited question sets','Unlimited worksheets','Faster generation (~15s)','No ads','Priority support','All subjects & grades'].map(f => (
+                  {[
+                    'Up to 30 questions per set',
+                    'Unlimited question sets & worksheets',
+                    'Faster generation (~15s)',
+                    'No ads',
+                    'Priority support',
+                    'XP streak multiplier (up to 5x) 🔥',
+                    'Dark mode at Level 5 🌙',
+                    'Speed Mode at Level 8 ⚡',
+                    'Legend border at Level 9 👑',
+                    'Early access to new features',
+                  ].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g)', flexShrink:0 }} />{f}
                     </li>
@@ -605,6 +628,38 @@ export default async function HomePage() {
                 </Link>
               </div>
             </div>
+
+            {/* Level rewards mini preview */}
+            <div style={{ marginTop:'2rem', padding:'1.5rem', borderRadius:'1.25rem', background:'white', border:'1px solid rgba(34,85,14,0.1)', maxWidth:'46rem', marginLeft:'auto', marginRight:'auto' }}>
+              <p style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'0.875rem', color:'#0a1a06', marginBottom:'1rem' }}>
+                🎮 Level up as you study — unlock rewards along the way
+              </p>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:'0.5rem', flexWrap:'wrap' }}>
+                {[
+                  { level:1, name:'Freshman', emoji:'📚' },
+                  { level:2, name:'Apprentice', emoji:'✏️' },
+                  { level:3, name:'Scholar', emoji:'🎓' },
+                  { level:5, name:'Achiever', emoji:'⭐' },
+                  { level:7, name:'Master', emoji:'🏆' },
+                  { level:10, name:'Legend', emoji:'👑' },
+                ].map(l => (
+                  <div key={l.level} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.25rem', flex:1, minWidth:'60px' }}>
+                    <span style={{ fontSize:'1.25rem' }}>{l.emoji}</span>
+                    <span style={{ fontFamily:'Syne,sans-serif', fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)' }}>Lv.{l.level}</span>
+                    <span style={{ fontFamily:'Syne,sans-serif', fontSize:'0.625rem', color:'#7a9470' }}>{l.name}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:'flex', height:'4px', borderRadius:'9999px', overflow:'hidden', marginTop:'0.75rem', gap:'2px' }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div key={i} style={{ flex:1, background: i < 3 ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.12)', borderRadius:'9999px' }} />
+                ))}
+              </div>
+              <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.75rem', color:'#7a9470', marginTop:'0.5rem' }}>
+                Takes months to reach Legend — that's the point 👑
+              </p>
+            </div>
+
             <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.875rem', color:'#7a9470', marginTop:'1.5rem' }}>
               🔒 Secure payment via Stripe · Cancel any time
             </p>
