@@ -78,22 +78,24 @@ export async function POST(request: Request) {
       // FR scoring
       if (frScores && frScores.length > 0) {
         for (const score of frScores) {
-          xpEarned += 8 // base for submitting
-          const numerator = parseInt(score.split('/')[0])
-          if (numerator === 4) {
-            xpEarned += 15
-            breakdown.push({ reason: 'Perfect FR answer (4/4)', amount: 23 })
-          } else if (numerator === 3) {
-            xpEarned += 8
-            breakdown.push({ reason: 'Great FR answer (3/4)', amount: 16 })
-          } else if (numerator === 2) {
-            breakdown.push({ reason: 'FR answer submitted (2/4)', amount: 8 })
-          } else if (numerator === 1) {
-            breakdown.push({ reason: 'FR answer submitted (1/4)', amount: 8 })
-          } else {
-            breakdown.push({ reason: 'FR answer submitted', amount: 8 })
-          }
-        }
+  const numerator = parseInt(score.split('/')[0])
+  if (numerator === 4) {
+    xpEarned += 23
+    breakdown.push({ reason: 'Perfect FR answer (4/4)', amount: 23 })
+  } else if (numerator === 3) {
+    xpEarned += 16
+    breakdown.push({ reason: 'Great FR answer (3/4)', amount: 16 })
+  } else if (numerator === 2) {
+    xpEarned += 8
+    breakdown.push({ reason: 'Good FR answer (2/4)', amount: 8 })
+  } else if (numerator === 1) {
+    xpEarned += 3
+    breakdown.push({ reason: 'FR answer attempted (1/4)', amount: 3 })
+  } else {
+    xpEarned += 1
+    breakdown.push({ reason: 'FR answer attempted (0/4)', amount: 1 })
+  }
+}
       }
 
       // Session completion bonus
