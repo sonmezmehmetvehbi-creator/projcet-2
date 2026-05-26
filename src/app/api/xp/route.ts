@@ -67,9 +67,9 @@ export async function POST(request: Request) {
     }
     const multiplierTier = getMultiplierTier(streakCount)
     const mcCorrectBonus  = [5, 6, 7, 8, 10][multiplierTier - 1]
-    const fr4Bonus        = [10, 12, 14, 16, 18][multiplierTier - 1]
-    const fr3Bonus        = [7,  8,  9, 11, 13][multiplierTier - 1]
-    const fr2Bonus        = [4,  5,  6,  7,  8][multiplierTier - 1]
+    const fr4Bonus        = [8, 9, 10, 12, 14][multiplierTier - 1]
+    const fr3Bonus        = [5,  6,  7,  8,  9][multiplierTier - 1]
+    const fr2Bonus        = [3,  3,  4,  4,  5][multiplierTier - 1]
 
     // ── Calculate XP earned ──────────────────────────────────────────────
     let xpEarned = 0
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
             xpEarned += fr2Bonus
             breakdown.push({ reason: 'Good FR answer (2/4)', amount: fr2Bonus })
           } else if (numerator === 1) {
-            xpEarned += 3
+            xpEarned += 2
             breakdown.push({ reason: 'FR answer attempted (1/4)', amount: 3 })
           } else {
             xpEarned += 1
