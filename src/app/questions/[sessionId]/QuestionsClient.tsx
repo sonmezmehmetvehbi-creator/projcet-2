@@ -86,9 +86,11 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
       setAnswers(prev => ({ ...prev, [current]: { answer: studentAnswer, correct: null, topic: (question as any).topic, frScore: data.score } }))
 
       const score = data.score
-      if (score === '4/4') spawnFloatingXP(23)
-      else if (score === '3/4') spawnFloatingXP(16)
-      else spawnFloatingXP(8)
+if (score === '4/4') spawnFloatingXP(8)
+else if (score === '3/4') spawnFloatingXP(5)
+else if (score === '2/4') spawnFloatingXP(3)
+else if (score === '1/4') spawnFloatingXP(2)
+else spawnFloatingXP(1)
     } catch {}
     setFrLoading(prev => ({ ...prev, [current]: false }))
   }
