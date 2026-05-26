@@ -1,12 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, ArrowLeft, ArrowRight, RotateCcw, Download } from 'lucide-react'
 import type { MCQuestion, FRQuestion, Question } from '@/types'
 import MathText from '@/components/ui/MathText'
+import XPModal from '@/components/ui/XPModal'
 
 interface Props { session: any; isPremium?: boolean }
+
+interface FloatingXP {
+  id: number
+  amount: number
+  x: number
+  y: number
+}
 
 export default function QuestionsClient({ session, isPremium = false }: Props) {
   const questions: Question[] = session.content?.questions ?? []
@@ -16,18 +24,45 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
   const [frFeedback, setFrFeedback] = useState<Record<number, { score: string; feedback: string }>>({})
   const [frLoading, setFrLoading] = useState<Record<number, boolean>>({})
   const [showSummary, setShowSummary] = useState(false)
+  const [xpResult, setXpResult] = useState<any>(null)
+  const [floatingXPs, setFloatingXPs] = useState<FloatingXP[]>([])
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0)
+  const [showFireBanner, setShowFireBanner] = useState(false)
+  const [xpLoading, setXpLoading] = useState(false)
+  const floatingIdRef = useRef(0)
   const router = useRouter()
 
   const q = questions[current]
   const total = questions.length
   const score = Object.values(answers).filter(a =>
-  a.correct === true || a.frScore === '4/4' || a.frScore === '3/4'
-).length
+    a.correct === true || a.frScore === '4/4' || a.frScore === '3/4'
+  ).length
+
+  function spawnFloatingXP(amount: number) {
+    const id = floatingIdRef.current++
+    const x = 40 + Math.random() * 20
+    const y = 30 + Math.random() * 20
+    setFloatingXPs(prev => [...prev, { id, amount, x, y }])
+    setTimeout(() => setFloatingXPs(prev => prev.filter(f => f.id !== id)), 1500)
+  }
 
   function selectMC(question: MCQuestion, choice: string) {
     if (answers[current]) return
     const correct = choice === question.correctAnswer
     setAnswers(prev => ({ ...prev, [current]: { answer: choice, correct, topic: (question as any).topic } }))
+
+    if (correct) {
+      spawnFloatingXP(5)
+      const newConsec = consecutiveCorrect + 1
+      setConsecutiveCorrect(newConsec)
+      if (newConsec >= 3) {
+        setShowFireBanner(true)
+        setTimeout(() => setShowFireBanner(false), 2500)
+      }
+    } else {
+      spawnFloatingXP(1)
+      setConsecutiveCorrect(0)
+    }
   }
 
   async function submitFR(question: FRQuestion) {
@@ -48,8 +83,12 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
       })
       const data = await res.json()
       setFrFeedback(prev => ({ ...prev, [current]: data }))
-      // Store frScore so summary can use it for color/label
       setAnswers(prev => ({ ...prev, [current]: { answer: studentAnswer, correct: null, topic: (question as any).topic, frScore: data.score } }))
+
+      const score = data.score
+      if (score === '4/4') spawnFloatingXP(23)
+      else if (score === '3/4') spawnFloatingXP(16)
+      else spawnFloatingXP(8)
     } catch {}
     setFrLoading(prev => ({ ...prev, [current]: false }))
   }
@@ -69,28 +108,122 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
     setTimeout(() => { printWindow.print(); printWindow.close() }, 500)
   }
 
+  async function handleFinish(finalAnswers: typeof answers) {
+    setXpLoading(true)
+    try {
+      const correctAnswers = Object.values(finalAnswers).filter(a => a.correct === true).length
+      const frScores = Object.values(finalAnswers)
+        .filter(a => a.correct === null && a.frScore)
+        .map(a => a.frScore!)
+
+      const today = new Date().toISOString().split('T')[0]
+      const lastStudy = localStorage.getItem('lastStudyDate')
+      const isFirstSessionToday = lastStudy !== today
+      if (isFirstSessionToday) localStorage.setItem('lastStudyDate', today)
+
+      const res = await fetch('/api/xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          correctAnswers,
+          totalAnswers: Object.keys(finalAnswers).length,
+          frScores,
+          outputType: 'questions',
+          isFirstSessionToday,
+        }),
+      })
+      const data = await res.json()
+      if (!data.error) setXpResult(data)
+    } catch {}
+    setXpLoading(false)
+    setShowSummary(true)
+  }
+
   function next() {
-    if (current < total - 1) setCurrent(c => c + 1)
-    else setShowSummary(true)
+    if (current < total - 1) {
+      setCurrent(c => c + 1)
+    } else {
+      handleFinish(answers)
+    }
   }
 
   function prev() { if (current > 0) setCurrent(c => c - 1) }
 
-  if (showSummary) return (
+  if (xpResult && showSummary) return (
+    <>
+      <Summary
+        questions={questions}
+        answers={answers}
+        score={score}
+        total={total}
+        session={session}
+        onRestart={() => { setAnswers({}); setFrInputs({}); setFrFeedback({}); setCurrent(0); setShowSummary(false); setXpResult(null); setConsecutiveCorrect(0) }}
+      />
+      <XPModal result={xpResult} onClose={() => setXpResult(null)} />
+    </>
+  )
+
+  if (showSummary && !xpResult) return (
     <Summary
       questions={questions}
       answers={answers}
       score={score}
       total={total}
       session={session}
-      onRestart={() => { setAnswers({}); setFrInputs({}); setFrFeedback({}); setCurrent(0); setShowSummary(false) }}
+      onRestart={() => { setAnswers({}); setFrInputs({}); setFrFeedback({}); setCurrent(0); setShowSummary(false); setConsecutiveCorrect(0) }}
     />
   )
 
   if (!q) return <div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>No questions found.</div>
 
   return (
-    <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
+    <div style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative' }}>
+
+      {/* Floating XP animations */}
+      {floatingXPs.map(f => (
+        <div key={f.id} style={{
+          position:'fixed',
+          left:`${f.x}%`,
+          top:`${f.y}%`,
+          zIndex:9999,
+          pointerEvents:'none',
+          fontFamily:'Syne, sans-serif',
+          fontWeight:800,
+          fontSize:'1.25rem',
+          color: f.amount >= 15 ? 'rgb(34,85,14)' : f.amount >= 5 ? 'rgb(74,122,40)' : 'rgb(107,107,88)',
+          animation:'floatXP 1.4s ease-out forwards',
+          textShadow:'0 2px 8px rgba(0,0,0,0.15)',
+        }}>
+          +{f.amount} XP
+        </div>
+      ))}
+
+      {/* On fire banner */}
+      {showFireBanner && (
+        <div style={{
+          position:'fixed', top:'5rem', left:'50%', transform:'translateX(-50%)',
+          zIndex:9998, background:'linear-gradient(135deg, rgb(34,85,14), rgb(74,122,40))',
+          color:'white', padding:'0.625rem 1.5rem', borderRadius:'9999px',
+          fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'1rem',
+          boxShadow:'0 4px 20px rgba(34,85,14,0.4)',
+          animation:'fireBanner 0.4s cubic-bezier(0.16,1,0.3,1)',
+          display:'flex', alignItems:'center', gap:'0.5rem',
+          whiteSpace:'nowrap',
+        }}>
+          🔥 On fire! {consecutiveCorrect} in a row!
+        </div>
+      )}
+
+      {/* Loading overlay */}
+      {xpLoading && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', zIndex:9990, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(2px)' }}>
+          <div style={{ background:'white', borderRadius:'1rem', padding:'2rem', textAlign:'center' }}>
+            <div style={{ width:'2rem', height:'2rem', border:'3px solid rgba(34,85,14,0.2)', borderTop:'3px solid rgb(34,85,14)', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 1rem' }} />
+            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'rgb(26,26,20)' }}>Calculating your XP...</p>
+          </div>
+        </div>
+      )}
+
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'48rem' }}>
 
         <div style={{ marginBottom:'1.5rem' }}>
@@ -161,6 +294,20 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes floatXP {
+          0% { opacity:0; transform:translateY(0) scale(0.8); }
+          20% { opacity:1; transform:translateY(-8px) scale(1.1); }
+          80% { opacity:1; transform:translateY(-40px) scale(1); }
+          100% { opacity:0; transform:translateY(-60px) scale(0.9); }
+        }
+        @keyframes fireBanner {
+          from { opacity:0; transform:translateX(-50%) translateY(-10px) scale(0.9); }
+          to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+      `}</style>
     </div>
   )
 }
@@ -217,25 +364,23 @@ function MCOptions({ question, answered, onSelect }: {
   )
 }
 
-// Returns colors/label based on FR score string e.g. "3/4"
 function getFRColors(score: string) {
   switch (score) {
-    case '4/4': return { bg:'rgb(234,243,222)',          border:'rgba(59,109,17,0.2)',    title:'rgb(59,109,17)',    text:'rgba(59,109,17,0.85)',   emoji:'🎉', label:'Excellent!' }
-    case '3/4': return { bg:'rgba(34,85,14,0.06)',       border:'rgba(34,85,14,0.18)',    title:'rgb(34,85,14)',     text:'rgba(34,85,14,0.8)',     emoji:'👍', label:'Good work!' }
-    case '2/4': return { bg:'rgba(232,160,32,0.08)',     border:'rgba(232,160,32,0.3)',   title:'rgb(180,120,10)',   text:'rgba(180,120,10,0.9)',   emoji:'📚', label:'Halfway there' }
-    case '1/4': return { bg:'rgba(220,80,20,0.07)',      border:'rgba(220,80,20,0.22)',   title:'rgb(200,75,20)',    text:'rgba(200,75,20,0.85)',   emoji:'💪', label:'Keep practicing' }
-    default:    return { bg:'rgb(252,235,235)',           border:'rgba(163,45,45,0.2)',    title:'rgb(163,45,45)',    text:'rgba(163,45,45,0.85)',   emoji:'❌', label:'Needs review' }
+    case '4/4': return { bg:'rgb(234,243,222)', border:'rgba(59,109,17,0.2)', title:'rgb(59,109,17)', text:'rgba(59,109,17,0.85)', emoji:'🎉', label:'Excellent!' }
+    case '3/4': return { bg:'rgba(34,85,14,0.06)', border:'rgba(34,85,14,0.18)', title:'rgb(34,85,14)', text:'rgba(34,85,14,0.8)', emoji:'👍', label:'Good work!' }
+    case '2/4': return { bg:'rgba(232,160,32,0.08)', border:'rgba(232,160,32,0.3)', title:'rgb(180,120,10)', text:'rgba(180,120,10,0.9)', emoji:'📚', label:'Halfway there' }
+    case '1/4': return { bg:'rgba(220,80,20,0.07)', border:'rgba(220,80,20,0.22)', title:'rgb(200,75,20)', text:'rgba(200,75,20,0.85)', emoji:'💪', label:'Keep practicing' }
+    default: return { bg:'rgb(252,235,235)', border:'rgba(163,45,45,0.2)', title:'rgb(163,45,45)', text:'rgba(163,45,45,0.85)', emoji:'❌', label:'Needs review' }
   }
 }
 
-// Maps a score string to a summary badge style (used in question list at end)
 function getFRSummaryStyle(score: string): { bg: string; color: string; label: string } {
   switch (score) {
-    case '4/4': return { bg:'rgb(234,243,222)',      color:'rgb(59,109,17)',   label:`✓ ${score}` }
-    case '3/4': return { bg:'rgba(34,85,14,0.08)',   color:'rgb(34,85,14)',    label:`✓ ${score}` }
+    case '4/4': return { bg:'rgb(234,243,222)', color:'rgb(59,109,17)', label:`✓ ${score}` }
+    case '3/4': return { bg:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)', label:`✓ ${score}` }
     case '2/4': return { bg:'rgba(232,160,32,0.12)', color:'rgb(180,120,10)', label:`~ ${score}` }
-    case '1/4': return { bg:'rgba(220,80,20,0.09)',  color:'rgb(200,75,20)',   label:`✗ ${score}` }
-    default:    return { bg:'rgb(252,235,235)',       color:'rgb(163,45,45)',   label:'Review' }
+    case '1/4': return { bg:'rgba(220,80,20,0.09)', color:'rgb(200,75,20)', label:`✗ ${score}` }
+    default: return { bg:'rgb(252,235,235)', color:'rgb(163,45,45)', label:'Review' }
   }
 }
 
@@ -257,15 +402,11 @@ function FRInput({ question, value, onChange, onSubmit, loading, feedback, answe
         </button>
       )}
       {feedback && colors && (
-        <div style={{
-          padding:'1.25rem', borderRadius:'0.875rem',
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
-        }}>
-          <p style={{ fontWeight:700, color: colors.title, marginBottom:'0.5rem', fontSize:'1rem' }}>
+        <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:colors.bg, border:`1px solid ${colors.border}` }}>
+          <p style={{ fontWeight:700, color:colors.title, marginBottom:'0.5rem', fontSize:'1rem' }}>
             {colors.emoji} {colors.label} — Score: {feedback.score}
           </p>
-          <p style={{ fontSize:'0.9375rem', color: colors.text, lineHeight:1.7 }}>{feedback.feedback}</p>
+          <p style={{ fontSize:'0.9375rem', color:colors.text, lineHeight:1.7 }}>{feedback.feedback}</p>
         </div>
       )}
     </div>
@@ -299,9 +440,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
       wrongByTopic[topic].questions.push(q)
     } else if (a.correct === true) {
       if (!correctTopics.includes(topic)) correctTopics.push(topic)
-    }
-    // FR with score 3/4 or 4/4 counts as a strong area
-    else if (a.correct === null && (a.frScore === '4/4' || a.frScore === '3/4')) {
+    } else if (a.correct === null && (a.frScore === '4/4' || a.frScore === '3/4')) {
       if (!correctTopics.includes(topic)) correctTopics.push(topic)
     }
   })
@@ -329,7 +468,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           subject: session.subject,
           grade: session.grade,
           topic: session.topic,
-          focus: `Focus ONLY on these weak areas: ${wrongTopicNames}. Mix in some questions similar to the ones the student got wrong.`,
+          focus: `Focus ONLY on these weak areas: ${wrongTopicNames}.`,
           outputType: 'questions',
           questionCount: retryCount,
           questionTypes: ['mc'],
@@ -342,9 +481,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
         setRetryCurrent(0)
         setRetryAnswers({})
       }
-    } catch (err) {
-      console.error('Retry error:', err)
-    }
+    } catch (err) { console.error('Retry error:', err) }
     setRetryLoading(false)
   }
 
@@ -387,7 +524,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
               <div style={{ height:'100%', background:'rgb(232,160,32)', borderRadius:'9999px', width:`${(Object.keys(retryAnswers).length / retryQuestions.length) * 100}%`, transition:'width 0.3s' }} />
             </div>
           </div>
-
           <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
             <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
               Question {retryCurrent + 1} of {retryQuestions.length}
@@ -431,7 +567,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
               />
             )}
           </div>
-
           <div style={{ display:'flex', justifyContent:'space-between' }}>
             <button onClick={() => setRetryCurrent(c => Math.max(0, c - 1))} disabled={retryCurrent === 0} className="btn-secondary" style={{ padding:'0.625rem 1.25rem' }}>
               <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Previous
@@ -448,7 +583,6 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
   return (
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'44rem' }}>
-
         <div className="card" style={{ padding:'2.5rem', textAlign:'center', marginBottom:'1.5rem' }}>
           <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>{msg.emoji}</div>
           <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>{msg.title}</h1>
@@ -467,58 +601,38 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                   if (!acc[topic]) acc[topic] = { correct: 0, total: 0 }
                   acc[topic].total++
                   if (answers[i]?.correct === true) acc[topic].correct++
-                  // Count FR 3/4 and 4/4 as correct in the breakdown bar
                   else if (answers[i]?.frScore === '4/4' || answers[i]?.frScore === '3/4') acc[topic].correct++
                   return acc
                 }, {})
               ).map(([topic, data]) => {
-  const topicPct = Math.round((data.correct / data.total) * 100)
-  const barColor =
-    topicPct === 100 ? 'rgb(59,109,17)' :
-    topicPct >= 75  ? 'rgb(34,85,14)' :
-    topicPct >= 50  ? 'rgb(122,182,72)' :
-    topicPct >= 25  ? 'rgb(232,160,32)' :
-    topicPct > 0    ? 'rgb(200,75,20)' :
-                      'rgb(163,45,45)'
-  const labelColor =
-    topicPct >= 50 ? barColor : 'rgb(163,45,45)'
-  const checkmark = topicPct >= 50 ? '✓' : '✗'
-
-  return (
-    <div key={topic}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.375rem' }}>
-        <span style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)' }}>{topic}</span>
-        <span style={{ fontSize:'0.8125rem', fontWeight:600, color: labelColor }}>
-          {data.correct}/{data.total} {checkmark}
-        </span>
-      </div>
-      <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.08)', borderRadius:'9999px', overflow:'hidden' }}>
-        <div style={{
-          height:'100%', borderRadius:'9999px',
-          background: barColor,
-          width: `${topicPct}%`,
-          transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)',
-        }} />
-      </div>
-    </div>
-  )
-})}
+                const topicPct = Math.round((data.correct / data.total) * 100)
+                const barColor = topicPct === 100 ? 'rgb(59,109,17)' : topicPct >= 75 ? 'rgb(34,85,14)' : topicPct >= 50 ? 'rgb(122,182,72)' : topicPct >= 25 ? 'rgb(232,160,32)' : topicPct > 0 ? 'rgb(200,75,20)' : 'rgb(163,45,45)'
+                return (
+                  <div key={topic}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.375rem' }}>
+                      <span style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)' }}>{topic}</span>
+                      <span style={{ fontSize:'0.8125rem', fontWeight:600, color: topicPct >= 50 ? barColor : 'rgb(163,45,45)' }}>
+                        {data.correct}/{data.total} {topicPct >= 50 ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.08)', borderRadius:'9999px', overflow:'hidden' }}>
+                      <div style={{ height:'100%', borderRadius:'9999px', background:barColor, width:`${topicPct}%`, transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
               {correctTopics.length > 0 && (
                 <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgb(234,243,222)', border:'1px solid rgba(59,109,17,0.2)' }}>
                   <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(59,109,17)', marginBottom:'0.5rem' }}>💪 Strong areas</p>
-                  {correctTopics.map(t => (
-                    <p key={t} style={{ fontSize:'0.8125rem', color:'rgb(59,109,17)', lineHeight:1.6 }}>• {t}</p>
-                  ))}
+                  {correctTopics.map(t => <p key={t} style={{ fontSize:'0.8125rem', color:'rgb(59,109,17)', lineHeight:1.6 }}>• {t}</p>)}
                 </div>
               )}
               {wrongTopics.length > 0 && (
                 <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgb(252,235,235)', border:'1px solid rgba(163,45,45,0.2)' }}>
                   <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(163,45,45)', marginBottom:'0.5rem' }}>📖 Needs work</p>
-                  {wrongTopics.map(([t]) => (
-                    <p key={t} style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', lineHeight:1.6 }}>• {t}</p>
-                  ))}
+                  {wrongTopics.map(([t]) => <p key={t} style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', lineHeight:1.6 }}>• {t}</p>)}
                 </div>
               )}
             </div>
@@ -533,26 +647,21 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                   {totalWrong <= 3 ? "You're almost perfect! 🎯 Let's nail those last few" : "Let's strengthen those weak spots! 💪 You've got this"}
                 </p>
                 <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
-                  {totalWrong <= 3 ? `Practice ${Math.min(5, totalWrong + 2)} targeted questions on your weak areas` : `Practice ${wrongTopics.length * 2} questions — 2 per topic you missed`}
+                  {totalWrong <= 3 ? `Practice ${Math.min(5, totalWrong + 2)} targeted questions` : `Practice ${wrongTopics.length * 2} questions — 2 per topic`}
                 </p>
               </div>
-              <button onClick={handlePracticeWeakSpots} disabled={retryLoading} className="btn-primary" style={{ flexShrink:0, fontSize:'0.9375rem' }}>
-                {retryLoading ? (
-                  <><div style={{ width:'1rem', height:'1rem', border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} /> Generating...</>
-                ) : '🎯 Practice weak spots'}
+              <button onClick={handlePracticeWeakSpots} disabled={retryLoading} className="btn-primary" style={{ flexShrink:0 }}>
+                {retryLoading ? <><div style={{ width:'1rem', height:'1rem', border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} /> Generating...</> : '🎯 Practice weak spots'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Question list — now with proper FR score colors */}
         <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', marginBottom:'1.5rem' }}>
           {questions.map((q, i) => {
             const a = answers[i]
             const isMC = q.type === 'mc'
             const wasAnswered = !!a
-
-            // Determine icon + badge for this row
             let icon: React.ReactNode
             let badgeStyle: { bg: string; color: string; label: string }
 
@@ -568,15 +677,10 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                 badgeStyle = { bg:'rgb(252,235,235)', color:'rgb(163,45,45)', label:'Review' }
               }
             } else {
-              // FR question — use score-based colors
               const frStyle = getFRSummaryStyle(a.frScore ?? '')
               badgeStyle = frStyle
               if (a.frScore === '4/4' || a.frScore === '3/4') {
-                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color: a.frScore === '4/4' ? 'rgb(59,109,17)' : 'rgb(34,85,14)', flexShrink:0 }} />
-              } else if (a.frScore === '2/4') {
-                icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', background:'rgba(232,160,32,0.2)', border:'2px solid rgb(232,160,32)', flexShrink:0 }} />
-              } else if (a.frScore === '1/4') {
-                icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', background:'rgba(220,80,20,0.15)', border:'2px solid rgb(200,75,20)', flexShrink:0 }} />
+                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
               } else {
                 icon = <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
               }
@@ -588,7 +692,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                 <span style={{ fontSize:'0.875rem', color:'rgb(26,26,20)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   Q{i + 1}: {q.question}
                 </span>
-                <span className="badge" style={{ background: badgeStyle.bg, color: badgeStyle.color, flexShrink:0 }}>
+                <span className="badge" style={{ background:badgeStyle.bg, color:badgeStyle.color, flexShrink:0 }}>
                   {badgeStyle.label}
                 </span>
               </div>
