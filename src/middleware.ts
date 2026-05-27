@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   '/auth/callback',
   '/privacy',
   '/terms',
+  '/admin'
 ]
 
 export async function middleware(request: NextRequest) {
