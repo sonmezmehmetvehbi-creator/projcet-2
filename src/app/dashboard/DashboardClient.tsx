@@ -1,4 +1,5 @@
 'use client'
+import TutoringModal from '@/components/ui/TutoringModal'
 import AdSlot from '@/components/ui/AdSlot'
 import { useState } from 'react'
 import Link from 'next/link'
@@ -41,10 +42,10 @@ interface Props {
 
 function DashboardInner({ profile, sessions, usage }: Props) {
   const searchParams = useSearchParams()
-  const initialTab = searchParams.get('tab') === 'pdfs' ? 'pdfs' : 'all'
   const initialTabValue = searchParams.get('tab') === 'pdfs' ? 'pdfs' : searchParams.get('tab') === 'sat' ? 'sat' : 'all'
   const [tab, setTab] = useState<'all' | 'pdfs' | 'sat'>(initialTabValue)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [showTutoring, setShowTutoring] = useState(false)
   const router = useRouter()
 
   const upgraded = searchParams.get('upgraded') === 'true'
@@ -114,6 +115,11 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <p style={{ color:'rgb(107,107,88)' }}>What are you studying today?</p>
             </div>
             <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
+              {profile?.is_premium && (
+                <button onClick={() => setShowTutoring(true)} style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.625rem 1.25rem', borderRadius:'0.75rem', background:'rgba(232,160,32,0.08)', border:'1.5px solid rgba(232,160,32,0.3)', color:'rgb(180,120,10)', fontWeight:600, fontSize:'0.9375rem', cursor:'pointer', transition:'all 0.2s' }}>
+                  🎓 Request Tutoring
+                </button>
+              )}
               <Link href="/sat" style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.625rem 1.25rem', borderRadius:'0.75rem', background:'rgba(99,102,241,0.08)', border:'1.5px solid rgba(99,102,241,0.25)', color:'rgb(79,70,229)', textDecoration:'none', fontWeight:600, fontSize:'0.9375rem', transition:'all 0.2s' }}>
                 📐 SAT Prep
               </Link>
@@ -145,7 +151,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 </div>
               </div>
 
-              {/* XP progress bar */}
               <div style={{ marginBottom:'0.5rem' }}>
                 <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.1)', borderRadius:'9999px', overflow:'hidden' }}>
                   <div style={{
@@ -179,7 +184,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 )}
               </div>
 
-              {/* All levels preview */}
               <div style={{ display:'flex', gap:'0.25rem', marginTop:'0.875rem' }}>
                 {LEVELS.map(l => (
                   <div key={l.level} title={`Level ${l.level}: ${l.name}`} style={{
@@ -226,7 +230,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                   : 'Legendary dedication! You\'re unstoppable! 👑'}
               </p>
 
-              {/* Streak week dots */}
               <div style={{ display:'flex', gap:'0.375rem' }}>
                 {Array.from({ length: 7 }, (_, i) => (
                   <div key={i} style={{
@@ -241,7 +244,6 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)' }}>Day 7 🔥</span>
               </div>
 
-              {/* Bonus generations for free users */}
               {!profile?.is_premium && bonusGenerations > 0 && (
                 <div style={{ marginTop:'0.875rem', padding:'0.5rem 0.75rem', borderRadius:'0.625rem', background:'rgba(34,85,14,0.06)', border:'1px solid rgba(34,85,14,0.15)', display:'flex', alignItems:'center', gap:'0.5rem' }}>
                   <span style={{ fontSize:'1rem' }}>🎁</span>
@@ -294,6 +296,11 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                     {sessions.filter(s => s.pdf_downloaded).length}
                   </span>
                 )}
+                {t.value === 'sat' && sessions.filter(s => s.is_sat).length > 0 && (
+                  <span style={{ marginLeft:'0.5rem', background:'rgba(99,102,241,0.1)', color:'rgb(79,70,229)', borderRadius:'9999px', padding:'0.125rem 0.5rem', fontSize:'0.75rem', fontWeight:600 }}>
+                    {sessions.filter(s => s.is_sat).length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -303,22 +310,22 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'rgba(34,85,14,0.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
                 {tab === 'pdfs' ? <FileText style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} /> : <BookOpen style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} />}
               </div>
-             <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
-              {tab === 'pdfs' ? 'No PDFs yet' : tab === 'sat' ? 'No SAT sessions yet' : 'No sessions yet'}
-            </h2>
-            <p style={{ color:'rgb(107,107,88)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
-              {tab === 'pdfs'
-                ? 'Download a PDF from any questions or worksheet session and it will appear here.'
-                : tab === 'sat'
-                ? 'Start your first SAT practice session and it will appear here.'
-                : 'Start your first study session and your history will appear here.'}
-            </p>
-            {tab === 'sat' && (
-              <Link href="/sat" className="btn-primary" style={{ display:'inline-flex' }}>
-                📐 Start SAT Practice
-              </Link>
-            )}
-            {tab === 'all' && (
+              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
+                {tab === 'pdfs' ? 'No PDFs yet' : tab === 'sat' ? 'No SAT sessions yet' : 'No sessions yet'}
+              </h2>
+              <p style={{ color:'rgb(107,107,88)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
+                {tab === 'pdfs'
+                  ? 'Download a PDF from any questions or worksheet session and it will appear here.'
+                  : tab === 'sat'
+                  ? 'Start your first SAT practice session and it will appear here.'
+                  : 'Start your first study session and your history will appear here.'}
+              </p>
+              {tab === 'sat' && (
+                <Link href="/sat" className="btn-primary" style={{ display:'inline-flex' }}>
+                  📐 Start SAT Practice
+                </Link>
+              )}
+              {tab === 'all' && (
                 <Link href="/generate" className="btn-primary" style={{ display:'inline-flex' }}>
                   <Plus style={{ width:'1rem', height:'1rem' }} />
                   Start Studying
@@ -377,6 +384,10 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           />
         </div>
       </div>
+
+      {showTutoring && (
+        <TutoringModal profile={profile} onClose={() => setShowTutoring(false)} />
+      )}
 
       <style>{`
         .dash-ad-sidebar { display: none; }
