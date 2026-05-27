@@ -263,6 +263,12 @@ else spawnFloatingXP(1)
           <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
             Question {current + 1} of {total} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
           </p>
+         {(q as any).passage && (
+            <div style={{ padding:'1rem 1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'1.25rem', borderLeft:'3px solid rgb(34,85,14)' }}>
+              <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Passage</p>
+              <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.8 }}>{(q as any).passage}</p>
+            </div>
+          )}
           <MathText text={q.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
 
           {q.type === 'mc' ? (
