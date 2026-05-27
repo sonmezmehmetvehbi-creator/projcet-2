@@ -92,7 +92,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
 
   const TABS = [
     { id:'overview', label:'Overview' },
-    { id:'sessions', label:`Sessions ${pending.length > 0 ? `(${pending.length} pending)` : ''}` },
+    { id:'sessions', label:`Sessions ${pending.length > 0 ? '(' + pending.length + ' pending)' : ''}` },
     { id:'reviews', label:'Reviews' },
     { id:'earnings', label:'Earnings' },
     { id:'availability', label:'Availability' },
@@ -103,7 +103,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
       <div style={{ maxWidth:'72rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
 
-        {/* Header */}
         <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', marginBottom:'2rem', flexWrap:'wrap' }}>
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} style={{ width:'4rem', height:'4rem', borderRadius:'50%', objectFit:'cover', border:'3px solid rgba(34,85,14,0.2)' }} />
@@ -130,7 +129,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display:'flex', gap:'0', marginBottom:'2rem', borderBottom:'2px solid rgba(34,85,14,0.08)', overflowX:'auto' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -140,16 +138,14 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           ))}
         </div>
 
-        {/* OVERVIEW TAB */}
         {tab === 'overview' && (
           <div>
-            {/* Stats */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
               {[
-                { label:'Total Earned', value:`$${totalEarned.toFixed(2)}`, emoji:'💰', color:'rgb(34,85,14)' },
-                { label:'Pending Payout', value:`$${pendingPayout.toFixed(2)}`, emoji:'⏳', color:'rgb(180,120,10)' },
+                { label:'Total Earned', value:'$' + totalEarned.toFixed(2), emoji:'💰', color:'rgb(34,85,14)' },
+                { label:'Pending Payout', value:'$' + pendingPayout.toFixed(2), emoji:'⏳', color:'rgb(180,120,10)' },
                 { label:'Sessions Done', value:completed.length, emoji:'✅', color:'rgb(34,85,14)' },
-                { label:'Avg Rating', value: avgRating === '—' ? '—' : `${avgRating}⭐`, emoji:'⭐', color:'rgb(180,120,10)' },
+                { label:'Avg Rating', value: avgRating === '—' ? '—' : avgRating + '⭐', emoji:'⭐', color:'rgb(180,120,10)' },
                 { label:'Upcoming', value:upcoming.length, emoji:'📅', color:'rgb(37,99,235)' },
               ].map(s => (
                 <div key={s.label} className="card" style={{ padding:'1.25rem', textAlign:'center' }}>
@@ -160,7 +156,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               ))}
             </div>
 
-            {/* Pending sessions that need confirmation */}
             {pending.length > 0 && (
               <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', border:'2px solid rgba(232,160,32,0.3)', background:'rgba(232,160,32,0.03)' }}>
                 <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
@@ -172,20 +167,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'1rem', flexWrap:'wrap' }}>
                         <div>
                           <p style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>
-                            {s.subject} — {s.topic}
-                          </p>
-                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
-                            📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min
-                          </p>
+                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>{s.subject} — {s.topic}</p>
+                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
                         </div>
                         <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', minWidth:'200px' }}>
-                          <input
-                            value={meetLink[s.id] ?? ''}
-                            onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
-                            placeholder="Paste Google Meet link"
-                            className="input" style={{ fontSize:'0.8125rem' }}
-                          />
+                          <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
+                            placeholder="Paste Google Meet link" className="input" style={{ fontSize:'0.8125rem' }} />
                           <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
                             className="btn-primary" style={{ fontSize:'0.875rem', justifyContent:'center', padding:'0.5rem 1rem' }}>
                             {confirmingSession === s.id ? 'Confirming...' : '✅ Confirm Session'}
@@ -198,7 +185,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               </div>
             )}
 
-            {/* Upcoming confirmed sessions */}
             {upcoming.length > 0 && (
               <div className="card" style={{ padding:'1.5rem' }}>
                 <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
@@ -229,7 +215,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
-        {/* SESSIONS TAB */}
         {tab === 'sessions' && (
           <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
             {sessions.length === 0 && (
@@ -276,7 +261,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
-        {/* REVIEWS TAB */}
         {tab === 'reviews' && (
           <div>
             {reviews.length === 0 ? (
@@ -312,7 +296,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
-        {/* EARNINGS TAB */}
         {tab === 'earnings' && (
           <div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
@@ -332,11 +315,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                   {payouts.map(p => (
-                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0.875rem 1rem', borderRadius:'0.75rem', background: p.status === 'paid' ? 'rgba(34,85,14,0.04)' : 'rgba(232,160,32,0.04)', border:`1px solid ${p.status === 'paid' ? 'rgba(34,85,14,0.1)' : 'rgba(232,160,32,0.15)'}` }}>
+                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0.875rem 1rem', borderRadius:'0.75rem', background: p.status === 'paid' ? 'rgba(34,85,14,0.04)' : 'rgba(232,160,32,0.04)', border:'1px solid ' + (p.status === 'paid' ? 'rgba(34,85,14,0.1)' : 'rgba(232,160,32,0.15)') }}>
                       <div>
                         <p style={{ fontWeight:600, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>${p.amount.toFixed(2)}</p>
                         <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
-                          {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()} via ${p.paid_via}` : 'Pending'}
+                          {p.paid_at ? 'Paid ' + new Date(p.paid_at).toLocaleDateString() + ' via ' + p.paid_via : 'Pending'}
                         </p>
                       </div>
                       <span style={{ fontSize:'0.75rem', fontWeight:700, padding:'0.2rem 0.625rem', borderRadius:'9999px', background: p.status === 'paid' ? 'rgba(34,85,14,0.08)' : 'rgba(232,160,32,0.12)', color: p.status === 'paid' ? 'rgb(34,85,14)' : 'rgb(180,120,10)' }}>
@@ -350,18 +333,14 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
-        {/* AVAILABILITY TAB */}
         {tab === 'availability' && (
           <div className="card" style={{ padding:'2rem' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>Weekly Availability</h2>
-              <div style={{ display:'flex', gap:'0.5rem' }}>
-                <select value={timezone} onChange={e => setTimezone(e.target.value)} className="input" style={{ fontSize:'0.8125rem' }}>
-                  {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>)}
-                </select>
-              </div>
+              <select value={timezone} onChange={e => setTimezone(e.target.value)} className="input" style={{ fontSize:'0.8125rem', width:'auto' }}>
+                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>)}
+              </select>
             </div>
-
             <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem', marginBottom:'1.25rem' }}>
               {availability.map((a: any) => (
                 <div key={a.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:'0.75rem', alignItems:'end' }}>
@@ -385,7 +364,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 </div>
               ))}
             </div>
-
             <div style={{ display:'flex', gap:'0.75rem' }}>
               <button onClick={addSlot} className="btn-secondary" style={{ fontSize:'0.875rem' }}>
                 <Plus style={{ width:'1rem', height:'1rem' }} /> Add Slot
@@ -397,13 +375,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
-        {/* PROFILE TAB */}
         {tab === 'profile' && (
           <div className="card" style={{ padding:'2rem' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>
-                Your Public Profile
-              </h2>
+              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>Your Public Profile</h2>
               {!editingProfile ? (
                 <button onClick={() => setEditingProfile(true)} className="btn-secondary" style={{ fontSize:'0.875rem' }}>
                   <Edit style={{ width:'0.875rem', height:'0.875rem' }} /> Edit Profile
@@ -419,7 +394,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 </div>
               )}
             </div>
-
             <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
               <div>
                 <label className="label">Bio / About You</label>
@@ -431,14 +405,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="label">Subjects</label>
                 {editingProfile ? (
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
                     {SUBJECTS.map(sub => (
                       <button key={sub} type="button" onClick={() => toggleSubject(sub)}
-                        style={{ padding:'0.375rem 0.875rem', borderRadius:'9999px', border:`1.5px solid ${subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}`, background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontSize:'0.875rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor:'pointer' }}>
+                        style={{ padding:'0.375rem 0.875rem', borderRadius:'9999px', border:'1.5px solid ' + (subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'), background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontSize:'0.875rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor:'pointer' }}>
                         {sub}
                       </button>
                     ))}
@@ -451,7 +424,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="label">Hourly Rate</label>
                 <div style={{ padding:'0.875rem 1rem', background:'rgba(34,85,14,0.04)', borderRadius:'0.875rem', border:'1px solid rgba(34,85,14,0.1)' }}>
