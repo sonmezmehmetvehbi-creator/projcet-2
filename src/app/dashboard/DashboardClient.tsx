@@ -42,7 +42,8 @@ interface Props {
 function DashboardInner({ profile, sessions, usage }: Props) {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') === 'pdfs' ? 'pdfs' : 'all'
-  const [tab, setTab] = useState<'all' | 'pdfs'>(initialTab)
+  const initialTabValue = searchParams.get('tab') === 'pdfs' ? 'pdfs' : searchParams.get('tab') === 'sat' ? 'sat' : 'all'
+  const [tab, setTab] = useState<'all' | 'pdfs' | 'sat'>(initialTabValue)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -50,7 +51,9 @@ function DashboardInner({ profile, sessions, usage }: Props) {
 
   const filteredSessions = tab === 'pdfs'
     ? sessions.filter(s => s.pdf_downloaded)
-    : sessions
+    : tab === 'sat'
+    ? sessions.filter(s => s.is_sat)
+    : sessions.filter(s => !s.is_sat)
 
   const xp = (profile as any)?.xp ?? 0
   const streak = (profile as any)?.streak_count ?? 0
@@ -110,10 +113,15 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               </h1>
               <p style={{ color:'rgb(107,107,88)' }}>What are you studying today?</p>
             </div>
-            <Link href="/generate" className="btn-primary">
-              <Plus style={{ width:'1rem', height:'1rem' }} />
-              New Study Session
-            </Link>
+            <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
+              <Link href="/sat" style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.625rem 1.25rem', borderRadius:'0.75rem', background:'rgba(99,102,241,0.08)', border:'1.5px solid rgba(99,102,241,0.25)', color:'rgb(79,70,229)', textDecoration:'none', fontWeight:600, fontSize:'0.9375rem', transition:'all 0.2s' }}>
+                📐 SAT Prep
+              </Link>
+              <Link href="/generate" className="btn-primary">
+                <Plus style={{ width:'1rem', height:'1rem' }} />
+                New Study Session
+              </Link>
+            </div>
           </div>
 
           {/* XP & Streak Section */}
@@ -275,6 +283,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           <div style={{ display:'flex', gap:'0.25rem', marginBottom:'1.5rem', borderBottom:'2px solid rgba(34,85,14,0.08)', paddingBottom:'0' }}>
             {([
               { value:'all', label:'All Sessions' },
+              { value:'sat', label:'📐 SAT Prep' },
               { value:'pdfs', label:'My PDFs' },
             ] as const).map(t => (
               <button key={t.value} onClick={() => setTab(t.value)}
@@ -294,15 +303,22 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'rgba(34,85,14,0.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
                 {tab === 'pdfs' ? <FileText style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} /> : <BookOpen style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} />}
               </div>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
-                {tab === 'pdfs' ? 'No PDFs yet' : 'No sessions yet'}
-              </h2>
-              <p style={{ color:'rgb(107,107,88)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
-                {tab === 'pdfs'
-                  ? 'Download a PDF from any questions or worksheet session and it will appear here.'
-                  : 'Start your first study session and your history will appear here.'}
-              </p>
-              {tab === 'all' && (
+             <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
+              {tab === 'pdfs' ? 'No PDFs yet' : tab === 'sat' ? 'No SAT sessions yet' : 'No sessions yet'}
+            </h2>
+            <p style={{ color:'rgb(107,107,88)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
+              {tab === 'pdfs'
+                ? 'Download a PDF from any questions or worksheet session and it will appear here.'
+                : tab === 'sat'
+                ? 'Start your first SAT practice session and it will appear here.'
+                : 'Start your first study session and your history will appear here.'}
+            </p>
+            {tab === 'sat' && (
+              <Link href="/sat" className="btn-primary" style={{ display:'inline-flex' }}>
+                📐 Start SAT Practice
+              </Link>
+            )}
+            {tab === 'all' && (
                 <Link href="/generate" className="btn-primary" style={{ display:'inline-flex' }}>
                   <Plus style={{ width:'1rem', height:'1rem' }} />
                   Start Studying
@@ -315,7 +331,11 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 <div key={session.id} className="card-hover" style={{ padding:'1.5rem', position:'relative' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem' }}>
                     <span className="badge badge-primary" style={{ fontSize:'0.75rem' }}>
-                      {session.output_type === 'questions' ? '❓ Questions' : '📄 Worksheet'}
+                      {session.is_sat
+                        ? session.sat_module === 'math_no_calc' ? '📐 SAT Math (No Calc)'
+                        : session.sat_module === 'math_calc' ? '🔢 SAT Math (Calc)'
+                        : '📖 SAT Reading & Writing'
+                        : session.output_type === 'questions' ? '❓ Questions' : '📄 Worksheet'}
                     </span>
                     {session.pdf_downloaded && (
                       <span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', display:'flex', alignItems:'center', gap:'0.25rem' }}>
