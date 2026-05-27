@@ -123,7 +123,7 @@ For each question:
 - id (number)
 - type: "mc"
 - passage (string) — 3-6 sentences of well-written, content-rich text. Must feel like real academic writing. Include specific details, data, or quotes where appropriate.
-- question (string) — the question stem, referencing the passage
+- question (string) — ONLY the question stem itself, nothing else. Example: "As used in line 2, 'documented' most nearly means..." — do NOT include the answer or explanation in this field
 - options (array of exactly 4 strings: ["A. ...", "B. ...", "C. ...", "D. ..."])
 - correctAnswer ("A", "B", "C", or "D")
 - explanation (string) — 4-6 sentences: identify the correct answer and cite specific evidence from the passage, explain why each main distractor fails (too broad/narrow/unsupported/opposite), end with a strategy tip
