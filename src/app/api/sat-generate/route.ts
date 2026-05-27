@@ -154,13 +154,48 @@ Return JSON: { "questions": [...] }`
     } catch {
       clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
       try { parsed = JSON.parse(clean) }
-      try {
-      parsed = JSON.parse(clean)
-    } catch {
-      clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
-      try {
-        parsed = JSON.parse(clean)
-      } catch {
-        throw new Error('Failed to parse AI response. Please try again.')
+      catch { throw new Error('Failed to parse AI response. Please try again.') }
+    }
+
+    // Save session
+    const { data: session, error: sessionError } = await supabase
+      .from('sessions')
+      .insert({
+        user_id: user.id,
+        subject: 'SAT',
+        grade: 'college',
+        topic: module === 'math_no_calc' ? 'SAT Math (No Calculator)' : module === 'math_calc' ? 'SAT Math (Calculator)' : 'SAT Reading & Writing',
+        output_type: 'questions',
+        content: parsed,
+        difficulty,
+        is_sat: true,
+        sat_module: module,
+      })
+      .select('id')
+      .single()
+
+    if (sessionError) throw sessionError
+
+    // Update usage for free users
+    if (!profile?.is_premium) {
+      const today = new Date().toISOString().split('T')[0]
+      const { data: existingUsage } = await supabase
+        .from('daily_usage')
+        .select('id, sat')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single()
+
+      if (existingUsage) {
+        await supabase.from('daily_usage').update({ sat: (existingUsage.sat ?? 0) + 1 }).eq('id', existingUsage.id)
+      } else {
+        await supabase.from('daily_usage').insert({ user_id: user.id, date: today, sat: 1 })
       }
     }
+
+    return NextResponse.json({ sessionId: session.id })
+  } catch (error: any) {
+    console.error('SAT generate error:', error)
+    return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })
+  }
+}
