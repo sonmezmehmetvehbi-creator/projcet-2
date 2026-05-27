@@ -154,4 +154,13 @@ Return JSON: { "questions": [...] }`
     } catch {
       clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
       try { parsed = JSON.parse(clean) }
-      catch { throw new Error('Failed to pa
+      try {
+      parsed = JSON.parse(clean)
+    } catch {
+      clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
+      try {
+        parsed = JSON.parse(clean)
+      } catch {
+        throw new Error('Failed to parse AI response. Please try again.')
+      }
+    }
