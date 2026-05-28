@@ -24,7 +24,7 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
     .filter(s => s.status === 'completed')
     .reduce((sum, s) => sum + (s.student_price ?? 0), 0)
 
-  const bookedTutorIds = [...new Set(sessions.map(s => s.tutor_profiles?.id).filter(Boolean))]
+  const bookedTutorIds = Array.from(new Set(sessions.map(s => s.tutor_profiles?.id).filter(Boolean)))
   const favoriteTutors = allTutors.filter(t => bookedTutorIds.includes(t.id))
   const newTutors = allTutors.filter(t => !bookedTutorIds.includes(t.id))
 
