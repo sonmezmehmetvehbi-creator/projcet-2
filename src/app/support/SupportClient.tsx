@@ -41,22 +41,29 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
   useEffect(() => {
     if (!selectedTicket) return
     loadMessages(selectedTicket.id)
+
+    // Realtime for new admin replies
     const channel = supabase
-      .channel(`support-${selectedTicket.id}`)
+      .channel(`user-support-${selectedTicket.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'support_messages',
         filter: `ticket_id=eq.${selectedTicket.id}`,
       }, (payload) => {
-        setMessages(prev => [...prev, payload.new])
+        setMessages(prev => {
+          // avoid duplicates
+          if (prev.find(m => m.id === payload.new.id)) return prev
+          return [...prev, payload.new]
+        })
       })
       .subscribe()
+
     return () => { supabase.removeChannel(channel) }
   }, [selectedTicket])
 
   async function loadMessages(ticketId: string) {
     const { data } = await supabase
       .from('support_messages')
-      .select('*, profiles!support_messages_sender_id_fkey(display_name, is_admin)')
+      .select('*')
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: true })
     setMessages(data ?? [])
@@ -102,12 +109,26 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
   async function sendMessage() {
     if (!newMessage.trim() || !selectedTicket) return
     setSending(true)
-    await supabase.from('support_messages').insert({
+    const msg = {
+      id: Date.now().toString(),
       ticket_id: selectedTicket.id,
       sender_id: profile.id,
       message: newMessage.trim(),
       is_admin: false,
-    })
+      created_at: new Date().toISOString(),
+    }
+    const { data, error } = await supabase.from('support_messages').insert({
+      ticket_id: selectedTicket.id,
+      sender_id: profile.id,
+      message: newMessage.trim(),
+      is_admin: false,
+    }).select().single()
+
+    if (!error) {
+      setMessages(prev => [...prev, data ?? msg])
+    } else {
+      setMessages(prev => [...prev, msg])
+    }
     setNewMessage('')
     setSending(false)
   }
@@ -226,11 +247,11 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
                   <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {messages.length === 0 && (
                       <div style={{ textAlign: 'center', color: 'rgb(107,107,88)', fontSize: '0.875rem', padding: '2rem' }}>
-                        No messages yet.
+                        No messages yet. We will reply shortly!
                       </div>
                     )}
-                    {messages.map(msg => (
-                      <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.is_admin ? 'flex-start' : 'flex-end' }}>
+                    {messages.map((msg, i) => (
+                      <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.is_admin ? 'flex-start' : 'flex-end' }}>
                         {msg.is_admin && (
                           <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>
                             🎧 AceForge Support
