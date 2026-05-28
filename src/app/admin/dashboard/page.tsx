@@ -12,7 +12,6 @@ export default async function AdminDashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile?.is_admin) redirect('/dashboard')
 
-  // Use service role for admin queries to bypass RLS
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -42,7 +41,6 @@ export default async function AdminDashboardPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // Manually join profiles
   const tickets = await Promise.all((ticketsRaw ?? []).map(async (ticket) => {
     const { data: profileData } = await adminClient
       .from('profiles')
@@ -51,10 +49,6 @@ export default async function AdminDashboardPage() {
       .single()
     return { ...ticket, profiles: profileData }
   }))
-    .from('support_tickets')
-    .select('*, profiles!support_tickets_user_id_fkey(display_name, email, avatar_url)')
-    .order('created_at', { ascending: false })
-    .limit(50)
 
   const { data: pendingTutorList } = await adminClient
     .from('tutor_profiles')
@@ -79,7 +73,7 @@ export default async function AdminDashboardPage() {
           openTickets: openTickets ?? 0,
         }}
         recentUsers={recentUsers ?? []}
-        tickets={tickets ?? []}
+        tickets={tickets}
         pendingTutorList={pendingTutorList ?? []}
         currentUserId={user.id}
       />

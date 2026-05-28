@@ -34,7 +34,7 @@ export default async function AdminSupportPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
       <AdminNavbar profile={profile} />
-      <AdminSupportClient tickets={tickets ?? []} currentUserId={user.id} />
+      <AdminSupportClient tickets={tickets} currentUserId={user.id} />
     </div>
   )
 }
