@@ -67,25 +67,29 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
   }, [selectedTicket])
 
   async function loadMessages(ticketId: string) {
-    const res = await fetch(`/api/admin/get-messages?ticketId=${ticketId}`)
-    const data = await res.json()
-    setMessages(data.messages ?? [])
+    try {
+      const res = await fetch(`/api/support/messages?ticketId=${ticketId}`)
+      const data = await res.json()
+      if (data.messages) {
+        setMessages(prev => {
+          if (JSON.stringify(prev.map((m: any) => m.id)) === JSON.stringify(data.messages.map((m: any) => m.id))) return prev
+          return data.messages
+        })
+      }
+    } catch {}
   }
 
   async function sendMessage() {
     if (!newMessage.trim() || !selectedTicket) return
     setSending(true)
-    const msg = {
-      id: Date.now().toString(),
-      ticket_id: selectedTicket.id,
-      sender_id: currentUserId,
-      message: newMessage.trim(),
-      is_admin: true,
-      created_at: new Date().toISOString(),
-    }
-    const { data } = await supabase.from('support_messages').insert(msg).select().single()
-    setMessages(prev => [...prev, data ?? msg])
+    const text = newMessage.trim()
     setNewMessage('')
+    await fetch('/api/support/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId: selectedTicket.id, message: text }),
+    })
+    await loadMessages(selectedTicket.id)
     setSending(false)
   }
 
