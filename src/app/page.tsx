@@ -445,6 +445,17 @@ export default async function HomePage() {
                 </Link>
                 <a href="#how-it-works" className="af-btn-s">See how it works</a>
               </div>
+              <div className="af-anim-4" style={{ marginTop:'-0.75rem' }}>
+                <a href="/tutor/apply" style={{
+                  display:'inline-flex', alignItems:'center', gap:'0.5rem',
+                  fontSize:'0.9375rem', color:'#3d5c35', textDecoration:'none',
+                  fontFamily:'Syne, sans-serif', fontWeight:600,
+                  borderBottom:'1.5px dashed rgba(34,85,14,0.3)',
+                  paddingBottom:'1px', transition:'all 0.2s',
+                }}>
+                  🎓 Think you'd make a great tutor? Apply and start earning →
+                </a>
+              </div>
               <div className="af-trust af-anim-5">
                 {['Free to start', 'All subjects & grades', 'Upload your notes'].map(t => (
                   <div key={t} className="af-trust-item">
