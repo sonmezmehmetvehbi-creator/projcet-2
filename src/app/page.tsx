@@ -446,7 +446,7 @@ export default async function HomePage() {
                 <a href="#how-it-works" className="af-btn-s">See how it works</a>
               </div>
               <div className="af-anim-4" style={{ marginTop:'-0.75rem' }}>
-                <a href="/tutor/apply" style={{
+                <a href="/tutor/signup" style={{
                   display:'inline-flex', alignItems:'center', gap:'0.5rem',
                   fontSize:'0.9375rem', color:'#3d5c35', textDecoration:'none',
                   fontFamily:'Syne, sans-serif', fontWeight:600,

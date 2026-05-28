@@ -1,0 +1,192 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { BookOpen, AlertCircle, CheckCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+
+export default function TutorSignupPage() {
+  const router = useRouter()
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setError('Please fill in all fields.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const supabase = createClient()
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { display_name: fullName.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/tutor/apply`,
+        },
+      })
+
+      if (signUpError) throw signUpError
+
+      // Update profile with display name and role
+      if (data.user) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          display_name: fullName.trim(),
+          email: email.trim(),
+          role: 'tutor_pending',
+        })
+        router.push('/tutor/apply')
+      }
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem 1.5rem' }}>
+      <div style={{ width:'100%', maxWidth:'26rem' }}>
+
+        {/* Logo */}
+        <Link href="/" style={{ display:'flex', alignItems:'center', gap:'0.5rem', textDecoration:'none', justifyContent:'center', marginBottom:'2rem' }}>
+          <div style={{ width:'2.25rem', height:'2.25rem', borderRadius:'0.625rem', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <BookOpen style={{ width:'1.125rem', height:'1.125rem', color:'white' }} strokeWidth={2.5} />
+          </div>
+          <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>AceForge</span>
+        </Link>
+
+        {/* Header */}
+        <div style={{ textAlign:'center', marginBottom:'2rem' }}>
+          <div style={{ fontSize:'2.5rem', marginBottom:'0.75rem' }}>🎓</div>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
+            Join as a Tutor
+          </h1>
+          <p style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem', lineHeight:1.6 }}>
+            Create your tutor account and start the application process. Earn $30/hr on your own schedule.
+          </p>
+        </div>
+
+        {/* Benefits */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', marginBottom:'1.5rem' }}>
+          {[
+            '💰 Earn $30/hr — paid within 24hrs',
+            '📅 Set your own availability',
+            '🎓 Help students ace their exams',
+            '🔒 All sessions on secure platform',
+          ].map(b => (
+            <div key={b} style={{ display:'flex', alignItems:'center', gap:'0.625rem', padding:'0.5rem 0.75rem', borderRadius:'0.625rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.08)' }}>
+              <p style={{ fontSize:'0.875rem', color:'rgb(26,26,20)' }}>{b}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Form */}
+        <div className="card" style={{ padding:'2rem' }}>
+          {error && (
+            <div className="alert-error" style={{ marginBottom:'1.25rem' }}>
+              <AlertCircle style={{ width:'1rem', height:'1rem', flexShrink:0 }} />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSignup} style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+            <div>
+              <label className="label">Full Name *</label>
+              <input
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                className="input"
+                placeholder="Your full legal name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="label">Email *</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="input"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="label">Password *</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="input"
+                placeholder="At least 8 characters"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="label">Confirm Password *</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="input"
+                placeholder="Repeat your password"
+                required
+              />
+            </div>
+
+            <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(37,99,235,0.04)', border:'1px solid rgba(37,99,235,0.12)' }}>
+              <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
+                By creating an account you agree to AceForge's{' '}
+                <Link href="/terms" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Terms of Service</Link>
+                {' '}and{' '}
+                <Link href="/tutoring/legal" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>Tutor Policy</Link>.
+              </p>
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary"
+              style={{ width:'100%', justifyContent:'center', padding:'0.875rem', fontSize:'1rem' }}>
+              {loading ? 'Creating account...' : 'Create Tutor Account →'}
+            </button>
+          </form>
+        </div>
+
+        <p style={{ textAlign:'center', marginTop:'1.25rem', fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
+          Already have an account?{' '}
+          <Link href="/login" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
+            Log in
+          </Link>
+        </p>
+
+        <p style={{ textAlign:'center', marginTop:'0.75rem', fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
+          Want to study instead?{' '}
+          <Link href="/signup" style={{ color:'rgb(34,85,14)', fontWeight:600, textDecoration:'none' }}>
+            Sign up as a student
+          </Link>
+        </p>
+
+      </div>
+    </div>
+  )
+}

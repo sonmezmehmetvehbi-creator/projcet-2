@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   '/',
   '/login',
   '/signup',
+  '/tutor/signup',
   '/forgot-password',
   '/reset-password',
   '/pricing',
@@ -12,6 +13,7 @@ const PUBLIC_PATHS = [
   '/privacy',
   '/terms',
   '/admin'
+  '/tutoring/legal',
 ]
 
 export async function middleware(request: NextRequest) {
