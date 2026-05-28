@@ -64,7 +64,13 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    // Check if admin — redirect to admin dashboard
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+    url.pathname = profile?.is_admin ? '/admin/dashboard' : '/dashboard'
     return NextResponse.redirect(url)
   }
 
