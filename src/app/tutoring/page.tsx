@@ -36,8 +36,6 @@ export default async function TutoringPage() {
             <p style={{ color:'rgb(107,107,88)', fontSize:'1.0625rem', maxWidth:'36rem', margin:'0 auto 1.5rem' }}>
               Live 1-on-1 sessions via Google Meet. All sessions recorded for quality assurance.
             </p>
-
-            {/* Pricing pills */}
             <div style={{ display:'inline-flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
               <div style={{ padding:'0.625rem 1.25rem', borderRadius:'9999px', background: isPremium ? 'rgba(34,85,14,0.08)' : 'white', border:`2px solid ${isPremium ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}` }}>
                 <span style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'1rem', color:'rgb(34,85,14)' }}>
@@ -61,7 +59,7 @@ export default async function TutoringPage() {
               {[
                 { emoji:'🔍', step:'1', title:'Choose a tutor', desc: isPremium ? 'Browse our verified tutors and pick the best fit for you.' : 'We match you with the best available tutor for your subject.' },
                 { emoji:'📅', step:'2', title:'Pick a time', desc:'Select your preferred session length and time slot.' },
-                { emoji:'💳', step:'3', title:'Pay securely', desc:'Pay upfront via Stripe. Full refund if tutor doesn\'t show up.' },
+                { emoji:'💳', step:'3', title:'Pay securely', desc:"Pay upfront via Stripe. Full refund if tutor doesn't show up." },
                 { emoji:'🎥', step:'4', title:'Join Google Meet', desc:'Your tutor sends a Meet link. Session is recorded for quality.' },
               ].map(s => (
                 <div key={s.step} style={{ textAlign:'center' }}>
@@ -103,7 +101,7 @@ export default async function TutoringPage() {
                 Tutors coming soon!
               </h3>
               <p style={{ color:'rgb(107,107,88)', marginBottom:'1.5rem' }}>
-                We're onboarding our first tutors. Leave your email and we'll notify you when they're ready.
+                We are onboarding our first tutors. Check back soon!
               </p>
               <Link href="/dashboard" className="btn-primary" style={{ display:'inline-flex' }}>
                 Back to Dashboard
@@ -128,7 +126,6 @@ export default async function TutoringPage() {
                       )}
                     </div>
                   </div>
-
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem', marginBottom:'0.875rem' }}>
                     {tutor.subjects?.slice(0,3).map((s: string) => (
                       <span key={s} style={{ fontSize:'0.75rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600 }}>
@@ -136,11 +133,9 @@ export default async function TutoringPage() {
                       </span>
                     ))}
                   </div>
-
                   <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', lineHeight:1.6, marginBottom:'1rem', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
                     {tutor.bio || 'Experienced tutor ready to help you succeed.'}
                   </p>
-
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
                     <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>
                       ${hourlyRate}/hr
@@ -149,7 +144,6 @@ export default async function TutoringPage() {
                       {tutor.total_sessions} sessions
                     </span>
                   </div>
-
                   <Link href={`/tutoring/book/${tutor.id}`}
                     className={isPremium ? 'btn-primary' : 'btn-secondary'}
                     style={{ width:'100%', justifyContent:'center', display:'flex', textDecoration:'none' }}>
@@ -167,15 +161,15 @@ export default async function TutoringPage() {
             </p>
           </div>
 
-        </div>
-      </div>
-    </div>
-
-    {/* Legal policy link */}
+          {/* Legal policy link */}
           <div style={{ marginTop:'1rem', textAlign:'center' }}>
             <Link href="/tutoring/legal" style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', textDecoration:'none' }}>
               ⚖️ View full tutoring policies, refund policy & legal terms →
             </Link>
           </div>
+
+        </div>
+      </div>
+    </div>
   )
 }
