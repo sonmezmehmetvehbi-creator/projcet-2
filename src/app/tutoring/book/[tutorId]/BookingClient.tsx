@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle, Upload, X, FileUp } from 'lucide-react'
+import { AlertCircle, CheckCircle, Upload, X, FileUp, Zap } from 'lucide-react'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const SESSION_LENGTHS = [
@@ -10,6 +10,19 @@ const SESSION_LENGTHS = [
   { value: 60, label: '1 hour', desc: 'Standard session' },
   { value: 90, label: '1.5 hours', desc: 'Deep dive session' },
 ]
+
+function getExpressFee(date: string, time: string): { fee: number; label: string; tier: string } {
+  if (!date || !time) return { fee: 0, label: '', tier: 'standard' }
+  const sessionTime = new Date(`${date}T${time}`)
+  const now = new Date()
+  const hoursUntil = (sessionTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+  if (hoursUntil < 0) return { fee: 0, label: '', tier: 'standard' }
+  if (hoursUntil < 6) return { fee: 40, label: 'Under 6 hours — Emergency booking', tier: 'emergency' }
+  if (hoursUntil < 12) return { fee: 25, label: '6–12 hours — Urgent booking', tier: 'urgent' }
+  if (hoursUntil < 24) return { fee: 15, label: '12–24 hours — Express booking', tier: 'express' }
+  return { fee: 0, label: 'Standard booking (24hr+ notice)', tier: 'standard' }
+}
 
 interface Props {
   profile: any
@@ -40,7 +53,18 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
 
   const isPremium = profile?.is_premium ?? false
   const baseRate = isPremium ? 34.99 : 49.99
-  const sessionPrice = sessionLength === 30 ? baseRate / 2 : sessionLength === 90 ? baseRate * 1.5 : baseRate
+  const express = getExpressFee(selectedDate, selectedTime)
+  const expressFeeForLength = express.fee * (sessionLength === 30 ? 0.5 : sessionLength === 90 ? 1.5 : 1)
+  const baseSessionPrice = sessionLength === 30 ? baseRate / 2 : sessionLength === 90 ? baseRate * 1.5 : baseRate
+  const totalPrice = baseSessionPrice + expressFeeForLength
+
+  const tierColors: Record<string, { bg: string; border: string; color: string; icon: string }> = {
+    standard: { bg:'rgba(34,85,14,0.04)', border:'rgba(34,85,14,0.12)', color:'rgb(34,85,14)', icon:'✅' },
+    express:  { bg:'rgba(232,160,32,0.06)', border:'rgba(232,160,32,0.25)', color:'rgb(180,120,10)', icon:'⚡' },
+    urgent:   { bg:'rgba(220,80,20,0.06)', border:'rgba(220,80,20,0.25)', color:'rgb(200,75,20)', icon:'🔥' },
+    emergency:{ bg:'rgba(163,45,45,0.06)', border:'rgba(163,45,45,0.25)', color:'rgb(163,45,45)', icon:'🚨' },
+  }
+  const tierStyle = tierColors[express.tier]
 
   function handleFileAdd(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -64,13 +88,20 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
       setError('Please consent to session recording to proceed.')
       return
     }
+
+    const sessionTime = new Date(`${selectedDate}T${selectedTime}`)
+    if (sessionTime < new Date()) {
+      setError('Please select a future date and time.')
+      return
+    }
+
     setError('')
     setLoading(true)
 
     try {
-      const scheduledAt = new Date(`${selectedDate}T${selectedTime}`).toISOString()
+      const scheduledAt = sessionTime.toISOString()
 
-      // Upload files if any
+      // Upload files
       const fileUrls: string[] = []
       for (const file of uploadedFiles) {
         const formData = new FormData()
@@ -85,18 +116,12 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tutorId: tutor.id,
-          subject,
-          topic,
-          grade,
-          sessionLength,
-          scheduledAt,
-          language,
-          message,
-          wantsIntroCall,
-          wantsContinuing,
-          fileUrls,
-          studentPrice: sessionPrice,
+          subject, topic, grade, sessionLength, scheduledAt,
+          language, message, wantsIntroCall, wantsContinuing, fileUrls,
+          studentPrice: Math.round(totalPrice * 100) / 100,
           tutorPayout: sessionLength === 30 ? 15 : sessionLength === 90 ? 45 : 30,
+          expressTier: express.tier,
+          expressFee: expressFeeForLength,
         }),
       })
 
@@ -122,7 +147,9 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
         <p style={{ color:'rgb(107,107,88)', lineHeight:1.7 }}>
           {wantsIntroCall
             ? 'Your intro call request has been sent. The tutor will reach out to schedule your free 15-min call first.'
-            : 'Your tutoring session has been requested. The tutor will confirm within 24 hours and send you a Google Meet link.'}
+            : express.tier !== 'standard'
+            ? 'Your express session has been requested. The tutor will confirm ASAP.'
+            : 'Your tutoring session has been requested. The tutor will confirm within 24 hours.'}
         </p>
       </div>
     </div>
@@ -162,7 +189,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
 
           <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
-            {/* Intro call option */}
+            {/* Intro call */}
             <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.12)' }}>
               <div style={{ display:'flex', alignItems:'flex-start', gap:'0.875rem', marginBottom: wantsIntroCall ? '0.875rem' : 0 }}>
                 <input type="checkbox" checked={wantsIntroCall} onChange={e => setWantsIntroCall(e.target.checked)}
@@ -172,20 +199,20 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
                     🤝 Request a free 15-min intro call first <span style={{ fontWeight:400, fontSize:'0.8125rem', color:'rgb(34,85,14)' }}>(recommended)</span>
                   </p>
                   <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-                    Meet your tutor briefly before committing to a full session. Completely free, no obligation.
+                    Meet your tutor before committing. Completely free, no obligation.
                   </p>
                 </div>
               </div>
               {wantsIntroCall && (
                 <div style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', border:'1px solid rgba(34,85,14,0.15)' }}>
                   <p style={{ fontSize:'0.8125rem', color:'rgb(34,85,14)', fontWeight:600 }}>
-                    ✅ The tutor will contact you to schedule a free 15-min Google Meet call before your session.
+                    ✅ The tutor will contact you to schedule a free 15-min Google Meet call first.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Continuing sessions option */}
+            {/* Continuing sessions */}
             <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.02)', border:'1px solid rgba(34,85,14,0.08)', display:'flex', alignItems:'flex-start', gap:'0.875rem' }}>
               <input type="checkbox" checked={wantsContinuing} onChange={e => setWantsContinuing(e.target.checked)}
                 style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }} />
@@ -194,7 +221,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
                   🔁 I am interested in ongoing sessions with this tutor
                 </p>
                 <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-                  Let the tutor know you are looking for regular sessions. This helps them prepare a learning plan for you.
+                  Let the tutor know you want regular sessions so they can prepare a learning plan.
                 </p>
               </div>
             </div>
@@ -228,7 +255,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
             <div>
               <label className="label">What do you need help with? *</label>
               <textarea value={topic} onChange={e => setTopic(e.target.value)} className="input" rows={3} style={{ resize:'vertical' }}
-                placeholder="e.g. I am struggling with quadratic equations and need help understanding the quadratic formula..." />
+                placeholder="e.g. I have an exam tomorrow on quadratic equations and need help fast..." />
             </div>
 
             <div>
@@ -236,28 +263,74 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.5rem' }}>
                 {SESSION_LENGTHS.map(sl => {
                   const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? baseRate * 1.5 : baseRate
+                  const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
                   return (
                     <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
                       style={{ padding:'0.875rem 0.5rem', borderRadius:'0.75rem', border:`2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : 'white', cursor:'pointer', textAlign:'center', transition:'all 0.2s' }}>
                       <p style={{ fontWeight:700, fontSize:'0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom:'0.25rem' }}>{sl.label}</p>
                       <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>{sl.desc}</p>
-                      <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1rem', color:'rgb(34,85,14)' }}>${price.toFixed(2)}</p>
+                      <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1rem', color:'rgb(34,85,14)' }}>
+                        ${(price + expFee).toFixed(2)}
+                      </p>
+                      {expFee > 0 && (
+                        <p style={{ fontSize:'0.6875rem', color: tierStyle.color }}>
+                          incl. +${expFee.toFixed(2)} express
+                        </p>
+                      )}
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
-              <div>
-                <label className="label">Preferred Date *</label>
+            {/* Date & Time with express detection */}
+            <div>
+              <label className="label">Date & Time *</label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'0.75rem' }}>
                 <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]} className="input" />
-              </div>
-              <div>
-                <label className="label">Preferred Time *</label>
                 <input type="time" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} className="input" />
               </div>
+
+              {/* Express tier indicator */}
+              {selectedDate && selectedTime && (
+                <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:tierStyle.bg, border:`1px solid ${tierStyle.border}` }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom: express.tier !== 'standard' ? '0.375rem' : 0 }}>
+                    <span style={{ fontSize:'1rem' }}>{tierStyle.icon}</span>
+                    <p style={{ fontSize:'0.875rem', fontWeight:700, color:tierStyle.color }}>{express.label}</p>
+                  </div>
+                  {express.tier !== 'standard' && (
+                    <p style={{ fontSize:'0.8125rem', color:tierStyle.color, marginLeft:'1.5rem' }}>
+                      +${expressFeeForLength.toFixed(2)} express surcharge added · Tutor will be notified of urgency
+                    </p>
+                  )}
+                  {express.tier === 'standard' && (
+                    <p style={{ fontSize:'0.8125rem', color:'rgb(34,85,14)', marginLeft:'1.5rem' }}>
+                      No extra charge — book earlier for the best rates
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Express pricing info */}
+              {(!selectedDate || !selectedTime) && (
+                <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(232,160,32,0.04)', border:'1px solid rgba(232,160,32,0.15)' }}>
+                  <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(180,120,10)', marginBottom:'0.5rem' }}>⚡ Express booking available for urgent needs:</p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.25rem' }}>
+                    {[
+                      { label:'24+ hours notice', fee:'No extra charge', color:'rgb(34,85,14)' },
+                      { label:'12–24 hours notice', fee:'+$15', color:'rgb(180,120,10)' },
+                      { label:'6–12 hours notice', fee:'+$25', color:'rgb(200,75,20)' },
+                      { label:'Under 6 hours', fee:'+$40', color:'rgb(163,45,45)' },
+                    ].map(item => (
+                      <div key={item.label} style={{ display:'flex', justifyContent:'space-between' }}>
+                        <span style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{item.label}</span>
+                        <span style={{ fontSize:'0.8125rem', fontWeight:700, color:item.color }}>{item.fee}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {availability.length > 0 && (
@@ -284,7 +357,6 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
               <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginBottom:'0.75rem' }}>
                 Share notes, past tests, or any material so your tutor can prepare before the session.
               </p>
-
               {uploadedFiles.length < 5 && (
                 <label style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'1rem', borderRadius:'0.75rem', border:'2px dashed rgba(34,85,14,0.2)', cursor:'pointer', background:'rgba(34,85,14,0.02)', marginBottom:'0.75rem' }}>
                   <Upload style={{ width:'1.25rem', height:'1.25rem', color:'rgb(107,107,88)', flexShrink:0 }} />
@@ -295,9 +367,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
                   <input ref={fileRef} type="file" multiple style={{ display:'none' }} onChange={handleFileAdd} />
                 </label>
               )}
-
               {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginBottom:'0.5rem' }}>{uploadError}</p>}
-
               {uploadedFiles.length > 0 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                   {uploadedFiles.map((f, i) => (
@@ -327,8 +397,17 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
             <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.12)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
                 <span style={{ fontSize:'0.9375rem', color:'rgb(107,107,88)' }}>Session ({sessionLength} min)</span>
-                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'rgb(26,26,20)' }}>${sessionPrice.toFixed(2)}</span>
+                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'rgb(26,26,20)' }}>${baseSessionPrice.toFixed(2)}</span>
               </div>
+              {expressFeeForLength > 0 && (
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
+                  <span style={{ fontSize:'0.875rem', color:tierStyle.color, display:'flex', alignItems:'center', gap:'0.375rem' }}>
+                    <Zap style={{ width:'0.875rem', height:'0.875rem' }} />
+                    {express.label.split('—')[0].trim()} surcharge
+                  </span>
+                  <span style={{ fontSize:'0.875rem', color:tierStyle.color, fontWeight:700 }}>+${expressFeeForLength.toFixed(2)}</span>
+                </div>
+              )}
               {wantsIntroCall && (
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
                   <span style={{ fontSize:'0.875rem', color:'rgb(34,85,14)' }}>15-min intro call</span>
@@ -343,7 +422,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
               )}
               <div style={{ borderTop:'1px solid rgba(34,85,14,0.1)', paddingTop:'0.5rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontWeight:700, color:'rgb(26,26,20)' }}>Total due now</span>
-                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>${sessionPrice.toFixed(2)}</span>
+                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
               </div>
             </div>
 
@@ -365,8 +444,8 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
             </div>
 
             <button onClick={handleBook} disabled={loading} className="btn-primary"
-              style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem' }}>
-              {loading ? 'Processing...' : `Request & Pay $${sessionPrice.toFixed(2)} 🎓`}
+              style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem', background: express.tier === 'emergency' ? 'rgb(163,45,45)' : express.tier === 'urgent' ? 'rgb(200,75,20)' : 'rgb(34,85,14)' }}>
+              {loading ? 'Processing...' : `${express.tier !== 'standard' ? '⚡ Express Book' : 'Request & Pay'} $${totalPrice.toFixed(2)} 🎓`}
             </button>
 
             <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', textAlign:'center' }}>
