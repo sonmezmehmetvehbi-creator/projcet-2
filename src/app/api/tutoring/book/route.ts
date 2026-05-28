@@ -1,4 +1,3 @@
-
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
@@ -12,9 +11,18 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    const { tutorId, subject, topic, sessionLength, scheduledAt, language, message, studentPrice, tutorPayout } = await request.json()
+    const {
+      tutorId, subject, topic, grade, sessionLength, scheduledAt,
+      language, message, wantsIntroCall, wantsContinuing,
+      fileUrls, studentPrice, tutorPayout
+    } = await request.json()
 
-    const { data: tutor } = await supabase.from('tutor_profiles').select('*, profiles!tutor_profiles_user_id_fkey(email, display_name)').eq('id', tutorId).single()
+    const { data: tutor } = await supabase
+      .from('tutor_profiles')
+      .select('*, profiles!tutor_profiles_user_id_fkey(email, display_name)')
+      .eq('id', tutorId)
+      .single()
+
     if (!tutor) return NextResponse.json({ error: 'Tutor not found' }, { status: 404 })
 
     const { data: session, error: sessionError } = await supabase
@@ -50,14 +58,24 @@ export async function POST(request: Request) {
           <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:20px;margin:20px 0">
             <p><strong>Subject:</strong> ${subject}</p>
             <p><strong>Topic:</strong> ${topic}</p>
+            <p><strong>Grade:</strong> ${grade}</p>
             <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
             <p><strong>Duration:</strong> ${sessionLength} minutes</p>
             <p><strong>Language:</strong> ${language}</p>
-            ${message ? '<p><strong>Student note:</strong> ' + message + '</p>' : ''}
+            ${message ? `<p><strong>Student note:</strong> ${message}</p>` : ''}
             <p><strong>Your payout:</strong> $${tutorPayout}</p>
+            ${wantsIntroCall ? '<p style="color:#22550e;font-weight:700">🤝 Student requested a FREE 15-min intro call first. Please reach out to schedule it.</p>' : ''}
+            ${wantsContinuing ? '<p style="color:#22550e;font-weight:700">🔁 Student is interested in ongoing sessions.</p>' : ''}
+            ${fileUrls && fileUrls.length > 0 ? `
+              <div style="margin-top:16px">
+                <p><strong>📎 Student uploaded files:</strong></p>
+                ${fileUrls.map((url: string, i: number) => `<p><a href="${url}" style="color:#22550e">File ${i+1}</a></p>`).join('')}
+              </div>
+            ` : ''}
           </div>
-          <p>Please log in to your tutor dashboard to confirm this session and add a Google Meet link.</p>
-          <a href="https://aceforge.app/tutor/dashboard" style="display:inline-block;background:#22550e;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">Go to Dashboard →</a>
+          <a href="https://aceforge.app/tutor/dashboard" style="display:inline-block;background:#22550e;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">
+            Go to Dashboard →
+          </a>
           <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
         </div>
       `,
@@ -75,12 +93,17 @@ export async function POST(request: Request) {
           <p>Your tutoring session request has been sent to ${tutor.display_name}.</p>
           <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:20px;margin:20px 0">
             <p><strong>Subject:</strong> ${subject}</p>
+            <p><strong>Topic:</strong> ${topic}</p>
             <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
             <p><strong>Duration:</strong> ${sessionLength} minutes</p>
             <p><strong>Amount:</strong> $${studentPrice}</p>
+            ${wantsIntroCall ? '<p style="color:#22550e;font-weight:700">🤝 Your tutor will contact you to schedule a free 15-min intro call first.</p>' : ''}
           </div>
           <p>The tutor will confirm within 24 hours and send you a Google Meet link.</p>
-          <a href="https://aceforge.app/tutoring/sessions" style="display:inline-block;background:#22550e;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">View My Sessions →</a>
+          <p>Complete your session to earn <strong>+${sessionLength === 30 ? 50 : sessionLength === 90 ? 150 : 100} XP</strong>! ⭐</p>
+          <a href="https://aceforge.app/tutoring/sessions" style="display:inline-block;background:#22550e;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">
+            View My Sessions →
+          </a>
           <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
         </div>
       `,
