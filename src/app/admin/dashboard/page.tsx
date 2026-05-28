@@ -36,7 +36,21 @@ export default async function AdminDashboardPage() {
     .order('created_at', { ascending: false })
     .limit(10)
 
-  const { data: tickets } = await adminClient
+  const { data: ticketsRaw } = await adminClient
+    .from('support_tickets')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  // Manually join profiles
+  const tickets = await Promise.all((ticketsRaw ?? []).map(async (ticket) => {
+    const { data: profileData } = await adminClient
+      .from('profiles')
+      .select('display_name, email, avatar_url')
+      .eq('id', ticket.user_id)
+      .single()
+    return { ...ticket, profiles: profileData }
+  }))
     .from('support_tickets')
     .select('*, profiles!support_tickets_user_id_fkey(display_name, email, avatar_url)')
     .order('created_at', { ascending: false })

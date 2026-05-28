@@ -17,10 +17,19 @@ export default async function AdminSupportPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { data: tickets } = await adminClient
+  const { data: ticketsRaw } = await adminClient
     .from('support_tickets')
-    .select('*, profiles!support_tickets_user_id_fkey(display_name, email, avatar_url)')
+    .select('*')
     .order('created_at', { ascending: false })
+
+  const tickets = await Promise.all((ticketsRaw ?? []).map(async (ticket) => {
+    const { data: profileData } = await adminClient
+      .from('profiles')
+      .select('display_name, email, avatar_url')
+      .eq('id', ticket.user_id)
+      .single()
+    return { ...ticket, profiles: profileData }
+  }))
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
