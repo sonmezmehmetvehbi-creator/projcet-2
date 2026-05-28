@@ -23,10 +23,18 @@ function AdminSignupInner() {
 
   useEffect(() => {
     async function checkToken() {
-      if (!token) { setValidToken(false); return }
-      const res = await fetch(`/api/admin/verify-token?token=${token}`)
-      const data = await res.json()
-      setValidToken(data.valid)
+      if (!token) {
+        setValidToken(false)
+        return
+      }
+      try {
+        const res = await fetch(`/api/admin/verify-token?token=${encodeURIComponent(token)}`)
+        if (!res.ok) { setValidToken(false); return }
+        const data = await res.json()
+        setValidToken(data.valid === true)
+      } catch {
+        setValidToken(false)
+      }
     }
     checkToken()
   }, [token])
