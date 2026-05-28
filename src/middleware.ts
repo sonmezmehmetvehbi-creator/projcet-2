@@ -12,7 +12,7 @@ const PUBLIC_PATHS = [
   '/auth/callback',
   '/privacy',
   '/terms',
-  '/admin'
+  '/admin',
   '/tutoring/legal',
 ]
 
