@@ -54,14 +54,53 @@ export default function TutorSignupPage() {
           email: email.trim(),
           role: 'tutor_pending',
         })
-        router.push('/tutor/apply')
+        router.push('/tutor/signup?verified=pending')
       }
     } catch (err: any) {
       setError(err.message)
     }
     setLoading(false)
   }
+const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const isPending = searchParams?.get('verified') === 'pending'
 
+  if (isPending) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem 1.5rem' }}>
+      <div style={{ width:'100%', maxWidth:'26rem', textAlign:'center' }}>
+        <Link href="/" style={{ display:'flex', alignItems:'center', gap:'0.5rem', textDecoration:'none', justifyContent:'center', marginBottom:'2rem' }}>
+          <div style={{ width:'2.25rem', height:'2.25rem', borderRadius:'0.625rem', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <BookOpen style={{ width:'1.125rem', height:'1.125rem', color:'white' }} strokeWidth={2.5} />
+          </div>
+          <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>AceForge</span>
+        </Link>
+        <div className="card" style={{ padding:'3rem' }}>
+          <div style={{ width:'4rem', height:'4rem', borderRadius:'50%', background:'rgb(234,243,222)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.25rem' }}>
+            <CheckCircle style={{ width:'2rem', height:'2rem', color:'rgb(59,109,17)' }} />
+          </div>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
+            Check your email! 📬
+          </h1>
+          <p style={{ color:'rgb(107,107,88)', lineHeight:1.7, marginBottom:'0.5rem' }}>
+            We sent a confirmation link to <strong style={{ color:'rgb(26,26,20)' }}>{email}</strong>.
+          </p>
+          <p style={{ color:'rgb(107,107,88)', lineHeight:1.7, marginBottom:'1.5rem' }}>
+            Click the link in your email to confirm your account. Once confirmed you will be directed to complete your tutor application.
+          </p>
+          <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'1.5rem' }}>
+            <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
+              Did not receive the email? Check your spam folder or{' '}
+              <button onClick={() => router.push('/tutor/signup')} style={{ background:'transparent', border:'none', color:'rgb(34,85,14)', fontWeight:600, cursor:'pointer', padding:0, fontSize:'0.8125rem' }}>
+                try again
+              </button>.
+            </p>
+          </div>
+          <Link href="/login" className="btn-primary" style={{ display:'flex', justifyContent:'center', textDecoration:'none' }}>
+            Go to Login →
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem 1.5rem' }}>
       <div style={{ width:'100%', maxWidth:'26rem' }}>
