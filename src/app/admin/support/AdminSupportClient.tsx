@@ -62,7 +62,7 @@ export default function AdminSupportClient({ tickets: initialTickets, currentUse
   async function closeTicket(ticketId: string) {
     await supabase.from('support_tickets').update({ status:'closed' }).eq('id', ticketId)
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status:'closed' } : t))
-    if (selectedTicket?.id === ticketId) setSelectedTicket(prev => ({ ...prev, status:'closed' }))
+    if (selectedTicket?.id === ticketId) setSelectedTicket((prev: any) => ({ ...prev, status:'closed' }))
   }
 
   return (
