@@ -37,24 +37,24 @@ export default function AdminSupportClient({ tickets: initialTickets, currentUse
   }, [selectedTicket])
 
   async function loadMessages(ticketId: string) {
-    const { data } = await supabase
-      .from('support_messages')
-      .select('*, profiles!support_messages_sender_id_fkey(display_name, is_admin)')
-      .eq('ticket_id', ticketId)
-      .order('created_at', { ascending: true })
-    setMessages(data ?? [])
-    await supabase.from('support_messages').update({ read: true }).eq('ticket_id', ticketId).eq('is_admin', false)
+    const res = await fetch(`/api/admin/get-messages?ticketId=${ticketId}`)
+    const data = await res.json()
+    setMessages(data.messages ?? [])
   }
 
   async function sendMessage() {
     if (!newMessage.trim() || !selectedTicket) return
     setSending(true)
-    await supabase.from('support_messages').insert({
+    const msg = {
+      id: Date.now().toString(),
       ticket_id: selectedTicket.id,
       sender_id: currentUserId,
       message: newMessage.trim(),
       is_admin: true,
-    })
+      created_at: new Date().toISOString(),
+    }
+    const { data } = await supabase.from('support_messages').insert(msg).select().single()
+    setMessages(prev => [...prev, data ?? msg])
     setNewMessage('')
     setSending(false)
   }
