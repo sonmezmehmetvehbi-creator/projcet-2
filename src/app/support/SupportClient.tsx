@@ -42,31 +42,26 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
     if (!selectedTicket) return
     loadMessages(selectedTicket.id)
 
-    // Realtime for new admin replies
-    const channel = supabase
-      .channel(`user-support-${selectedTicket.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'support_messages',
-        filter: `ticket_id=eq.${selectedTicket.id}`,
-      }, (payload) => {
-        setMessages(prev => {
-          // avoid duplicates
-          if (prev.find(m => m.id === payload.new.id)) return prev
-          return [...prev, payload.new]
-        })
-      })
-      .subscribe()
+    // Poll every 3 seconds for new messages
+    const pollInterval = setInterval(() => {
+      loadMessages(selectedTicket.id)
+    }, 3000)
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { clearInterval(pollInterval) }
   }, [selectedTicket])
-
   async function loadMessages(ticketId: string) {
     const { data } = await supabase
       .from('support_messages')
       .select('*')
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: true })
-    setMessages(data ?? [])
+    if (data) {
+      setMessages(prev => {
+        // Only update if there are new messages
+        if (data.length !== prev.length) return data
+        return prev
+      })
+    }
   }
 
   async function createTicket() {

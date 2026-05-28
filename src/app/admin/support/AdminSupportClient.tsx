@@ -28,12 +28,12 @@ export default function AdminSupportClient({ tickets: initialTickets, currentUse
   useEffect(() => {
     if (!selectedTicket) return
     loadMessages(selectedTicket.id)
-    const channel = supabase
-      .channel(`admin-support-${selectedTicket.id}`)
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'support_messages', filter:`ticket_id=eq.${selectedTicket.id}` },
-        (payload) => setMessages(prev => [...prev, payload.new]))
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    const pollInterval = setInterval(() => {
+      loadMessages(selectedTicket.id)
+    }, 3000)
+
+    return () => { clearInterval(pollInterval) }
   }, [selectedTicket])
 
   async function loadMessages(ticketId: string) {
