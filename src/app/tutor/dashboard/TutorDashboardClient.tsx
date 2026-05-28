@@ -101,6 +101,20 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
 
   return (
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
+      {/* Anti-poaching warning banner */}
+        <div style={{
+          background:'linear-gradient(135deg, rgba(163,45,45,0.06), rgba(163,45,45,0.03))',
+          borderBottom:'1px solid rgba(163,45,45,0.15)',
+          padding:'0.75rem 1.5rem',
+          display:'flex', alignItems:'center', gap:'0.75rem',
+          flexWrap:'wrap',
+        }}>
+          <span style={{ fontSize:'1rem', flexShrink:0 }}>⚖️</span>
+          <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', lineHeight:1.6, flex:1 }}>
+            <strong>Legal Reminder:</strong> All tutoring sessions must be conducted exclusively through AceForge. Soliciting students outside the platform is a violation of your tutor agreement and may result in permanent ban and legal action. Sessions are recorded.{' '}
+            <a href="/tutoring/legal" style={{ color:'rgb(163,45,45)', fontWeight:700, textDecoration:'underline' }}>View full policy →</a>
+          </p>
+        </div>
       <div style={{ maxWidth:'72rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
 
         <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', marginBottom:'2rem', flexWrap:'wrap' }}>

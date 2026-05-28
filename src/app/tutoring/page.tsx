@@ -170,5 +170,12 @@ export default async function TutoringPage() {
         </div>
       </div>
     </div>
+
+    {/* Legal policy link */}
+          <div style={{ marginTop:'1rem', textAlign:'center' }}>
+            <Link href="/tutoring/legal" style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', textDecoration:'none' }}>
+              ⚖️ View full tutoring policies, refund policy & legal terms →
+            </Link>
+          </div>
   )
 }
