@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { Settings, LogOut, FileText, Crown, ChevronDown, Zap, BookOpen, Menu, X } from 'lucide-react'
+import { Settings, LogOut, FileText, Crown, ChevronDown, Zap, BookOpen, Menu, X, Headphones } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Profile } from '@/types'
 
@@ -269,7 +269,7 @@ export default function Navbar({ profile }: NavbarProps) {
                       {[
                       { href:'/settings', icon:<Settings style={{width:'1rem',height:'1rem'}} />, label:'Settings' },
                       { href:'/dashboard?tab=pdfs', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'My PDFs' },
-                      { href:'/support', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Support' },
+                      { href:'/support', icon:<Headphones style={{width:'1rem',height:'1rem'}} />, label:'Support' },
                       { href:'/terms', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Terms of Service' },
                       { href:'/privacy', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Privacy Policy' },
                     ].map(item => (
