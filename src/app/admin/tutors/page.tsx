@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import Navbar from '@/components/layout/Navbar'
+import AdminNavbar from '../dashboard/AdminNavbar'
 import AdminTutorsClient from './AdminTutorsClient'
 
 export default async function AdminTutorsPage() {
@@ -18,7 +18,7 @@ export default async function AdminTutorsPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
-      <Navbar profile={profile} />
+      <AdminNavbar profile={profile} />
       <AdminTutorsClient applications={applications ?? []} />
     </div>
   )

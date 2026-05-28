@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import Navbar from '@/components/layout/Navbar'
+import AdminNavbar from '../dashboard/AdminNavbar'
 import AdminDisputesClient from './AdminDisputesClient'
 
 export default async function AdminDisputesPage() {
@@ -19,7 +19,7 @@ export default async function AdminDisputesPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
-      <Navbar profile={profile} />
+      <AdminNavbar profile={profile} />
       <AdminDisputesClient disputes={disputes ?? []} />
     </div>
   )
