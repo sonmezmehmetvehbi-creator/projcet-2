@@ -110,12 +110,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
   }
 
   async function closeTicket(ticketId: string) {
-    await fetch('/api/support/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId, message: 'This ticket has been closed by support.' }),
-    })
-    const res = await fetch(`/api/admin/close-ticket`, {
+    await fetch('/api/admin/close-ticket', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ticketId }),
@@ -165,12 +160,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: '1rem', marginBottom: '2rem' }}>
               {STAT_CARDS.map((s, i) => (
-                <div key={s.label} className="card" style={{
-                  padding: '1.5rem', textAlign: 'center', background: s.bg,
-                  border: `1px solid ${s.color}22`,
-                  animation: `fadeSlideUp 0.4s ease ${i * 0.05}s both`,
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                }}
+                <div key={s.label} className="card" style={{ padding: '1.5rem', textAlign: 'center', background: s.bg, border: `1px solid ${s.color}22`, animation: `fadeSlideUp 0.4s ease ${i * 0.05}s both`, transition: 'transform 0.2s, box-shadow 0.2s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${s.color}22` }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
                   <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>{s.emoji}</div>
@@ -181,15 +171,14 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                 </div>
               ))}
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px,1fr))', gap: '1rem' }}>
               {stats.pendingTutors > 0 && (
                 <Link href="/admin/tutors" style={{ textDecoration: 'none' }}>
-                  <div className="card" style={{ padding: '1.25rem', border: '2px solid rgba(163,45,45,0.25)', background: 'rgba(163,45,45,0.03)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <div className="card" style={{ padding: '1.25rem', border: '2px solid rgba(163,45,45,0.25)', background: 'rgba(163,45,45,0.03)', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ fontSize: '1.5rem' }}>⏳</span>
                       <div>
-                        <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', fontSize: '0.9375rem' }}>{stats.pendingTutors} tutor application{stats.pendingTutors > 1 ? 's' : ''} waiting</p>
+                        <p style={{ fontWeight: 700, color: 'rgb(163,45,45)' }}>{stats.pendingTutors} tutor application{stats.pendingTutors > 1 ? 's' : ''} waiting</p>
                         <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>Click to review →</p>
                       </div>
                     </div>
@@ -198,11 +187,11 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
               )}
               {stats.openTickets > 0 && (
                 <button onClick={() => setTab('support')} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%' }}>
-                  <div className="card" style={{ padding: '1.25rem', border: '2px solid rgba(163,45,45,0.25)', background: 'rgba(163,45,45,0.03)', transition: 'all 0.2s' }}>
+                  <div className="card" style={{ padding: '1.25rem', border: '2px solid rgba(163,45,45,0.25)', background: 'rgba(163,45,45,0.03)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ fontSize: '1.5rem' }}>🎧</span>
                       <div>
-                        <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', fontSize: '0.9375rem' }}>{stats.openTickets} open support ticket{stats.openTickets > 1 ? 's' : ''}</p>
+                        <p style={{ fontWeight: 700, color: 'rgb(163,45,45)' }}>{stats.openTickets} open support ticket{stats.openTickets > 1 ? 's' : ''}</p>
                         <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>Click to respond →</p>
                       </div>
                     </div>
@@ -273,30 +262,33 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                   </div>
                   <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {messages.length === 0 && <div style={{ textAlign: 'center', color: 'rgb(107,107,88)', fontSize: '0.875rem', padding: '2rem' }}>No messages yet.</div>}
-                    {messages.map((msg, i) => (
-                      <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.is_admin ? 'flex-end' : 'flex-start' }}>
-                        {!msg.is_admin && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>{selectedTicket.profiles?.display_name}</p>}
-                        {msg.is_admin && <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingRight: '0.25rem' }}>You (Admin)</p>}
-                        <div style={{
-                          maxWidth: '70%',
-                          padding: msg.image_url && !msg.message ? '0.375rem' : '0.75rem 1rem',
-                          borderRadius: msg.is_admin ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
-                          background: msg.is_admin ? 'rgb(26,26,20)' : 'rgba(34,85,14,0.08)',
-                          color: msg.is_admin ? 'white' : 'rgb(26,26,20)',
-                          overflow: 'hidden',
-                        }}>
-                          {msg.image_url && (
-                            <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
-                              <img src={msg.image_url} alt="screenshot" style={{ maxWidth: '100%', borderRadius: '0.625rem', display: 'block', maxHeight: '300px', objectFit: 'contain' }} />
-                            </a>
-                          )}
-                          {msg.message && <p style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginTop: msg.image_url ? '0.5rem' : 0 }}>{msg.message}</p>}
+                    {messages.map((msg, i) => {
+                      const isMine = msg.sender_id === currentUserId
+                      return (
+                        <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                          {!isMine && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>{selectedTicket.profiles?.display_name}</p>}
+                          {isMine && <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingRight: '0.25rem' }}>You (Admin)</p>}
+                          <div style={{
+                            maxWidth: '70%',
+                            padding: msg.image_url && !msg.message ? '0.375rem' : '0.75rem 1rem',
+                            borderRadius: isMine ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
+                            background: isMine ? 'rgb(26,26,20)' : 'rgba(34,85,14,0.08)',
+                            color: isMine ? 'white' : 'rgb(26,26,20)',
+                            overflow: 'hidden',
+                          }}>
+                            {msg.image_url && (
+                              <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+                                <img src={msg.image_url} alt="screenshot" style={{ maxWidth: '100%', borderRadius: '0.625rem', display: 'block', maxHeight: '300px', objectFit: 'contain' }} />
+                              </a>
+                            )}
+                            {msg.message && <p style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginTop: msg.image_url ? '0.5rem' : 0 }}>{msg.message}</p>}
+                          </div>
+                          <p style={{ fontSize: '0.6875rem', color: 'rgb(107,107,88)', marginTop: '0.25rem' }}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </div>
-                        <p style={{ fontSize: '0.6875rem', color: 'rgb(107,107,88)', marginTop: '0.25rem' }}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    ))}
+                      )
+                    })}
                     <div ref={messagesEndRef} />
                   </div>
                   {selectedTicket.status === 'open' ? (
@@ -305,15 +297,14 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                         <input value={newMessage} onChange={e => setNewMessage(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                           placeholder="Reply to user..." className="input" style={{ flex: 1 }} />
-                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.06)', border: '1.5px solid rgba(34,85,14,0.2)', cursor: 'pointer', flexShrink: 0 }} title="Send screenshot">
-                          🖼️
-                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.06)', border: '1.5px solid rgba(34,85,14,0.2)', cursor: 'pointer', flexShrink: 0 }}>
+                          🖼️<input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                         </label>
                         <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="btn-primary" style={{ padding: '0.625rem 1rem', flexShrink: 0 }}>
                           <Send style={{ width: '1rem', height: '1rem' }} />
                         </button>
                       </div>
-                      {uploadingImage && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginTop: '0.5rem' }}>Uploading image...</p>}
+                      {uploadingImage && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginTop: '0.5rem' }}>Uploading...</p>}
                     </div>
                   ) : (
                     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)', textAlign: 'center' }}>
@@ -343,7 +334,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                         ))}
                       </div>
                     </div>
-                    <Link href="/admin/tutors" className="btn-primary" style={{ textDecoration: 'none', fontSize: '0.875rem' }}>Review Application →</Link>
+                    <Link href="/admin/tutors" className="btn-primary" style={{ textDecoration: 'none', fontSize: '0.875rem' }}>Review →</Link>
                   </div>
                 ))}
               </div>
@@ -382,13 +373,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{`@keyframes fadeSlideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }`}</style>
     </div>
   )
 }

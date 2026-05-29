@@ -25,6 +25,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [showNewTicket, setShowNewTicket] = useState(false)
   const [subject, setSubject] = useState('')
   const [category, setCategory] = useState('')
@@ -33,7 +34,6 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
-  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -52,7 +52,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
       const data = await res.json()
       if (data.messages) {
         setMessages(prev => {
-          if (JSON.stringify(prev.map(m => m.id)) === JSON.stringify(data.messages.map((m: any) => m.id))) return prev
+          if (JSON.stringify(prev.map((m: any) => m.id)) === JSON.stringify(data.messages.map((m: any) => m.id))) return prev
           return data.messages
         })
       }
@@ -72,13 +72,11 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
         .select()
         .single()
       if (ticketError) throw ticketError
-
       await fetch('/api/support/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticketId: ticket.id, message: firstMessage.trim() }),
       })
-
       setTickets(prev => [ticket, ...prev])
       setSelectedTicket(ticket)
       setShowNewTicket(false)
@@ -164,7 +162,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
               <div>
                 <label className="label">Tell us more *</label>
                 <textarea value={firstMessage} onChange={e => setFirstMessage(e.target.value)} className="input" rows={4} style={{ resize: 'vertical' }}
-                  placeholder="Describe what happened, what you expected, and any relevant details..." />
+                  placeholder="Describe what happened and any relevant details..." />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button onClick={() => { setShowNewTicket(false); setError('') }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
@@ -187,6 +185,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
           </div>
         ) : tickets.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '1.5rem', height: '65vh' }}>
+
             <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid rgba(34,85,14,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(34,85,14,0.08)', background: 'rgba(34,85,14,0.02)' }}>
                 <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'rgb(26,26,20)' }}>Your Tickets</p>
@@ -221,55 +220,61 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
                       {selectedTicket.status === 'open' ? '🟢 Open — we will reply soon' : '⚫ Closed'}
                     </p>
                   </div>
+
                   <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {messages.length === 0 && (
                       <div style={{ textAlign: 'center', color: 'rgb(107,107,88)', fontSize: '0.875rem', padding: '2rem' }}>
                         No messages yet. We will reply shortly!
                       </div>
                     )}
-                    {messages.map((msg, i) => (
-                      <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.is_admin ? 'flex-start' : 'flex-end' }}>
-                        {msg.is_admin && (
-                          <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>🎧 AceForge Support</p>
-                        )}
-                        <div style={{
-                          maxWidth: '70%', padding: msg.image_url && !msg.message ? '0.375rem' : '0.75rem 1rem',
-                          borderRadius: msg.is_admin ? '1rem 1rem 1rem 0.25rem' : '1rem 1rem 0.25rem 1rem',
-                          background: msg.is_admin ? 'rgba(34,85,14,0.08)' : 'rgb(34,85,14)',
-                          color: msg.is_admin ? 'rgb(26,26,20)' : 'white',
-                          overflow: 'hidden',
-                        }}>
-                          {msg.image_url && (
-                            <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
-                              <img src={msg.image_url} alt="screenshot" style={{ maxWidth:'100%', borderRadius:'0.625rem', display:'block', maxHeight:'300px', objectFit:'contain' }} />
-                            </a>
+                    {messages.map((msg, i) => {
+                      const isMine = msg.sender_id === profile.id
+                      return (
+                        <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                          {!isMine && (
+                            <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>
+                              🎧 AceForge Support
+                            </p>
                           )}
-                          {msg.message && <p style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginTop: msg.image_url ? '0.5rem' : 0 }}>{msg.message}</p>}
+                          <div style={{
+                            maxWidth: '70%',
+                            padding: msg.image_url && !msg.message ? '0.375rem' : '0.75rem 1rem',
+                            borderRadius: isMine ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
+                            background: isMine ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.08)',
+                            color: isMine ? 'white' : 'rgb(26,26,20)',
+                            overflow: 'hidden',
+                          }}>
+                            {msg.image_url && (
+                              <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+                                <img src={msg.image_url} alt="screenshot" style={{ maxWidth: '100%', borderRadius: '0.625rem', display: 'block', maxHeight: '300px', objectFit: 'contain' }} />
+                              </a>
+                            )}
+                            {msg.message && <p style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginTop: msg.image_url ? '0.5rem' : 0 }}>{msg.message}</p>}
+                          </div>
+                          <p style={{ fontSize: '0.6875rem', color: 'rgb(107,107,88)', marginTop: '0.25rem' }}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </div>
-                        <p style={{ fontSize: '0.6875rem', color: 'rgb(107,107,88)', marginTop: '0.25rem' }}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    ))}
+                      )
+                    })}
                     <div ref={messagesEndRef} />
                   </div>
+
                   {selectedTicket.status === 'open' ? (
                     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)' }}>
                       <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <input value={newMessage} onChange={e => setNewMessage(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                           placeholder="Type your message..." className="input" style={{ flex: 1 }} />
-                        <label style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'2.75rem', height:'2.75rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', border:'1.5px solid rgba(34,85,14,0.2)', cursor:'pointer', flexShrink:0 }} title="Send screenshot">
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.06)', border: '1.5px solid rgba(34,85,14,0.2)', cursor: 'pointer', flexShrink: 0 }} title="Send screenshot">
                           🖼️
-                          <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageUpload} />
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                         </label>
                         <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="btn-primary" style={{ padding: '0.625rem 1rem', flexShrink: 0 }}>
                           <Send style={{ width: '1rem', height: '1rem' }} />
                         </button>
                       </div>
-                      {uploadingImage && (
-                        <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginTop:'0.5rem' }}>Uploading image...</p>
-                      )}
+                      {uploadingImage && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginTop: '0.5rem' }}>Uploading image...</p>}
                     </div>
                   ) : (
                     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)', textAlign: 'center' }}>
