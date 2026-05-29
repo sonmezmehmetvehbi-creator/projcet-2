@@ -7,6 +7,7 @@ import { Send, Plus, AlertCircle } from 'lucide-react'
 interface Props {
   profile: any
   tickets: any[]
+  currentUserId: string
 }
 
 const ISSUE_CATEGORIES = [
@@ -19,7 +20,7 @@ const ISSUE_CATEGORIES = [
   'Other',
 ]
 
-export default function SupportClient({ profile, tickets: initialTickets }: Props) {
+export default function SupportClient({ profile, tickets: initialTickets, currentUserId }: Props) {
   const [tickets, setTickets] = useState(initialTickets)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [messages, setMessages] = useState<any[]>([])
@@ -228,7 +229,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
                       </div>
                     )}
                     {messages.map((msg, i) => {
-                      const isMine = msg.sender_id === profile.id
+                      const isMine = msg.sender_id === currentUserId
                       return (
                         <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
                           {!isMine && (

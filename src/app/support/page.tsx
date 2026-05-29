@@ -17,9 +17,9 @@ export default async function SupportPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
       <Navbar profile={profile} />
-      <SupportClient profile={profile} tickets={tickets ?? []} />
+      <SupportClient profile={profile} tickets={tickets ?? []} currentUserId={user.id} />
     </div>
   )
 }
