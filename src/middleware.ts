@@ -6,6 +6,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/signup',
   '/tutor/signup',
+  '/tutor/apply',
   '/admin/signup',
   '/forgot-password',
   '/reset-password',
@@ -55,10 +56,16 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, role')
       .eq('id', user.id)
       .single()
-    url.pathname = profile?.is_admin ? '/admin/dashboard' : '/dashboard'
+    if (profile?.is_admin) {
+      url.pathname = '/admin/dashboard'
+    } else if (profile?.role === 'tutor_pending') {
+      url.pathname = '/tutor/apply'
+    } else {
+      url.pathname = '/dashboard'
+    }
     return NextResponse.redirect(url)
   }
 
