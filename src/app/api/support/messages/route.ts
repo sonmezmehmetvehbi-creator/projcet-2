@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-    const { ticketId, message } = await request.json()
+    const { ticketId, message, imageUrl } = await request.json()
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
       .insert({
         ticket_id: ticketId,
         sender_id: user.id,
-        message: message.trim(),
+        message: message?.trim() || '',
+        image_url: imageUrl || null,
         is_admin: profile?.is_admin ?? false,
       })
       .select()

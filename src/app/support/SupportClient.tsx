@@ -33,6 +33,7 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,6 +103,28 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
     })
     await loadMessages(selectedTicket.id)
     setSending(false)
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !selectedTicket) return
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/support/upload-image', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.url) {
+        await fetch('/api/support/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticketId: selectedTicket.id, message: '', imageUrl: data.url }),
+        })
+        await loadMessages(selectedTicket.id)
+      }
+    } catch {}
+    setUploadingImage(false)
+    if (e.target) e.target.value = ''
   }
 
   return (
@@ -210,12 +233,18 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
                           <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', fontWeight: 700, marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>🎧 AceForge Support</p>
                         )}
                         <div style={{
-                          maxWidth: '70%', padding: '0.75rem 1rem',
+                          maxWidth: '70%', padding: msg.image_url && !msg.message ? '0.375rem' : '0.75rem 1rem',
                           borderRadius: msg.is_admin ? '1rem 1rem 1rem 0.25rem' : '1rem 1rem 0.25rem 1rem',
                           background: msg.is_admin ? 'rgba(34,85,14,0.08)' : 'rgb(34,85,14)',
                           color: msg.is_admin ? 'rgb(26,26,20)' : 'white',
+                          overflow: 'hidden',
                         }}>
-                          <p style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}>{msg.message}</p>
+                          {msg.image_url && (
+                            <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+                              <img src={msg.image_url} alt="screenshot" style={{ maxWidth:'100%', borderRadius:'0.625rem', display:'block', maxHeight:'300px', objectFit:'contain' }} />
+                            </a>
+                          )}
+                          {msg.message && <p style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginTop: msg.image_url ? '0.5rem' : 0 }}>{msg.message}</p>}
                         </div>
                         <p style={{ fontSize: '0.6875rem', color: 'rgb(107,107,88)', marginTop: '0.25rem' }}>
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -225,13 +254,22 @@ export default function SupportClient({ profile, tickets: initialTickets }: Prop
                     <div ref={messagesEndRef} />
                   </div>
                   {selectedTicket.status === 'open' ? (
-                    <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)', display: 'flex', gap: '0.75rem' }}>
-                      <input value={newMessage} onChange={e => setNewMessage(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                        placeholder="Type your message..." className="input" style={{ flex: 1 }} />
-                      <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="btn-primary" style={{ padding: '0.625rem 1rem', flexShrink: 0 }}>
-                        <Send style={{ width: '1rem', height: '1rem' }} />
-                      </button>
+                    <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <input value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+                          placeholder="Type your message..." className="input" style={{ flex: 1 }} />
+                        <label style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'2.75rem', height:'2.75rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', border:'1.5px solid rgba(34,85,14,0.2)', cursor:'pointer', flexShrink:0 }} title="Send screenshot">
+                          🖼️
+                          <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageUpload} />
+                        </label>
+                        <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="btn-primary" style={{ padding: '0.625rem 1rem', flexShrink: 0 }}>
+                          <Send style={{ width: '1rem', height: '1rem' }} />
+                        </button>
+                      </div>
+                      {uploadingImage && (
+                        <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginTop:'0.5rem' }}>Uploading image...</p>
+                      )}
                     </div>
                   ) : (
                     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(34,85,14,0.08)', textAlign: 'center' }}>
