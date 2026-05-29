@@ -18,40 +18,29 @@ const PUBLIC_PATHS = [
 ]
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
     }
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
   const isPublic =
     PUBLIC_PATHS.includes(pathname) ||
-    pathname.startsWith('/api/stripe') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/ads.txt')
@@ -64,7 +53,6 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone()
-    // Check if admin — redirect to admin dashboard
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
