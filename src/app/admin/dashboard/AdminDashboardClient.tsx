@@ -263,7 +263,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                   <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {messages.length === 0 && <div style={{ textAlign: 'center', color: 'rgb(107,107,88)', fontSize: '0.875rem', padding: '2rem' }}>No messages yet.</div>}
                     {messages.map((msg, i) => {
-                      const isMine = msg.sender_id === currentUserId
+                      const isMine = msg.is_admin === true
                       return (
                         <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
                           {!isMine && <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>{selectedTicket.profiles?.display_name}</p>}

@@ -229,7 +229,7 @@ export default function SupportClient({ profile, tickets: initialTickets, curren
                       </div>
                     )}
                     {messages.map((msg, i) => {
-                      const isMine = msg.sender_id === currentUserId
+                      const isMine = !msg.is_admin
                       return (
                         <div key={msg.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
                           {!isMine && (
