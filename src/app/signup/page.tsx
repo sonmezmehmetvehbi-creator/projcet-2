@@ -30,10 +30,21 @@ export default function SignupPage() {
     if (!passwordValid) { setError('Please meet all password requirements.'); return }
     setError(''); setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: name } },
+      options: { 
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+      },
     })
+    if (!error && data.user) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        display_name: name,
+        email,
+        role: 'user',
+      })
+    }
     if (error) { setError(error.message); setLoading(false) }
     else { setSuccess(true); setLoading(false) }
   }
