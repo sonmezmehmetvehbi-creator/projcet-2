@@ -48,12 +48,6 @@ export default function TutorSignupPage() {
 
       // Update profile with display name and role
       if (data.user) {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          display_name: fullName.trim(),
-          email: email.trim(),
-          role: 'tutor_pending',
-        })
         router.push('/tutor/signup?verified=pending')
       }
     } catch (err: any) {
