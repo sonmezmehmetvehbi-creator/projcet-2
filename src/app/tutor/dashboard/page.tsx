@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import Navbar from '@/components/layout/Navbar'
+import TutorNavbar from './TutorNavbar'
 import TutorDashboardClient from './TutorDashboardClient'
 
 export default async function TutorDashboardPage() {
@@ -11,38 +12,43 @@ export default async function TutorDashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (profile?.tutor_status !== 'approved') redirect('/tutor/apply')
 
-  const { data: tutorProfile } = await supabase
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: tutorProfile } = await adminClient
     .from('tutor_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single()
 
-  const { data: sessions } = await supabase
+  const { data: sessions } = await adminClient
     .from('tutoring_sessions')
     .select('*, profiles!tutoring_sessions_student_id_fkey(display_name, email, avatar_url)')
     .eq('tutor_id', tutorProfile?.id)
     .order('scheduled_at', { ascending: false })
 
-  const { data: reviews } = await supabase
+  const { data: reviews } = await adminClient
     .from('tutor_reviews')
-    .select('*, profiles!tutor_reviews_student_id_fkey(display_name, avatar_url)')
+    .select('*, profiles!tutor_reviews_student_id_fkey(display_name)')
     .eq('tutor_id', tutorProfile?.id)
     .order('created_at', { ascending: false })
 
-  const { data: payouts } = await supabase
+  const { data: payouts } = await adminClient
     .from('tutor_payouts')
     .select('*')
     .eq('tutor_id', tutorProfile?.id)
     .order('created_at', { ascending: false })
 
-  const { data: availability } = await supabase
+  const { data: availability } = await adminClient
     .from('tutor_availability')
     .select('*')
     .eq('tutor_id', tutorProfile?.id)
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
-      <Navbar profile={profile} />
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0f1e, #1a1a2e, #16213e)' }}>
+      <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
       <TutorDashboardClient
         profile={profile}
         tutorProfile={tutorProfile}

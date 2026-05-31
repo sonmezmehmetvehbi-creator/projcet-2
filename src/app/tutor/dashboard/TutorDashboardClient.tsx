@@ -1,11 +1,51 @@
 'use client'
 
-import { useState } from 'react'
-import { Star, DollarSign, Calendar, Clock, User, Edit, Save, X, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Star, Edit, Save, X, Plus, Search } from 'lucide-react'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const SUBJECTS = ['SAT Math', 'ACT Math', 'Algebra', 'Geometry', 'Calculus', 'Pre-Calculus', 'Statistics', 'SAT Reading & Writing', 'ACT English']
-const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'Europe/London', 'Europe/Paris', 'Asia/Istanbul', 'Asia/Dubai']
+
+const COMMON_SUBJECTS = [
+  'SAT Math', 'SAT Reading & Writing', 'ACT Math', 'ACT English',
+  'Algebra', 'Geometry', 'Pre-Calculus', 'Calculus', 'Statistics',
+  'Biology', 'Chemistry', 'Physics', 'AP Chemistry', 'AP Biology', 'AP Physics',
+  'English Literature', 'Essay Writing', 'History', 'Economics',
+  'Computer Science', 'Python', 'Java', 'Spanish', 'French',
+]
+
+const ALL_SUBJECTS = [
+  ...COMMON_SUBJECTS,
+  'Trigonometry', 'Linear Algebra', 'Differential Equations', 'Discrete Math',
+  'Organic Chemistry', 'Biochemistry', 'Anatomy', 'Environmental Science',
+  'AP Calculus AB', 'AP Calculus BC', 'AP Statistics', 'AP Computer Science',
+  'AP History', 'AP Economics', 'AP English', 'AP Spanish', 'AP French',
+  'IB Math', 'IB Physics', 'IB Chemistry', 'IB Biology', 'IB Economics',
+  'GMAT', 'GRE', 'LSAT', 'MCAT', 'TOEFL', 'IELTS',
+  'Music Theory', 'Art History', 'Philosophy', 'Psychology', 'Sociology',
+  'Accounting', 'Finance', 'Marketing', 'Business',
+  'C++', 'JavaScript', 'React', 'Data Science', 'Machine Learning',
+  'Arabic', 'Mandarin', 'German', 'Italian', 'Portuguese', 'Japanese', 'Korean',
+  'Russian', 'Turkish', 'Hindi', 'Hebrew',
+]
+
+const ALL_LANGUAGES = [
+  'English', 'Spanish', 'French', 'Mandarin', 'Arabic', 'Turkish',
+  'Portuguese', 'Hindi', 'Korean', 'Japanese', 'German', 'Italian',
+  'Russian', 'Hebrew', 'Persian/Farsi', 'Urdu', 'Bengali', 'Swahili',
+  'Dutch', 'Greek', 'Polish', 'Swedish', 'Norwegian', 'Danish',
+  'Finnish', 'Czech', 'Romanian', 'Hungarian', 'Thai', 'Vietnamese',
+  'Indonesian', 'Malay', 'Tagalog', 'Punjabi', 'Gujarati', 'Tamil',
+  'Telugu', 'Kannada', 'Marathi', 'Amharic', 'Yoruba', 'Zulu',
+  'Serbian', 'Croatian', 'Slovak', 'Bulgarian', 'Ukrainian',
+  'Catalan', 'Basque', 'Welsh', 'Irish', 'Afrikaans',
+]
+
+const TIMEZONES = [
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Phoenix', 'Europe/London', 'Europe/Paris', 'Europe/Istanbul',
+  'Asia/Dubai', 'Asia/Kolkata', 'Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai',
+  'Australia/Sydney', 'Africa/Cairo',
+]
 
 interface Props {
   profile: any
@@ -18,13 +58,28 @@ interface Props {
 
 export default function TutorDashboardClient({ profile, tutorProfile, sessions, reviews, payouts, availability: initialAvailability }: Props) {
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
+  const [legalAccepted, setLegalAccepted] = useState(false)
+  const [showLegal, setShowLegal] = useState(true)
+
+  // Profile editing
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
   const [subjects, setSubjects] = useState<string[]>(tutorProfile?.subjects ?? [])
-  const [hourlyRate, setHourlyRate] = useState(tutorProfile?.hourly_rate ?? 30)
+  const [languages, setLanguages] = useState<string[]>(tutorProfile?.languages ?? ['English'])
+  const [subjectSearch, setSubjectSearch] = useState('')
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false)
+  const [langSearch, setLangSearch] = useState('')
+  const [showLangDropdown, setShowLangDropdown] = useState(false)
+  const [venmo, setVenmo] = useState(tutorProfile?.venmo ?? '')
+  const [paypal, setPaypal] = useState(tutorProfile?.paypal ?? '')
+  const [zelle, setZelle] = useState(tutorProfile?.zelle ?? '')
+
+  // Availability
   const [availability, setAvailability] = useState(initialAvailability)
   const [timezone, setTimezone] = useState(initialAvailability[0]?.timezone ?? 'America/New_York')
   const [saving, setSaving] = useState(false)
+
+  // Session actions
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
 
@@ -33,22 +88,30 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   const completed = sessions.filter(s => s.status === 'completed')
   const totalEarned = payouts.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
   const pendingPayout = payouts.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
-  const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : '—'
+  const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
+
+  // Weekly earnings
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+  const weeklyEarned = payouts.filter(p => p.status === 'paid' && new Date(p.paid_at) > weekAgo).reduce((sum, p) => sum + p.amount, 0)
 
   function toggleSubject(sub: string) {
     setSubjects(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub])
   }
 
+  function toggleLanguage(lang: string) {
+    setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
+  }
+
   function addSlot() {
-    setAvailability(prev => [...prev, { id: Date.now().toString(), day_of_week: 1, start_time: '09:00', end_time: '17:00', timezone }])
+    setAvailability((prev: any) => [...prev, { id: Date.now().toString(), day_of_week: 1, start_time: '09:00', end_time: '17:00', timezone }])
   }
 
   function removeSlot(id: string) {
-    setAvailability(prev => prev.filter((a: any) => a.id !== id))
+    setAvailability((prev: any) => prev.filter((a: any) => a.id !== id))
   }
 
   function updateSlot(id: string, field: string, value: any) {
-    setAvailability(prev => prev.map((a: any) => a.id === id ? { ...a, [field]: value } : a))
+    setAvailability((prev: any) => prev.map((a: any) => a.id === id ? { ...a, [field]: value } : a))
   }
 
   async function saveProfile() {
@@ -57,7 +120,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
       await fetch('/api/tutor/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio, subjects, hourlyRate, availability, timezone, tutorId: tutorProfile.id }),
+        body: JSON.stringify({ bio, subjects, languages, hourlyRate: tutorProfile?.hourly_rate ?? 30, availability, timezone, tutorId: tutorProfile?.id, venmo, paypal, zelle }),
       })
       setEditingProfile(false)
     } catch {}
@@ -80,6 +143,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   }
 
   async function completeSession(sessionId: string) {
+    if (!confirm('Mark this session as complete?')) return
     try {
       await fetch('/api/tutor/complete-session', {
         method: 'POST',
@@ -90,52 +154,93 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     } catch {}
   }
 
+  const filteredSubjects = ALL_SUBJECTS.filter(s => s.toLowerCase().includes(subjectSearch.toLowerCase()) && !subjects.includes(s) && !COMMON_SUBJECTS.includes(s))
+  const filteredLangs = ALL_LANGUAGES.filter(l => l.toLowerCase().includes(langSearch.toLowerCase()) && !languages.includes(l))
+
   const TABS = [
-    { id:'overview', label:'Overview' },
-    { id:'sessions', label:`Sessions ${pending.length > 0 ? '(' + pending.length + ' pending)' : ''}` },
-    { id:'reviews', label:'Reviews' },
-    { id:'earnings', label:'Earnings' },
-    { id:'availability', label:'Availability' },
-    { id:'profile', label:'My Profile' },
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'sessions', label: `📅 Sessions${pending.length > 0 ? ` (${pending.length})` : ''}` },
+    { id: 'reviews', label: '⭐ Reviews' },
+    { id: 'earnings', label: '💰 Earnings' },
+    { id: 'availability', label: '🕐 Availability' },
+    { id: 'profile', label: '👤 My Profile' },
   ] as const
 
-  return (
-    <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
-      {/* Anti-poaching warning banner */}
-        <div style={{
-          background:'linear-gradient(135deg, rgba(163,45,45,0.06), rgba(163,45,45,0.03))',
-          borderBottom:'1px solid rgba(163,45,45,0.15)',
-          padding:'0.75rem 1.5rem',
-          display:'flex', alignItems:'center', gap:'0.75rem',
-          flexWrap:'wrap',
-        }}>
-          <span style={{ fontSize:'1rem', flexShrink:0 }}>⚖️</span>
-          <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', lineHeight:1.6, flex:1 }}>
-            <strong>Legal Reminder:</strong> All tutoring sessions must be conducted exclusively through AceForge. Soliciting students outside the platform is a violation of your tutor agreement and may result in permanent ban and legal action. Sessions are recorded.{' '}
-            <a href="/tutoring/legal" style={{ color:'rgb(163,45,45)', fontWeight:700, textDecoration:'underline' }}>View full policy →</a>
-          </p>
-        </div>
-      <div style={{ maxWidth:'72rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
+  // Purple/indigo color scheme for tutors
+  const accent = 'rgb(99,102,241)'
+  const accentBg = 'rgba(99,102,241,0.1)'
+  const accentBorder = 'rgba(99,102,241,0.25)'
 
-        <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', marginBottom:'2rem', flexWrap:'wrap' }}>
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} style={{ width:'4rem', height:'4rem', borderRadius:'50%', objectFit:'cover', border:'3px solid rgba(34,85,14,0.2)' }} />
-          ) : (
-            <div style={{ width:'4rem', height:'4rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.5rem', fontWeight:700 }}>
-              {profile?.display_name?.[0] ?? '?'}
+  return (
+    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+
+      {/* Legal banner */}
+      {showLegal && (
+        <div style={{ background: 'rgba(163,45,45,0.12)', borderBottom: '1px solid rgba(163,45,45,0.25)', padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+            <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚖️</span>
+            <p style={{ fontSize: '0.8125rem', color: 'rgba(255,180,180,0.9)', lineHeight: 1.6 }}>
+              <strong>Legal Reminder:</strong> All tutoring sessions must be conducted exclusively through AceForge. Soliciting students outside the platform is a violation of your tutor agreement and may result in permanent ban and legal action. Sessions are recorded.{' '}
+              <a href="/tutoring/legal" style={{ color: 'rgba(255,180,180,0.9)', fontWeight: 700, textDecoration: 'underline' }}>View full policy →</a>
+            </p>
+          </div>
+          <button onClick={() => setShowLegal(false)}
+            style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.3)', border: '1px solid rgba(163,45,45,0.4)', color: 'rgba(255,200,200,0.9)', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            ✓ I Understand
+          </button>
+        </div>
+      )}
+
+      {/* Block if legal not accepted */}
+      {!legalAccepted && showLegal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
+          onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'rgb(18,18,30)', borderRadius: '1.25rem', padding: '2.5rem', maxWidth: '32rem', width: '100%', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 25px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '1rem' }}>⚖️</div>
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'white', textAlign: 'center', marginBottom: '1rem' }}>
+              Before You Continue
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {[
+                'All sessions must be conducted exclusively through AceForge',
+                'Soliciting students outside the platform is a breach of contract',
+                'All sessions are recorded for quality assurance',
+                'Violations may result in permanent ban and legal action',
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                  <span style={{ color: accent, flexShrink: 0, marginTop: '0.125rem' }}>•</span>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>{item}</p>
+                </div>
+              ))}
             </div>
-          )}
+            <a href="/tutoring/legal" target="_blank" style={{ display: 'block', textAlign: 'center', color: accent, fontSize: '0.875rem', marginBottom: '1.25rem', textDecoration: 'underline' }}>
+              Read full tutor policy →
+            </a>
+            <button onClick={() => setLegalAccepted(true)}
+              style={{ width: '100%', padding: '1rem', borderRadius: '0.875rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
+              ✓ I Understand & Agree — Continue to Dashboard
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+          <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
+            {profile?.display_name?.[0] ?? '?'}
+          </div>
           <div>
-            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)' }}>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>
               {tutorProfile?.display_name} 🎓
             </h1>
-            <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', flexWrap:'wrap' }}>
-              <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>Tutor Dashboard</span>
-              <span style={{ fontSize:'0.75rem', fontWeight:700, padding:'0.2rem 0.625rem', borderRadius:'9999px', background:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)' }}>
-                ✅ Approved
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,197,94,0.15)', color: 'rgb(74,222,128)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                ✅ Approved Tutor
               </span>
-              {avgRating !== '—' && (
-                <span style={{ fontSize:'0.875rem', color:'rgb(180,120,10)', display:'flex', alignItems:'center', gap:'0.25rem' }}>
+              {avgRating && (
+                <span style={{ fontSize: '0.875rem', color: 'rgb(251,191,36)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   ⭐ {avgRating} ({reviews.length} reviews)
                 </span>
               )}
@@ -143,52 +248,66 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         </div>
 
-        <div style={{ display:'flex', gap:'0', marginBottom:'2rem', borderBottom:'2px solid rgba(34,85,14,0.08)', overflowX:'auto' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '0', marginBottom: '2rem', borderBottom: '2px solid rgba(99,102,241,0.15)', overflowX: 'auto' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
-              style={{ padding:'0.625rem 1.25rem', fontSize:'0.9375rem', fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? 'rgb(34,85,14)' : 'rgb(107,107,88)', background:'transparent', border:'none', cursor:'pointer', borderBottom: tab === t.id ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom:'-2px', whiteSpace:'nowrap', transition:'all 0.2s' }}>
+              style={{ padding: '0.625rem 1.125rem', fontSize: '0.875rem', fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? 'white' : 'rgba(255,255,255,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: tab === t.id ? `2px solid ${accent}` : '2px solid transparent', marginBottom: '-2px', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
               {t.label}
             </button>
           ))}
         </div>
 
+        {/* OVERVIEW */}
         {tab === 'overview' && (
           <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
-                { label:'Total Earned', value:'$' + totalEarned.toFixed(2), emoji:'💰', color:'rgb(34,85,14)' },
-                { label:'Pending Payout', value:'$' + pendingPayout.toFixed(2), emoji:'⏳', color:'rgb(180,120,10)' },
-                { label:'Sessions Done', value:completed.length, emoji:'✅', color:'rgb(34,85,14)' },
-                { label:'Avg Rating', value: avgRating === '—' ? '—' : avgRating + '⭐', emoji:'⭐', color:'rgb(180,120,10)' },
-                { label:'Upcoming', value:upcoming.length, emoji:'📅', color:'rgb(37,99,235)' },
+                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, emoji: '💰', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
+                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, emoji: '📈', color: 'rgb(99,102,241)', bg: accentBg },
+                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, emoji: '⏳', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Sessions Done', value: completed.length, emoji: '✅', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
+                { label: 'Avg Rating', value: avgRating ? `${avgRating}⭐` : '—', emoji: '⭐', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Upcoming', value: upcoming.length, emoji: '📅', color: 'rgb(99,102,241)', bg: accentBg },
               ].map(s => (
-                <div key={s.label} className="card" style={{ padding:'1.25rem', textAlign:'center' }}>
-                  <div style={{ fontSize:'1.75rem', marginBottom:'0.5rem' }}>{s.emoji}</div>
-                  <div style={{ fontFamily:'Syne, sans-serif', fontSize:'1.5rem', fontWeight:800, color:s.color, marginBottom:'0.25rem' }}>{s.value}</div>
-                  <div style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{s.label}</div>
+                <div key={s.label} style={{ padding: '1.25rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>{s.emoji}</div>
+                  <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: s.color, marginBottom: '0.25rem' }}>{s.value}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
                 </div>
               ))}
             </div>
 
+            {/* Pending sessions */}
             {pending.length > 0 && (
-              <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', border:'2px solid rgba(232,160,32,0.3)', background:'rgba(232,160,32,0.03)' }}>
-                <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
-                  ⏳ Sessions Awaiting Your Confirmation ({pending.length})
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(234,179,8,0.08)', border: '2px solid rgba(234,179,8,0.2)', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>
+                  ⏳ Sessions Awaiting Confirmation ({pending.length})
                 </h2>
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {pending.map(s => (
-                    <div key={s.id} style={{ padding:'1rem', borderRadius:'0.875rem', background:'white', border:'1px solid rgba(232,160,32,0.2)' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'1rem', flexWrap:'wrap' }}>
+                    <div key={s.id} style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                         <div>
-                          <p style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>{s.subject} — {s.topic}</p>
-                          <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                          <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
+                          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                          {s.wants_intro_call && <p style={{ fontSize: '0.8125rem', color: 'rgb(99,102,241)', marginTop: '0.25rem', fontWeight: 600 }}>🤝 Student requested free 15-min intro call</p>}
+                          {s.file_urls?.length > 0 && (
+                            <div style={{ marginTop: '0.5rem' }}>
+                              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.25rem' }}>📎 Student uploaded files:</p>
+                              {s.file_urls.map((url: string, i: number) => (
+                                <a key={i} href={url} target="_blank" style={{ fontSize: '0.8125rem', color: accent, display: 'block' }}>File {i + 1} →</a>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', minWidth:'200px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '200px' }}>
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
-                            placeholder="Paste Google Meet link" className="input" style={{ fontSize:'0.8125rem' }} />
+                            placeholder="Paste Google Meet link"
+                            style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8125rem', outline: 'none' }} />
                           <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
-                            className="btn-primary" style={{ fontSize:'0.875rem', justifyContent:'center', padding:'0.5rem 1rem' }}>
+                            style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                             {confirmingSession === s.id ? 'Confirming...' : '✅ Confirm Session'}
                           </button>
                         </div>
@@ -199,25 +318,28 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               </div>
             )}
 
+            {/* Upcoming sessions */}
             {upcoming.length > 0 && (
-              <div className="card" style={{ padding:'1.5rem' }}>
-                <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>
                   📅 Upcoming Sessions
                 </h2>
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {upcoming.map(s => (
-                    <div key={s.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', flexWrap:'wrap', gap:'0.75rem' }}>
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.15)', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <div>
-                        <p style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                        <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                        <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
                       </div>
-                      <div style={{ display:'flex', gap:'0.5rem', flexWrap:'wrap' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {s.meet_link && (
-                          <a href={s.meet_link} target="_blank" className="btn-primary" style={{ fontSize:'0.875rem', padding:'0.5rem 1rem', textDecoration:'none' }}>
+                          <a href={s.meet_link} target="_blank"
+                            style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
                             🎥 Join Meet
                           </a>
                         )}
-                        <button onClick={() => completeSession(s.id)} className="btn-secondary" style={{ fontSize:'0.875rem', padding:'0.5rem 1rem' }}>
+                        <button onClick={() => completeSession(s.id)}
+                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: 'rgb(74,222,128)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                           ✅ Mark Complete
                         </button>
                       </div>
@@ -226,45 +348,43 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 </div>
               </div>
             )}
+
+            {pending.length === 0 && upcoming.length === 0 && (
+              <div style={{ padding: '3rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem' }}>No active sessions right now. Students will book you as your profile goes live.</p>
+              </div>
+            )}
           </div>
         )}
 
+        {/* SESSIONS */}
         {tab === 'sessions' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {sessions.length === 0 && (
-              <div className="card" style={{ padding:'3rem', textAlign:'center', color:'rgb(107,107,88)' }}>
-                No sessions yet. Students will book you once your profile is live.
+              <div style={{ padding: '3rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                No sessions yet.
               </div>
             )}
             {sessions.map(s => {
-              const statusColor = s.status === 'completed' ? 'rgb(34,85,14)' : s.status === 'confirmed' ? 'rgb(37,99,235)' : s.status === 'disputed' ? 'rgb(163,45,45)' : 'rgb(180,120,10)'
-              const statusBg = s.status === 'completed' ? 'rgba(34,85,14,0.08)' : s.status === 'confirmed' ? 'rgba(37,99,235,0.08)' : s.status === 'disputed' ? 'rgba(163,45,45,0.08)' : 'rgba(232,160,32,0.1)'
+              const statusColors: Record<string, string> = { completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)', pending: 'rgb(251,191,36)' }
+              const statusBgs: Record<string, string> = { completed: 'rgba(34,197,94,0.1)', confirmed: accentBg, disputed: 'rgba(239,68,68,0.1)', pending: 'rgba(234,179,8,0.1)' }
               return (
-                <div key={s.id} className="card" style={{ padding:'1.25rem' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'1rem', flexWrap:'wrap' }}>
+                <div key={s.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                     <div>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.625rem', marginBottom:'0.375rem' }}>
-                        <p style={{ fontWeight:600, color:'rgb(26,26,20)' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                        <span style={{ fontSize:'0.6875rem', fontWeight:700, padding:'0.2rem 0.5rem', borderRadius:'9999px', background:statusBg, color:statusColor }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
+                        <p style={{ fontWeight: 600, color: 'white' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: statusBgs[s.status] ?? 'rgba(255,255,255,0.1)', color: statusColors[s.status] ?? 'white' }}>
                           {s.status}
                         </span>
                       </div>
-                      <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>{s.subject} — {s.topic}</p>
-                      <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
-                        📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}
-                      </p>
+                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
+                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}</p>
                     </div>
-                    {s.status === 'pending' && (
-                      <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', minWidth:'200px' }}>
-                        <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
-                          placeholder="Google Meet link" className="input" style={{ fontSize:'0.8125rem' }} />
-                        <button onClick={() => confirmSession(s.id)} className="btn-primary" style={{ fontSize:'0.875rem', justifyContent:'center', padding:'0.5rem' }}>
-                          Confirm
-                        </button>
-                      </div>
-                    )}
                     {s.status === 'confirmed' && s.meet_link && (
-                      <a href={s.meet_link} target="_blank" className="btn-primary" style={{ fontSize:'0.875rem', padding:'0.5rem 1rem', textDecoration:'none' }}>
+                      <a href={s.meet_link} target="_blank"
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
                         🎥 Join
                       </a>
                     )}
@@ -275,33 +395,34 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
+        {/* REVIEWS */}
         {tab === 'reviews' && (
           <div>
             {reviews.length === 0 ? (
-              <div className="card" style={{ padding:'3rem', textAlign:'center', color:'rgb(107,107,88)' }}>
+              <div style={{ padding: '3rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
                 No reviews yet. Complete your first session to start receiving reviews.
               </div>
             ) : (
               <>
-                <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', textAlign:'center', background:'linear-gradient(135deg, rgba(34,85,14,0.03), rgba(122,182,72,0.04))' }}>
-                  <div style={{ fontSize:'3rem', fontWeight:800, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>{avgRating}</div>
-                  <div style={{ fontSize:'1.5rem', marginBottom:'0.5rem' }}>{'⭐'.repeat(Math.round(Number(avgRating)))}</div>
-                  <p style={{ color:'rgb(107,107,88)' }}>Based on {reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
+                <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', textAlign: 'center', marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '3.5rem', fontWeight: 800, color: 'rgb(251,191,36)', fontFamily: 'Syne, sans-serif' }}>{avgRating}</div>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{'⭐'.repeat(Math.round(Number(avgRating)))}</div>
+                  <p style={{ color: 'rgba(255,255,255,0.5)' }}>Based on {reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {reviews.map(r => (
-                    <div key={r.id} className="card" style={{ padding:'1.25rem' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.75rem' }}>
-                        <div style={{ width:'2.25rem', height:'2.25rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:600, fontSize:'0.875rem' }}>
+                    <div key={r.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>
                           {r.profiles?.display_name?.[0] ?? '?'}
                         </div>
                         <div>
-                          <p style={{ fontWeight:600, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>{r.profiles?.display_name ?? 'Student'}</p>
-                          <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>{new Date(r.created_at).toLocaleDateString()}</p>
+                          <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'white' }}>{r.profiles?.display_name ?? 'Student'}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{new Date(r.created_at).toLocaleDateString()}</p>
                         </div>
-                        <div style={{ marginLeft:'auto', fontSize:'1.125rem' }}>{'⭐'.repeat(r.rating)}</div>
+                        <div style={{ marginLeft: 'auto', fontSize: '1.125rem' }}>{'⭐'.repeat(r.rating)}</div>
                       </div>
-                      {r.comment && <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7 }}>{r.comment}</p>}
+                      {r.comment && <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>{r.comment}</p>}
                     </div>
                   ))}
                 </div>
@@ -310,33 +431,37 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
+        {/* EARNINGS */}
         {tab === 'earnings' && (
           <div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
-              <div className="card" style={{ padding:'1.5rem', textAlign:'center' }}>
-                <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Total Earned</p>
-                <p style={{ fontFamily:'Syne, sans-serif', fontSize:'2.5rem', fontWeight:800, color:'rgb(34,85,14)' }}>${totalEarned.toFixed(2)}</p>
-              </div>
-              <div className="card" style={{ padding:'1.5rem', textAlign:'center' }}>
-                <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Pending Payout</p>
-                <p style={{ fontFamily:'Syne, sans-serif', fontSize:'2.5rem', fontWeight:800, color:'rgb(180,120,10)' }}>${pendingPayout.toFixed(2)}</p>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              {[
+                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
+                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, color: accent, bg: accentBg },
+                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+              ].map(s => (
+                <div key={s.label} style={{ padding: '1.5rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{s.label}</p>
+                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '2.5rem', fontWeight: 800, color: s.color }}>{s.value}</p>
+                </div>
+              ))}
             </div>
-            <div className="card" style={{ padding:'1.5rem' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>Payout History</h2>
+
+            <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>Payout History</h2>
               {payouts.length === 0 ? (
-                <p style={{ color:'rgb(107,107,88)', textAlign:'center', padding:'2rem' }}>No payouts yet</p>
+                <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '2rem' }}>No payouts yet</p>
               ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {payouts.map(p => (
-                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0.875rem 1rem', borderRadius:'0.75rem', background: p.status === 'paid' ? 'rgba(34,85,14,0.04)' : 'rgba(232,160,32,0.04)', border:'1px solid ' + (p.status === 'paid' ? 'rgba(34,85,14,0.1)' : 'rgba(232,160,32,0.15)') }}>
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', borderRadius: '0.75rem', background: p.status === 'paid' ? 'rgba(34,197,94,0.06)' : 'rgba(234,179,8,0.06)', border: `1px solid ${p.status === 'paid' ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}` }}>
                       <div>
-                        <p style={{ fontWeight:600, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>${p.amount.toFixed(2)}</p>
-                        <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
-                          {p.paid_at ? 'Paid ' + new Date(p.paid_at).toLocaleDateString() + ' via ' + p.paid_via : 'Pending'}
+                        <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'white' }}>${p.amount.toFixed(2)}</p>
+                        <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)' }}>
+                          {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()} via ${p.paid_via}` : 'Pending'}
                         </p>
                       </div>
-                      <span style={{ fontSize:'0.75rem', fontWeight:700, padding:'0.2rem 0.625rem', borderRadius:'9999px', background: p.status === 'paid' ? 'rgba(34,85,14,0.08)' : 'rgba(232,160,32,0.12)', color: p.status === 'paid' ? 'rgb(34,85,14)' : 'rgb(180,120,10)' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: p.status === 'paid' ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: p.status === 'paid' ? 'rgb(74,222,128)' : 'rgb(251,191,36)' }}>
                         {p.status}
                       </span>
                     </div>
@@ -347,111 +472,236 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           </div>
         )}
 
+        {/* AVAILABILITY */}
         {tab === 'availability' && (
-          <div className="card" style={{ padding:'2rem' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>Weekly Availability</h2>
-              <select value={timezone} onChange={e => setTimezone(e.target.value)} className="input" style={{ fontSize:'0.8125rem', width:'auto' }}>
-                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>)}
+          <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>Weekly Availability</h2>
+              <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8125rem', outline: 'none' }}>
+                {TIMEZONES.map(tz => <option key={tz} value={tz} style={{ background: '#1a1a2e' }}>{tz.replace(/_/g, ' ')}</option>)}
               </select>
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem', marginBottom:'1.25rem' }}>
-              {availability.map((a: any) => (
-                <div key={a.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:'0.75rem', alignItems:'end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              {(availability as any[]).map((a: any) => (
+                <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'end' }}>
                   <div>
-                    <label className="label" style={{ fontSize:'0.75rem' }}>Day</label>
-                    <select value={a.day_of_week} onChange={e => updateSlot(a.id, 'day_of_week', parseInt(e.target.value))} className="input">
-                      {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '0.375rem' }}>Day</label>
+                    <select value={a.day_of_week} onChange={e => updateSlot(a.id, 'day_of_week', parseInt(e.target.value))}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none' }}>
+                      {DAYS.map((d, i) => <option key={d} value={i} style={{ background: '#1a1a2e' }}>{d}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="label" style={{ fontSize:'0.75rem' }}>From</label>
-                    <input type="time" value={a.start_time} onChange={e => updateSlot(a.id, 'start_time', e.target.value)} className="input" />
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '0.375rem' }}>From</label>
+                    <input type="time" value={a.start_time} onChange={e => updateSlot(a.id, 'start_time', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none' }} />
                   </div>
                   <div>
-                    <label className="label" style={{ fontSize:'0.75rem' }}>To</label>
-                    <input type="time" value={a.end_time} onChange={e => updateSlot(a.id, 'end_time', e.target.value)} className="input" />
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '0.375rem' }}>To</label>
+                    <input type="time" value={a.end_time} onChange={e => updateSlot(a.id, 'end_time', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none' }} />
                   </div>
-                  <button onClick={() => removeSlot(a.id)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgb(163,45,45)', padding:'0.5rem', alignSelf:'flex-end' }}>
-                    <X style={{ width:'1.25rem', height:'1.25rem' }} />
+                  <button onClick={() => removeSlot(a.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.625rem', cursor: 'pointer', color: 'rgb(248,113,113)', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X style={{ width: '1.125rem', height: '1.125rem' }} />
                   </button>
                 </div>
               ))}
             </div>
-            <div style={{ display:'flex', gap:'0.75rem' }}>
-              <button onClick={addSlot} className="btn-secondary" style={{ fontSize:'0.875rem' }}>
-                <Plus style={{ width:'1rem', height:'1rem' }} /> Add Slot
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={addSlot}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                <Plus style={{ width: '1rem', height: '1rem' }} /> Add Slot
               </button>
-              <button onClick={saveProfile} disabled={saving} className="btn-primary" style={{ fontSize:'0.875rem' }}>
+              <button onClick={saveProfile} disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem', borderRadius: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                 {saving ? 'Saving...' : 'Save Availability'}
               </button>
             </div>
           </div>
         )}
 
+        {/* PROFILE */}
         {tab === 'profile' && (
-          <div className="card" style={{ padding:'2rem' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>Your Public Profile</h2>
+          <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>Your Public Profile</h2>
               {!editingProfile ? (
-                <button onClick={() => setEditingProfile(true)} className="btn-secondary" style={{ fontSize:'0.875rem' }}>
-                  <Edit style={{ width:'0.875rem', height:'0.875rem' }} /> Edit Profile
+                <button onClick={() => setEditingProfile(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                  <Edit style={{ width: '0.875rem', height: '0.875rem' }} /> Edit Profile
                 </button>
               ) : (
-                <div style={{ display:'flex', gap:'0.5rem' }}>
-                  <button onClick={() => setEditingProfile(false)} className="btn-secondary" style={{ fontSize:'0.875rem' }}>
-                    <X style={{ width:'0.875rem', height:'0.875rem' }} /> Cancel
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setEditingProfile(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <X style={{ width: '0.875rem', height: '0.875rem' }} /> Cancel
                   </button>
-                  <button onClick={saveProfile} disabled={saving} className="btn-primary" style={{ fontSize:'0.875rem' }}>
-                    <Save style={{ width:'0.875rem', height:'0.875rem' }} /> {saving ? 'Saving...' : 'Save'}
+                  <button onClick={saveProfile} disabled={saving}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <Save style={{ width: '0.875rem', height: '0.875rem' }} /> {saving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               )}
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+              {/* Bio */}
               <div>
-                <label className="label">Bio / About You</label>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Bio</label>
                 {editingProfile ? (
-                  <textarea value={bio} onChange={e => setBio(e.target.value)} className="input" rows={5} style={{ resize:'vertical' }} />
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} rows={5} style={{ resize: 'vertical', width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }} />
                 ) : (
-                  <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, padding:'0.75rem 1rem', background:'rgba(34,85,14,0.03)', borderRadius:'0.75rem' }}>
+                  <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
                     {bio || 'No bio yet'}
                   </p>
                 )}
               </div>
+
+              {/* Subjects */}
               <div>
-                <label className="label">Subjects</label>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Subjects</label>
                 {editingProfile ? (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
-                    {SUBJECTS.map(sub => (
-                      <button key={sub} type="button" onClick={() => toggleSubject(sub)}
-                        style={{ padding:'0.375rem 0.875rem', borderRadius:'9999px', border:'1.5px solid ' + (subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'), background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontSize:'0.875rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor:'pointer' }}>
-                        {sub}
-                      </button>
-                    ))}
+                  <div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      {COMMON_SUBJECTS.map(sub => (
+                        <button key={sub} type="button" onClick={() => toggleSubject(sub)}
+                          style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', border: `1.5px solid ${subjects.includes(sub) ? accent : 'rgba(99,102,241,0.2)'}`, background: subjects.includes(sub) ? accentBg : 'transparent', color: subjects.includes(sub) ? accent : 'rgba(255,255,255,0.4)', fontSize: '0.8125rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                    {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                        {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).map(sub => (
+                          <span key={sub} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: accentBg, color: accent, fontSize: '0.8125rem', fontWeight: 600 }}>
+                            {sub}
+                            <button type="button" onClick={() => toggleSubject(sub)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: accent, padding: 0 }}>
+                              <X style={{ width: '0.75rem', height: '0.75rem' }} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ position: 'relative' }}>
+                      <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'rgba(255,255,255,0.3)' }} />
+                      <input value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); setShowSubjectDropdown(true) }}
+                        onFocus={() => setShowSubjectDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 200)}
+                        placeholder="Search other subjects..."
+                        style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                      {showSubjectDropdown && subjectSearch && filteredSubjects.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgb(18,18,30)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
+                          {filteredSubjects.slice(0, 20).map(sub => (
+                            <button key={sub} type="button" onMouseDown={() => { toggleSubject(sub); setSubjectSearch('') }}
+                              style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.1)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                              {sub}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                     {subjects.map(s => (
-                      <span key={s} style={{ padding:'0.375rem 0.875rem', borderRadius:'9999px', background:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)', fontSize:'0.875rem', fontWeight:600 }}>{s}</span>
+                      <span key={s} style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', background: accentBg, color: accent, fontSize: '0.875rem', fontWeight: 600 }}>{s}</span>
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* Languages */}
               <div>
-                <label className="label">Hourly Rate</label>
-                <div style={{ padding:'0.875rem 1rem', background:'rgba(34,85,14,0.04)', borderRadius:'0.875rem', border:'1px solid rgba(34,85,14,0.1)' }}>
-                  <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>
-                    Your base rate: <strong style={{ color:'rgb(34,85,14)' }}>${hourlyRate}/hr</strong>
-                  </p>
-                  <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
-                    Students pay: Free users $49.99/hr · Premium users $34.99/hr
-                  </p>
-                  <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginTop:'0.25rem' }}>
-                    Custom rates available at Tutor Level 3
-                  </p>
-                </div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Languages</label>
+                {editingProfile ? (
+                  <div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                      {languages.map(lang => (
+                        <span key={lang} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(139,92,246,0.15)', color: 'rgb(167,139,250)', fontSize: '0.875rem', fontWeight: 600 }}>
+                          {lang}
+                          <button type="button" onClick={() => toggleLanguage(lang)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(167,139,250)', padding: 0 }}>
+                            <X style={{ width: '0.75rem', height: '0.75rem' }} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'rgba(255,255,255,0.3)' }} />
+                      <input value={langSearch} onChange={e => { setLangSearch(e.target.value); setShowLangDropdown(true) }}
+                        onFocus={() => setShowLangDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowLangDropdown(false), 200)}
+                        placeholder="Search and add languages..."
+                        style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '0.625rem', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                      {showLangDropdown && filteredLangs.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgb(18,18,30)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
+                          {filteredLangs.slice(0, 20).map(lang => (
+                            <button key={lang} type="button" onMouseDown={() => { toggleLanguage(lang); setLangSearch('') }}
+                              style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.1)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                              {lang}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {languages.map(l => (
+                      <span key={l} style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', background: 'rgba(139,92,246,0.15)', color: 'rgb(167,139,250)', fontSize: '0.875rem', fontWeight: 600 }}>{l}</span>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Payment info */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Payment Info</label>
+                {editingProfile ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {[
+                      { label: 'Venmo', value: venmo, setter: setVenmo, placeholder: '@yourhandle' },
+                      { label: 'PayPal', value: paypal, setter: setPaypal, placeholder: 'you@example.com' },
+                      { label: 'Zelle', value: zelle, setter: setZelle, placeholder: 'Phone or email' },
+                    ].map(item => (
+                      <div key={item.label}>
+                        <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '0.25rem' }}>{item.label}</label>
+                        <input value={item.value} onChange={e => item.setter(e.target.value)} placeholder={item.placeholder}
+                          style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {[
+                      { label: 'Venmo', value: venmo },
+                      { label: 'PayPal', value: paypal },
+                      { label: 'Zelle', value: zelle },
+                    ].filter(i => i.value).map(item => (
+                      <div key={item.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)', minWidth: '60px' }}>{item.label}</span>
+                        <span style={{ fontSize: '0.8125rem', color: 'white', fontWeight: 600 }}>{item.value}</span>
+                      </div>
+                    ))}
+                    {!venmo && !paypal && !zelle && (
+                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)' }}>No payment info set</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Hourly rate */}
+              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>Your payout rate</p>
+                <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.25rem' }}>Custom rates available at Tutor Level 3</p>
+              </div>
+
             </div>
           </div>
         )}
