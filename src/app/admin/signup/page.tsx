@@ -61,7 +61,7 @@ function AdminSignupInner() {
         email: email.trim(),
         password,
         options: {
-          data: { display_name: fullName.trim(), role: 'tutor_pending' },
+          data: { display_name: fullName.trim(), role: 'admin' },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/tutor/apply`,
         },
       })
