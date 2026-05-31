@@ -698,8 +698,47 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               {/* Hourly rate */}
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)' }}>
                 <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>Your payout rate</p>
-                <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
-                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.25rem' }}>Custom rates available at Tutor Level 3</p>
+                {editingProfile && tutorProfile?.custom_rate ? (
+                  <input
+                    type="number"
+                    defaultValue={tutorProfile?.hourly_rate ?? 30}
+                    min={20} max={200}
+                    onChange={e => {}}
+                    style={{ width: '120px', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(74,222,128,0.3)', background: 'rgba(255,255,255,0.05)', color: 'rgb(74,222,128)', fontSize: '1.25rem', fontWeight: 800, outline: 'none' }}
+                  />
+                ) : (
+                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
+                )}
+                {(() => {
+                  const canCustomRate = completed.length >= 10 && Number(avgRating) >= 4.5
+                  const sessionsLeft = Math.max(0, 10 - completed.length)
+                  const ratingLeft = avgRating ? Math.max(0, 4.5 - Number(avgRating)).toFixed(1) : '4.5'
+                  return canCustomRate ? (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 600 }}>✅ Custom rates unlocked! Contact support to update your rate.</p>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
+                        Custom rates unlock after <strong style={{ color: 'rgba(255,255,255,0.5)' }}>10 completed sessions</strong> with a <strong style={{ color: 'rgba(255,255,255,0.5)' }}>4.5★ average rating</strong>
+                      </p>
+                      <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <div style={{ width: '80px', height: '4px', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, (completed.length / 10) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '9999px', transition: 'width 0.5s' }} />
+                          </div>
+                          <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)' }}>{completed.length}/10 sessions</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <div style={{ width: '80px', height: '4px', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, (Number(avgRating ?? 0) / 4.5) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '9999px', transition: 'width 0.5s' }} />
+                          </div>
+                          <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)' }}>{avgRating ?? '0'}/4.5★</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
             </div>
