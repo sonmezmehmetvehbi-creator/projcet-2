@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { BookOpen, AlertCircle, CheckCircle, Shield } from 'lucide-react'
+import { BookOpen, AlertCircle, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { Suspense } from 'react'
 
@@ -18,15 +18,11 @@ function AdminSignupInner() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [validToken, setValidToken] = useState<boolean | null>(null)
 
   useEffect(() => {
     async function checkToken() {
-      if (!token) {
-        setValidToken(false)
-        return
-      }
+      if (!token) { setValidToken(false); return }
       try {
         const res = await fetch(`/api/admin/verify-token?token=${encodeURIComponent(token)}`)
         if (!res.ok) { setValidToken(false); return }
@@ -42,16 +38,13 @@ function AdminSignupInner() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      setError('Please fill in all fields.')
-      return
+      setError('Please fill in all fields.'); return
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
+      setError('Password must be at least 8 characters.'); return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
+      setError('Passwords do not match.'); return
     }
     setLoading(true)
     setError('')
@@ -62,18 +55,30 @@ function AdminSignupInner() {
         password,
         options: {
           data: { display_name: fullName.trim(), role: 'admin' },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/tutor/apply`,
+          emailRedirectTo: `${window.location.origin}/admin/dashboard`,
         },
       })
       if (signUpError) throw signUpError
       if (data.user) {
-        // Set as admin via API (server-side with service role)
-        await fetch('/api/admin/create-admin', {
+        // Set admin role via service role API
+        const res = await fetch('/api/admin/create-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: data.user.id, token, displayName: fullName.trim(), email: email.trim() }),
         })
-        setSuccess(true)
+        const result = await res.json()
+        if (result.error) throw new Error(result.error)
+
+        // Sign in immediately after signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        if (signInError) throw signInError
+
+        // Small delay for session to propagate
+        await new Promise(r => setTimeout(r, 500))
+        window.location.href = '/admin/dashboard'
       }
     } catch (err: any) {
       setError(err.message)
@@ -81,7 +86,6 @@ function AdminSignupInner() {
     setLoading(false)
   }
 
-  // Loading token check
   if (validToken === null) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
       <div style={{ textAlign:'center' }}>
@@ -91,37 +95,12 @@ function AdminSignupInner() {
     </div>
   )
 
-  // Invalid token
   if (!validToken) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', padding:'2rem' }}>
       <div className="card" style={{ padding:'3rem', maxWidth:'24rem', width:'100%', textAlign:'center' }}>
         <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>🔒</div>
-        <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
-          Invalid Invite Link
-        </h1>
-        <p style={{ color:'rgb(107,107,88)', lineHeight:1.7 }}>
-          This link is invalid or has expired. Contact the AceForge team for a valid invite link.
-        </p>
-      </div>
-    </div>
-  )
-
-  // Success screen
-  if (success) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', padding:'2rem' }}>
-      <div className="card" style={{ padding:'3rem', maxWidth:'26rem', width:'100%', textAlign:'center' }}>
-        <div style={{ width:'4rem', height:'4rem', borderRadius:'50%', background:'rgb(234,243,222)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.25rem' }}>
-          <CheckCircle style={{ width:'2rem', height:'2rem', color:'rgb(59,109,17)' }} />
-        </div>
-        <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
-          Check your email! 📬
-        </h1>
-        <p style={{ color:'rgb(107,107,88)', lineHeight:1.7, marginBottom:'1.5rem' }}>
-          We sent a confirmation link to <strong style={{ color:'rgb(26,26,20)' }}>{email}</strong>. Click it to activate your admin account.
-        </p>
-        <Link href="/login" className="btn-primary" style={{ display:'flex', justifyContent:'center', textDecoration:'none' }}>
-          Go to Login →
-        </Link>
+        <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>Invalid Invite Link</h1>
+        <p style={{ color:'rgb(107,107,88)', lineHeight:1.7 }}>This link is invalid or has expired. Contact the AceForge team for a valid invite link.</p>
       </div>
     </div>
   )
@@ -141,12 +120,8 @@ function AdminSignupInner() {
           <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgba(34,85,14,0.08)', border:'2px solid rgba(34,85,14,0.2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
             <Shield style={{ width:'1.5rem', height:'1.5rem', color:'rgb(34,85,14)' }} />
           </div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
-            Admin Account Setup
-          </h1>
-          <p style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem' }}>
-            You have been invited to join AceForge as an admin.
-          </p>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>Admin Account Setup</h1>
+          <p style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem' }}>You have been invited to join AceForge as an admin.</p>
           <div style={{ display:'inline-flex', alignItems:'center', gap:'0.375rem', marginTop:'0.75rem', padding:'0.375rem 0.875rem', borderRadius:'9999px', background:'rgba(34,85,14,0.08)', border:'1px solid rgba(34,85,14,0.2)' }}>
             <span style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>🔒 Invite-only access verified</span>
           </div>
@@ -155,11 +130,9 @@ function AdminSignupInner() {
         <div className="card" style={{ padding:'2rem' }}>
           {error && (
             <div className="alert-error" style={{ marginBottom:'1.25rem' }}>
-              <AlertCircle style={{ width:'1rem', height:'1rem', flexShrink:0 }} />
-              {error}
+              <AlertCircle style={{ width:'1rem', height:'1rem', flexShrink:0 }} />{error}
             </div>
           )}
-
           <form onSubmit={handleSignup} style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
             <div>
               <label className="label">Full Name *</label>
@@ -178,7 +151,7 @@ function AdminSignupInner() {
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input" placeholder="Repeat your password" required />
             </div>
             <button type="submit" disabled={loading} className="btn-primary" style={{ width:'100%', justifyContent:'center', padding:'0.875rem', fontSize:'1rem' }}>
-              {loading ? 'Creating account...' : 'Create Admin Account →'}
+              {loading ? 'Setting up admin account...' : 'Create Admin Account →'}
             </button>
           </form>
         </div>
