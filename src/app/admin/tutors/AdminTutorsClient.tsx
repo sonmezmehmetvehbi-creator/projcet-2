@@ -118,6 +118,7 @@ export default function AdminTutorsClient({ applications: initialApps }: Props) 
                           { label: 'Email', value: app.profiles?.email },
                           { label: 'Languages', value: app.languages?.join(', ') },
                           { label: 'Bio', value: app.bio },
+                        { label: 'LinkedIn', value: app.linkedin_url },
                         ].map(item => item.value && (
                           <div key={item.label}>
                             <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgb(107,107,88)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</p>

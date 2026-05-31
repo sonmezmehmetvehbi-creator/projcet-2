@@ -166,6 +166,7 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
           cv_url: cvUrl,
           certificate_url: certUrl || null,
           id_verified: false,
+          linkedin_url: linkedIn,
         })
         .select('id')
         .single()
@@ -217,8 +218,14 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
               : existingApplication.status === 'approved' ? 'Congratulations! Your tutor account is active.'
               : 'Unfortunately your application was not approved. Please contact us for more information.'}
           </p>
-          {existingApplication.status === 'approved' && (
+         {existingApplication.status === 'approved' && (
             <a href="/tutor/dashboard" className="btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>Go to Tutor Dashboard →</a>
+          )}
+          {existingApplication.status === 'rejected' && (
+            <a href={`/tutor/appeal?email=${encodeURIComponent(profile?.email ?? '')}&name=${encodeURIComponent(profile?.display_name ?? '')}`}
+              style={{ display: 'inline-flex', justifyContent: 'center', padding: '0.875rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.08)', border: '2px solid rgba(163,45,45,0.2)', color: 'rgb(163,45,45)', fontWeight: 700, textDecoration: 'none', fontSize: '0.9375rem' }}>
+              ⚖️ Appeal This Decision →
+            </a>
           )}
         </div>
       </div>
@@ -332,11 +339,18 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
                 </div>
               </div>
 
-              <div>
-                <label className="label">LinkedIn Profile URL</label>
+           <div>
+                <label className="label">
+                  LinkedIn Profile URL
+                  <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem', marginLeft: '0.375rem' }}>(strongly recommended)</span>
+                </label>
                 <input value={linkedIn} onChange={e => setLinkedIn(e.target.value)} className="input" placeholder="https://linkedin.com/in/yourname" />
+                <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)' }}>
+                  <p style={{ fontSize: '0.8125rem', color: 'rgb(37,99,235)', lineHeight: 1.6 }}>
+                    💼 <strong>Tip:</strong> Applicants with a verified LinkedIn profile are <strong>3x more likely to be approved</strong>. Make sure your LinkedIn shows your education and experience clearly.
+                  </p>
+                </div>
               </div>
-
               <div>
                 <label className="label">About You * <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(students will see this)</span></label>
                 <textarea value={bio} onChange={e => setBio(e.target.value)} className="input" rows={4} style={{ resize: 'vertical' }}
