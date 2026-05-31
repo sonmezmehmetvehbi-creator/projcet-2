@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle, Upload, X, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
@@ -67,7 +66,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  // Step 1
   const [fullName, setFullName] = useState(profile?.display_name ?? '')
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [phone, setPhone] = useState('')
@@ -79,7 +77,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
   const [linkedIn, setLinkedIn] = useState('')
   const [idFile, setIdFile] = useState<File | null>(null)
 
-  // Step 2
   const [subjects, setSubjects] = useState<string[]>([])
   const [subjectSearch, setSubjectSearch] = useState('')
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false)
@@ -90,10 +87,8 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
   const [certFile, setCertFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
 
-  // Step 3
   const [availability, setAvailability] = useState<{ day: number; start: string; end: string }[]>([])
 
-  // Step 4
   const [venmo, setVenmo] = useState('')
   const [paypal, setPaypal] = useState('')
   const [zelle, setZelle] = useState('')
@@ -276,7 +271,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             </div>
           )}
 
-          {/* STEP 1 */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Personal Information</h2>
@@ -305,7 +299,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
                 </div>
               </div>
 
-              {/* Languages */}
               <div>
                 <label className="label">Languages you can tutor in *</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
@@ -375,7 +368,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             </div>
           )}
 
-          {/* STEP 2 */}
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Qualifications</h2>
@@ -490,7 +482,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             </div>
           )}
 
-          {/* STEP 3 */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Your Availability</h2>
@@ -541,7 +532,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             </div>
           )}
 
-          {/* STEP 4 */}
           {step === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Payment & Agreement</h2>
@@ -600,70 +590,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             </div>
           )}
 
-              {/* Tax info */}
-              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.15)' }}>
-                <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.375rem' }}>🧾 Tax Information (W-9)</p>
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, marginBottom: '1rem' }}>
-                  If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We collect your tax information securely for this purpose only.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div>
-                    <label className="label">Legal Name (as on tax return) *</label>
-                    <input value={taxName} onChange={e => setTaxName(e.target.value)} className="input" placeholder="Your full legal name" />
-                  </div>
-                  <div>
-                    <label className="label">Address *</label>
-                    <input value={taxAddress} onChange={e => setTaxAddress(e.target.value)} className="input" placeholder="Street address, city, state, zip" />
-                  </div>
-                  <div>
-                    <label className="label">Tax ID Type *</label>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      {(['ssn', 'ein'] as const).map(type => (
-                        <button key={type} type="button" onClick={() => setTaxIdType(type)}
-                          style={{ flex: 1, padding: '0.625rem', borderRadius: '0.75rem', border: `2px solid ${taxIdType === type ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}`, background: taxIdType === type ? 'rgba(34,85,14,0.06)' : 'white', color: taxIdType === type ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontWeight: taxIdType === type ? 700 : 400, fontSize: '0.875rem', cursor: 'pointer' }}>
-                          {type === 'ssn' ? 'SSN (Individual)' : 'EIN (Business)'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label">{taxIdType === 'ssn' ? 'Social Security Number *' : 'Employer Identification Number *'}</label>
-                    <input value={taxId} onChange={e => setTaxId(e.target.value)} className="input"
-                      placeholder={taxIdType === 'ssn' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'} type="password" />
-                    <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginTop: '0.375rem' }}>
-                      🔒 Stored securely and used only for tax reporting purposes.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Agreements */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                {[
-                  { state: agreedToTerms, setter: setAgreedToTerms, text: "I agree to AceForge's Tutor Terms of Service, including the refund policy, dispute process, and platform fee structure." },
-                  { state: agreedToNoCriminal, setter: setAgreedToNoCriminal, text: 'I declare that I have no criminal history and I am legally eligible to work with students including minors. I understand that providing false information will result in immediate termination and potential legal action.' },
-                  { state: agreedToNoPoaching, setter: setAgreedToNoPoaching, text: 'I agree not to solicit AceForge students to book sessions outside of the AceForge platform for 12 months. Violation of this agreement may result in legal action and a permanent ban.' },
-                  { state: agreedToRecording, setter: setAgreedToRecording, text: 'I consent to all tutoring sessions being recorded for quality assurance and dispute resolution purposes. Recordings are reviewed only in case of a dispute and deleted after 30 days.' },
-                  { state: agreedToTax, setter: setAgreedToTax, text: 'I understand that AceForge will issue a 1099-NEC form if I earn $600 or more in a calendar year, and that I am responsible for reporting and paying applicable taxes on my earnings as an independent contractor.' },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)' }}>
-                    <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
-                      style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
-                    <label style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
-                      {item.text}
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => { setError(''); setStep(3) }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>← Back</button>
-                <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-                  {loading ? 'Submitting...' : 'Submit Application 🎓'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
