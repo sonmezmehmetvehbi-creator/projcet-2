@@ -50,11 +50,20 @@ export default async function AdminDashboardPage() {
     return { ...ticket, profiles: profileData }
   }))
 
-  const { data: pendingTutorList } = await adminClient
+  const { data: pendingTutorRaw } = await adminClient
     .from('tutor_profiles')
-    .select('*, profiles!tutor_profiles_user_id_fkey(email)')
+    .select('*')
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
+
+  const pendingTutorList = await Promise.all((pendingTutorRaw ?? []).map(async (tutor) => {
+    const { data: profileData } = await adminClient
+      .from('profiles')
+      .select('email')
+      .eq('id', tutor.user_id)
+      .single()
+    return { ...tutor, profiles: profileData }
+  }))
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
