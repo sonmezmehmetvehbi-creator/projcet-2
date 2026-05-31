@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/terms',
   '/admin',
   '/tutoring/legal',
+  '/tutor/appeal',
 ]
 
 export async function middleware(request: NextRequest) {
