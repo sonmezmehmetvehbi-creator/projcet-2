@@ -30,27 +30,46 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // Use service role to set role reliably
       const adminClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       )
 
-      // Determine role from next param
-      let role = 'user'
-      if (next.includes('/tutor/apply')) role = 'tutor_pending'
-      if (next.includes('/admin')) role = 'admin'
+      // Look up signup intent by email
+      const { data: intent } = await adminClient
+        .from('signup_intents')
+        .select('role, display_name')
+        .eq('email', data.user.email?.toLowerCase() ?? '')
+        .single()
 
-      // Upsert profile with correct role
+      // Determine role — intent takes priority, then next param, then default
+      let role = 'user'
+      let redirectTo = next
+      if (intent?.role) {
+        role = intent.role
+        if (role === 'tutor_pending') redirectTo = '/tutor/apply'
+        if (role === 'admin') redirectTo = '/admin/dashboard'
+      } else if (next.includes('/tutor/apply')) {
+        role = 'tutor_pending'
+      } else if (next.includes('/admin')) {
+        role = 'admin'
+      }
+
+      // Upsert profile
       await adminClient.from('profiles').upsert({
         id: data.user.id,
         email: data.user.email,
-        display_name: data.user.user_metadata?.display_name ?? data.user.user_metadata?.full_name ?? '',
+        display_name: intent?.display_name ?? data.user.user_metadata?.display_name ?? data.user.user_metadata?.full_name ?? '',
         role,
         is_admin: role === 'admin',
       }, { onConflict: 'id', ignoreDuplicates: false })
 
-      return NextResponse.redirect(`${origin}${next}`)
+      // Clean up intent
+      if (intent) {
+        await adminClient.from('signup_intents').delete().eq('email', data.user.email?.toLowerCase() ?? '')
+      }
+
+      return NextResponse.redirect(`${origin}${redirectTo}`)
     }
   }
 
