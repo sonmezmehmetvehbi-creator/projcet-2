@@ -41,7 +41,7 @@ export default function TutorSignupPage() {
         email: email.trim(),
         password,
         options: {
-          data: { display_name: fullName.trim() },
+          data: { display_name: fullName.trim(), role: 'tutor_pending' },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/tutor/apply`,
         },
       })

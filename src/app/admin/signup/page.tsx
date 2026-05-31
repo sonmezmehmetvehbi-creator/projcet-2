@@ -61,8 +61,8 @@ function AdminSignupInner() {
         email: email.trim(),
         password,
         options: {
-          data: { display_name: fullName.trim() },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/admin/tutors`,
+          data: { display_name: fullName.trim(), role: 'tutor_pending' },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/tutor/apply`,
         },
       })
       if (signUpError) throw signUpError

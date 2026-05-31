@@ -32,8 +32,7 @@ export default function SignupPage() {
     const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { 
-        data: { full_name: name },
+      options: { data: { full_name: name, display_name: name, role: 'user' } },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     })
