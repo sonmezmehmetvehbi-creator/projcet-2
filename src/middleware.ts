@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
@@ -53,16 +54,24 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    const url = request.nextUrl.clone()
-    const { data: profile } = await supabase
+    // Use service role to bypass RLS when reading profile
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('is_admin, role')
       .eq('id', user.id)
       .single()
+
+    const url = request.nextUrl.clone()
     if (profile?.is_admin) {
       url.pathname = '/admin/dashboard'
     } else if (profile?.role === 'tutor_pending') {
       url.pathname = '/tutor/apply'
+    } else if (profile?.role === 'tutor') {
+      url.pathname = '/tutor/dashboard'
     } else {
       url.pathname = '/dashboard'
     }
