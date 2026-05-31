@@ -13,6 +13,9 @@ export default async function DashboardPage() {
     .select('*')
     .eq('id', user.id)
     .single()
+  if (profile?.is_admin) redirect('/admin/dashboard')
+  if (profile?.role === 'tutor_pending') redirect('/tutor/apply')
+  if (profile?.role === 'tutor') redirect('/tutor/dashboard')
 
   const { data: sessions } = await supabase
     .from('sessions')
