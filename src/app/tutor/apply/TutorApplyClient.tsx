@@ -58,9 +58,10 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 interface Props {
   profile: any
   existingApplication: any
+  appeal?: any
 }
 
-export default function TutorApplyClient({ profile, existingApplication }: Props) {
+export default function TutorApplyClient({ profile, existingApplication, appeal }: Props) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -222,10 +223,30 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
             <a href="/tutor/dashboard" className="btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>Go to Tutor Dashboard →</a>
           )}
           {existingApplication.status === 'rejected' && (
-            <a href={`/tutor/appeal?email=${encodeURIComponent(profile?.email ?? '')}&name=${encodeURIComponent(profile?.display_name ?? '')}`}
-              style={{ display: 'inline-flex', justifyContent: 'center', padding: '0.875rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.08)', border: '2px solid rgba(163,45,45,0.2)', color: 'rgb(163,45,45)', fontWeight: 700, textDecoration: 'none', fontSize: '0.9375rem' }}>
-              ⚖️ Appeal This Decision →
-            </a>
+            appeal?.status === 'rejected' ? (
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.06)', border: '1px solid rgba(163,45,45,0.2)' }}>
+                <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', marginBottom: '0.5rem' }}>⚖️ Appeal Rejected — Final Decision</p>
+                <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+                  We have reviewed your appeal and our decision is final. You are welcome to reapply after{' '}
+                  <strong style={{ color: 'rgb(26,26,20)' }}>
+                    {new Date(new Date(appeal.created_at).getTime() + 6 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </strong>{' '}
+                  with a stronger application. We wish you the best.
+                </p>
+              </div>
+            ) : appeal?.status === 'pending' ? (
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.06)', border: '1px solid rgba(232,160,32,0.2)' }}>
+                <p style={{ fontWeight: 700, color: 'rgb(180,120,10)', marginBottom: '0.5rem' }}>⏳ Appeal Under Review</p>
+                <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+                  Your appeal has been submitted and is being reviewed by our team. We will email you within 3-5 business days.
+                </p>
+              </div>
+            ) : (
+              <a href={`/tutor/appeal?email=${encodeURIComponent(profile?.email ?? '')}&name=${encodeURIComponent(profile?.display_name ?? '')}`}
+                style={{ display: 'inline-flex', justifyContent: 'center', padding: '0.875rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.08)', border: '2px solid rgba(163,45,45,0.2)', color: 'rgb(163,45,45)', fontWeight: 700, textDecoration: 'none', fontSize: '0.9375rem' }}>
+                ⚖️ Appeal This Decision →
+              </a>
+            )
           )}
         </div>
       </div>
