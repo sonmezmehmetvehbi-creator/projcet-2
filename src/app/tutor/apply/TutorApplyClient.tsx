@@ -97,15 +97,10 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
   const [venmo, setVenmo] = useState('')
   const [paypal, setPaypal] = useState('')
   const [zelle, setZelle] = useState('')
-  const [taxName, setTaxName] = useState(profile?.display_name ?? '')
-  const [taxAddress, setTaxAddress] = useState('')
-  const [taxId, setTaxId] = useState('')
-  const [taxIdType, setTaxIdType] = useState<'ssn' | 'ein'>('ssn')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [agreedToNoCriminal, setAgreedToNoCriminal] = useState(false)
   const [agreedToNoPoaching, setAgreedToNoPoaching] = useState(false)
   const [agreedToRecording, setAgreedToRecording] = useState(false)
-  const [agreedToTax, setAgreedToTax] = useState(false)
 
   function toggleLanguage(lang: string) {
     setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
@@ -138,7 +133,7 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
   }
 
   async function handleSubmit() {
-    if (!agreedToTerms || !agreedToNoCriminal || !agreedToNoPoaching || !agreedToRecording || !agreedToTax) {
+    if (!agreedToTerms || !agreedToNoCriminal || !agreedToNoPoaching || !agreedToRecording) {
       setError('Please agree to all terms before submitting.'); return
     }
     if (!idFile) { setError('Please upload your photo ID.'); return }
@@ -146,7 +141,6 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
     if (!videoFile) { setError('Please upload your intro video.'); return }
     if (subjects.length === 0) { setError('Please select at least one subject.'); return }
     if (!venmo && !paypal && !zelle) { setError('Please provide at least one payment method.'); return }
-    if (!taxName || !taxAddress || !taxId) { setError('Please fill in your tax information.'); return }
 
     setLoading(true)
     setError('')
@@ -573,6 +567,38 @@ export default function TutorApplyClient({ profile, existingApplication }: Props
                   <input value={zelle} onChange={e => setZelle(e.target.value)} className="input" placeholder="Phone or email" />
                 </div>
               </div>
+
+              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.05)', border: '1px solid rgba(232,160,32,0.2)' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
+                  🧾 <strong style={{ color: 'rgb(26,26,20)' }}>Tax note:</strong> If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We will contact you at that point to collect your tax information securely.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                {[
+                  { state: agreedToTerms, setter: setAgreedToTerms, text: "I agree to AceForge's Tutor Terms of Service, including the refund policy, dispute process, and platform fee structure." },
+                  { state: agreedToNoCriminal, setter: setAgreedToNoCriminal, text: 'I declare that I have no criminal history and I am legally eligible to work with students including minors. I understand that providing false information will result in immediate termination and potential legal action.' },
+                  { state: agreedToNoPoaching, setter: setAgreedToNoPoaching, text: 'I agree not to solicit AceForge students to book sessions outside of the AceForge platform for 12 months. Violation of this agreement may result in legal action and a permanent ban.' },
+                  { state: agreedToRecording, setter: setAgreedToRecording, text: 'I consent to all tutoring sessions being recorded for quality assurance and dispute resolution purposes. Recordings are reviewed only in case of a dispute and deleted after 30 days.' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)' }}>
+                    <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
+                      style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                    <label style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
+                      {item.text}
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => { setError(''); setStep(3) }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>← Back</button>
+                <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
+                  {loading ? 'Submitting...' : 'Submit Application 🎓'}
+                </button>
+              </div>
+            </div>
+          )}
 
               {/* Tax info */}
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.15)' }}>
