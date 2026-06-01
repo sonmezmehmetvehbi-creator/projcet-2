@@ -31,6 +31,7 @@ export default function TutorNavbar({ profile, tutorProfile }: Props) {
 
   const NAV_LINKS = [
     { href: '/tutor/dashboard', label: '📊 Dashboard' },
+    { href: '/tutor/meet-guide', label: '🎥 Meet Guide' },
   ]
 
   return (

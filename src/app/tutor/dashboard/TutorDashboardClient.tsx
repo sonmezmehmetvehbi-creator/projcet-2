@@ -401,6 +401,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                             {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Links'}
                           </button>
+                          <a href={}
+                            style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: accent, textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                            💬 Message Student
+                          </a>
                           <button onClick={() => declineSession(s.id, s.stripe_payment_intent_id)} disabled={confirmingSession === s.id}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: 'rgb(248,113,113)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                             ❌ Decline (Auto-refund student)
@@ -430,6 +434,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                             🎥 Join Meet
                           </a>
                         )}
+                        <a href={}
+                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+                          💬 Message Student
+                        </a>
                         <button onClick={() => completeSession(s.id)}
                           style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: 'rgb(74,222,128)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                           ✅ Mark Complete
