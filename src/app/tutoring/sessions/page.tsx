@@ -11,11 +11,21 @@ export default async function TutoringSessionsPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-  const { data: sessions } = await supabase
+  const { createClient } = await import('@supabase/supabase-js')
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+  const { data: sessionsRaw } = await adminClient
     .from('tutoring_sessions')
-    .select('*, tutor_profiles(display_name, rating, subjects)')
+    .select('*')
     .eq('student_id', user.id)
     .order('scheduled_at', { ascending: false })
+
+  const sessions = await Promise.all((sessionsRaw ?? []).map(async (s) => {
+    const { data: tp } = await adminClient.from('tutor_profiles').select('display_name, rating, subjects').eq('id', s.tutor_id).single()
+    return { ...s, tutor_profiles: tp }
+  }))
 
   const upcoming = sessions?.filter(s => ['pending','confirmed'].includes(s.status) && new Date(s.scheduled_at) > new Date()) ?? []
   const past = sessions?.filter(s => s.status === 'completed' || new Date(s.scheduled_at) < new Date()) ?? []

@@ -81,6 +81,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
 
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
+  const [introLink, setIntroLink] = useState<Record<string, string>>({})
+  const [introDate, setIntroDate] = useState<Record<string, string>>({})
 
   const accent = 'rgb(99,102,241)'
   const accentBg = 'rgba(99,102,241,0.1)'
@@ -145,15 +147,18 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     setTogglingActive(false)
   }
 
-  async function confirmSession(sessionId: string) {
+  async function confirmSession(sessionId: string, wantsIntroCall?: boolean, introCallLink?: string, introCallDate?: string) {
     const link = meetLink[sessionId]
     if (!link) { alert('Please enter a Google Meet link first'); return }
+    if (wantsIntroCall && (!introCallLink || !introCallDate)) {
+      alert('Please enter the intro call Meet link and date/time'); return
+    }
     setConfirmingSession(sessionId)
     try {
       await fetch('/api/tutor/confirm-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, meetLink: link }),
+        body: JSON.stringify({ sessionId, meetLink: link, introCallLink, introCallDate }),
       })
       window.location.reload()
     } catch {}
@@ -372,12 +377,29 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '220px' }}>
+                          {s.wants_intro_call && (
+                            <div style={{ padding: '0.625rem 0.75rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', marginBottom: '0.25rem' }}>
+                              <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgb(165,180,252)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Intro Call Details</p>
+                              <input
+                                value={introLink[s.id] ?? ''}
+                                onChange={e => setIntroLink(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                placeholder="Intro call Meet link"
+                                style={{ width: '100%', padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.75rem', outline: 'none', marginBottom: '0.375rem', boxSizing: 'border-box' }} />
+                              <input
+                                type="datetime-local"
+                                value={introDate[s.id] ?? ''}
+                                onChange={e => setIntroDate(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                style={{ width: '100%', padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box' }} />
+                              <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.25rem' }}>Schedule intro call BEFORE main session</p>
+                            </div>
+                          )}
+                          <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Main Session Meet Link</p>
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
                             placeholder="Paste Google Meet link"
                             style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8125rem', outline: 'none' }} />
-                          <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
+                          <button onClick={() => confirmSession(s.id, s.wants_intro_call, introLink[s.id], introDate[s.id])} disabled={confirmingSession === s.id}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                            {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Link'}
+                            {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Links'}
                           </button>
                           <button onClick={() => declineSession(s.id, s.stripe_payment_intent_id)} disabled={confirmingSession === s.id}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: 'rgb(248,113,113)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>

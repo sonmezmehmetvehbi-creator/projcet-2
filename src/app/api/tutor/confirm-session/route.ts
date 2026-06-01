@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { sessionId, meetLink } = await request.json()
+   const { sessionId, meetLink, introCallLink, introCallDate } = await request.json()
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,10 +73,13 @@ export async function POST(request: Request) {
             ${session.wants_intro_call ? `<p style="margin:0 0 8px"><strong>🤝 Intro Call:</strong> Your tutor will also send a separate 15-min intro call link below.</p>` : ''}
           </div>
 
-          ${session.wants_intro_call ? `
+         ${session.wants_intro_call && introCallLink ? `
           <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:12px;padding:20px;margin:20px 0">
             <p style="color:#1e40af;font-weight:700;margin:0 0 8px">🤝 Free 15-Min Intro Call</p>
-            <p style="margin:0;color:#374151">Your tutor will send you a separate Google Meet link for your free 15-minute intro call. Check your email — it should arrive shortly from your tutor.</p>
+            <p style="color:#374151;margin:0 0 8px">Your tutor has scheduled a free 15-minute intro call with you:</p>
+            <p style="color:#374151;margin:0 0 8px"><strong>📅 Date & Time:</strong> ${introCallDate ? new Date(introCallDate).toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'TBD'}</p>
+            <a href="${introCallLink}" style="display:inline-block;background:#1e40af;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Join Intro Call →</a>
+            <p style="color:#6b7280;font-size:12px;margin:8px 0 0">Or copy: ${introCallLink}</p>
           </div>
           ` : ''}
 
