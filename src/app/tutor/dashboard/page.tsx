@@ -23,11 +23,20 @@ export default async function TutorDashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  const { data: sessions } = await adminClient
+  const { data: sessionsRaw } = await adminClient
     .from('tutoring_sessions')
-    .select('*, profiles!tutoring_sessions_student_id_fkey(display_name, email, avatar_url)')
+    .select('*')
     .eq('tutor_id', tutorProfile?.id)
     .order('scheduled_at', { ascending: false })
+
+  const sessions = await Promise.all((sessionsRaw ?? []).map(async (s) => {
+    const { data: studentProfile } = await adminClient
+      .from('profiles')
+      .select('display_name, email, avatar_url')
+      .eq('id', s.student_id)
+      .single()
+    return { ...s, profiles: studentProfile }
+  }))
 
   const { data: reviews } = await adminClient
     .from('tutor_reviews')
