@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 
 
 export async function GET(request: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY as string)
   // Verify this is called by Vercel Cron
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
