@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Star, Edit, Save, X, Plus, Search } from 'lucide-react'
+import { useState } from 'react'
+import { Edit, Save, X, Plus, Search } from 'lucide-react'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -60,8 +60,9 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
   const [legalAccepted, setLegalAccepted] = useState(false)
   const [showLegal, setShowLegal] = useState(true)
+  const [isActive, setIsActive] = useState(tutorProfile?.is_active !== false)
+  const [togglingActive, setTogglingActive] = useState(false)
 
-  // Profile editing
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
   const [subjects, setSubjects] = useState<string[]>(tutorProfile?.subjects ?? [])
@@ -74,14 +75,15 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   const [paypal, setPaypal] = useState(tutorProfile?.paypal ?? '')
   const [zelle, setZelle] = useState(tutorProfile?.zelle ?? '')
 
-  // Availability
   const [availability, setAvailability] = useState(initialAvailability)
   const [timezone, setTimezone] = useState(initialAvailability[0]?.timezone ?? 'America/New_York')
   const [saving, setSaving] = useState(false)
 
-  // Session actions
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
+
+  const accent = 'rgb(99,102,241)'
+  const accentBg = 'rgba(99,102,241,0.1)'
 
   const upcoming = sessions.filter(s => s.status === 'confirmed' && new Date(s.scheduled_at) > new Date())
   const pending = sessions.filter(s => s.status === 'pending')
@@ -89,27 +91,30 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   const totalEarned = payouts.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
   const pendingPayout = payouts.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
-
-  // Weekly earnings
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
   const weeklyEarned = payouts.filter(p => p.status === 'paid' && new Date(p.paid_at) > weekAgo).reduce((sum, p) => sum + p.amount, 0)
+
+  const statusColors: Record<string, string> = {
+    completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)',
+    pending: 'rgb(251,191,36)', declined: 'rgb(107,107,88)'
+  }
+  const statusBgs: Record<string, string> = {
+    completed: 'rgba(34,197,94,0.1)', confirmed: accentBg, disputed: 'rgba(239,68,68,0.1)',
+    pending: 'rgba(234,179,8,0.1)', declined: 'rgba(107,107,88,0.1)'
+  }
 
   function toggleSubject(sub: string) {
     setSubjects(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub])
   }
-
   function toggleLanguage(lang: string) {
     setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
   }
-
   function addSlot() {
     setAvailability((prev: any) => [...prev, { id: Date.now().toString(), day_of_week: 1, start_time: '09:00', end_time: '17:00', timezone }])
   }
-
   function removeSlot(id: string) {
     setAvailability((prev: any) => prev.filter((a: any) => a.id !== id))
   }
-
   function updateSlot(id: string, field: string, value: any) {
     setAvailability((prev: any) => prev.map((a: any) => a.id === id ? { ...a, [field]: value } : a))
   }
@@ -127,6 +132,19 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     setSaving(false)
   }
 
+  async function toggleActive() {
+    setTogglingActive(true)
+    try {
+      await fetch('/api/tutor/toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutorId: tutorProfile?.id, isActive: !isActive }),
+      })
+      setIsActive(!isActive)
+    } catch {}
+    setTogglingActive(false)
+  }
+
   async function confirmSession(sessionId: string) {
     const link = meetLink[sessionId]
     if (!link) { alert('Please enter a Google Meet link first'); return }
@@ -136,6 +154,20 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, meetLink: link }),
+      })
+      window.location.reload()
+    } catch {}
+    setConfirmingSession(null)
+  }
+
+  async function declineSession(sessionId: string, paymentIntentId: string) {
+    if (!confirm('Decline this session? The student will be automatically refunded.')) return
+    setConfirmingSession(sessionId)
+    try {
+      await fetch('/api/tutor/decline-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, paymentIntentId }),
       })
       window.location.reload()
     } catch {}
@@ -166,11 +198,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     { id: 'profile', label: '👤 My Profile' },
   ] as const
 
-  // Purple/indigo color scheme for tutors
-  const accent = 'rgb(99,102,241)'
-  const accentBg = 'rgba(99,102,241,0.1)'
-  const accentBorder = 'rgba(99,102,241,0.25)'
-
   return (
     <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
 
@@ -191,15 +218,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
         </div>
       )}
 
-      {/* Block if legal not accepted */}
+      {/* Legal modal — blocks until accepted */}
       {!legalAccepted && showLegal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
-          onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
           <div style={{ background: 'rgb(18,18,30)', borderRadius: '1.25rem', padding: '2.5rem', maxWidth: '32rem', width: '100%', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 25px 80px rgba(0,0,0,0.6)' }}>
             <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '1rem' }}>⚖️</div>
-            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'white', textAlign: 'center', marginBottom: '1rem' }}>
-              Before You Continue
-            </h2>
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'white', textAlign: 'center', marginBottom: '1rem' }}>Before You Continue</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
               {[
                 'All sessions must be conducted exclusively through AceForge',
@@ -231,22 +255,34 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
           <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
             {profile?.display_name?.[0] ?? '?'}
           </div>
-          <div>
-            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.375rem' }}>
               {tutorProfile?.display_name} 🎓
             </h1>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,197,94,0.15)', color: 'rgb(74,222,128)', border: '1px solid rgba(34,197,94,0.3)' }}>
                 ✅ Approved Tutor
               </span>
               {avgRating && (
-                <span style={{ fontSize: '0.875rem', color: 'rgb(251,191,36)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  ⭐ {avgRating} ({reviews.length} reviews)
-                </span>
+                <span style={{ fontSize: '0.875rem', color: 'rgb(251,191,36)' }}>⭐ {avgRating} ({reviews.length} reviews)</span>
               )}
+              <button onClick={toggleActive} disabled={togglingActive}
+                style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '9999px', background: isActive ? 'rgba(34,197,94,0.15)' : 'rgba(107,107,88,0.15)', color: isActive ? 'rgb(74,222,128)' : 'rgba(255,255,255,0.4)', border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,107,88,0.3)'}`, cursor: 'pointer' }}>
+                {togglingActive ? '...' : isActive ? '🟢 Active' : '⚫ Inactive — Click to activate'}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Inactive warning */}
+        {!isActive && (
+          <div style={{ padding: '1rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(107,107,88,0.1)', border: '1px solid rgba(107,107,88,0.3)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>⚫</span>
+            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>
+              Your profile is currently <strong style={{ color: 'rgba(255,255,255,0.7)' }}>inactive</strong>. Students cannot find or book you. Click the toggle above to go active again.
+            </p>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0', marginBottom: '2rem', borderBottom: '2px solid rgba(99,102,241,0.15)', overflowX: 'auto' }}>
@@ -264,11 +300,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
                 { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, emoji: '💰', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
-                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, emoji: '📈', color: 'rgb(99,102,241)', bg: accentBg },
+                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, emoji: '📈', color: accent, bg: accentBg },
                 { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, emoji: '⏳', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
                 { label: 'Sessions Done', value: completed.length, emoji: '✅', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
                 { label: 'Avg Rating', value: avgRating ? `${avgRating}⭐` : '—', emoji: '⭐', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
-                { label: 'Upcoming', value: upcoming.length, emoji: '📅', color: 'rgb(99,102,241)', bg: accentBg },
+                { label: 'Upcoming', value: upcoming.length, emoji: '📅', color: accent, bg: accentBg },
               ].map(s => (
                 <div key={s.label} style={{ padding: '1.25rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>{s.emoji}</div>
@@ -278,37 +314,74 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               ))}
             </div>
 
-            {/* Pending sessions */}
             {pending.length > 0 && (
               <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(234,179,8,0.08)', border: '2px solid rgba(234,179,8,0.2)', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>
-                  ⏳ Sessions Awaiting Confirmation ({pending.length})
+                  ⏳ Pending Session Requests ({pending.length})
                 </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {pending.map(s => (
-                    <div key={s.id} style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                    <div key={s.id} style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(234,179,8,0.2)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                        <div>
-                          <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
-                          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
-                          {s.wants_intro_call && <p style={{ fontSize: '0.8125rem', color: 'rgb(99,102,241)', marginTop: '0.25rem', fontWeight: 600 }}>🤝 Student requested free 15-min intro call</p>}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                            <p style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: 'rgb(251,191,36)' }}>⏳ Awaiting your response</span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.875rem' }}>
+                            {[
+                              { label: 'Subject', value: s.subject },
+                              { label: 'Topic', value: s.topic },
+                              { label: 'Grade', value: s.grade },
+                              { label: 'Language', value: s.language },
+                              { label: 'Duration', value: s.session_length + ' min' },
+                              { label: 'Scheduled', value: new Date(s.scheduled_at).toLocaleString() },
+                              { label: 'Your Payout', value: '$' + s.tutor_payout },
+                            ].filter(item => item.value).map(item => (
+                              <div key={item.label} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.04)' }}>
+                                <p style={{ fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>{item.label}</p>
+                                <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>{item.value}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {s.wants_intro_call && (
+                            <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', marginBottom: '0.5rem' }}>
+                              <p style={{ fontSize: '0.8125rem', color: 'rgb(165,180,252)', fontWeight: 600 }}>🤝 Student requested a free 15-min intro call first</p>
+                            </div>
+                          )}
+
+                          {s.wants_continuing && (
+                            <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: '0.5rem' }}>
+                              <p style={{ fontSize: '0.8125rem', color: 'rgb(134,239,172)', fontWeight: 600 }}>🔁 Student interested in ongoing sessions</p>
+                            </div>
+                          )}
+
                           {s.file_urls?.length > 0 && (
-                            <div style={{ marginTop: '0.5rem' }}>
-                              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.25rem' }}>📎 Student uploaded files:</p>
+                            <div style={{ padding: '0.75rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '0.5rem' }}>
+                              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>📎 Student uploaded files</p>
                               {s.file_urls.map((url: string, i: number) => (
-                                <a key={i} href={url} target="_blank" style={{ fontSize: '0.8125rem', color: accent, display: 'block' }}>File {i + 1} →</a>
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                  style={{ fontSize: '0.875rem', color: accent, textDecoration: 'none', display: 'block', marginBottom: '0.25rem' }}>
+                                  📄 File {i + 1} →
+                                </a>
                               ))}
                             </div>
                           )}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '200px' }}>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '220px' }}>
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
                             placeholder="Paste Google Meet link"
                             style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8125rem', outline: 'none' }} />
                           <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                            {confirmingSession === s.id ? 'Confirming...' : '✅ Confirm Session'}
+                            style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                            {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Link'}
+                          </button>
+                          <button onClick={() => declineSession(s.id, s.stripe_payment_intent_id)} disabled={confirmingSession === s.id}
+                            style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: 'rgb(248,113,113)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                            ❌ Decline (Auto-refund student)
                           </button>
                         </div>
                       </div>
@@ -318,12 +391,9 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
               </div>
             )}
 
-            {/* Upcoming sessions */}
             {upcoming.length > 0 && (
-              <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>
-                  📅 Upcoming Sessions
-                </h2>
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>📅 Upcoming Sessions</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {upcoming.map(s => (
                     <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.15)', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -352,7 +422,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
             {pending.length === 0 && upcoming.length === 0 && (
               <div style={{ padding: '3rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem' }}>No active sessions right now. Students will book you as your profile goes live.</p>
+                <p style={{ color: 'rgba(255,255,255,0.5)' }}>No active sessions right now. Students will book you once your profile is visible.</p>
               </div>
             )}
           </div>
@@ -366,32 +436,28 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 No sessions yet.
               </div>
             )}
-            {sessions.map(s => {
-              const statusColors: Record<string, string> = { completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)', pending: 'rgb(251,191,36)' }
-              const statusBgs: Record<string, string> = { completed: 'rgba(34,197,94,0.1)', confirmed: accentBg, disputed: 'rgba(239,68,68,0.1)', pending: 'rgba(234,179,8,0.1)' }
-              return (
-                <div key={s.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
-                        <p style={{ fontWeight: 600, color: 'white' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: statusBgs[s.status] ?? 'rgba(255,255,255,0.1)', color: statusColors[s.status] ?? 'white' }}>
-                          {s.status}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
-                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}</p>
+            {sessions.map(s => (
+              <div key={s.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
+                      <p style={{ fontWeight: 600, color: 'white' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: statusBgs[s.status] ?? 'rgba(255,255,255,0.1)', color: statusColors[s.status] ?? 'white' }}>
+                        {s.status}
+                      </span>
                     </div>
-                    {s.status === 'confirmed' && s.meet_link && (
-                      <a href={s.meet_link} target="_blank"
-                        style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
-                        🎥 Join
-                      </a>
-                    )}
+                    <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
+                    <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}</p>
                   </div>
+                  {s.status === 'confirmed' && s.meet_link && (
+                    <a href={s.meet_link} target="_blank"
+                      style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+                      🎥 Join
+                    </a>
+                  )}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
 
@@ -446,7 +512,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 </div>
               ))}
             </div>
-
             <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>Payout History</h2>
               {payouts.length === 0 ? (
@@ -546,8 +611,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-              {/* Bio */}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Bio</label>
                 {editingProfile ? (
@@ -559,7 +622,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 )}
               </div>
 
-              {/* Subjects */}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Subjects</label>
                 {editingProfile ? (
@@ -614,7 +676,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 )}
               </div>
 
-              {/* Languages */}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Languages</label>
                 {editingProfile ? (
@@ -659,7 +720,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                 )}
               </div>
 
-              {/* Payment info */}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Payment Info</label>
                 {editingProfile ? (
@@ -678,45 +738,24 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {[
-                      { label: 'Venmo', value: venmo },
-                      { label: 'PayPal', value: paypal },
-                      { label: 'Zelle', value: zelle },
-                    ].filter(i => i.value).map(item => (
+                    {[{ label: 'Venmo', value: venmo }, { label: 'PayPal', value: paypal }, { label: 'Zelle', value: zelle }].filter(i => i.value).map(item => (
                       <div key={item.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)', minWidth: '60px' }}>{item.label}</span>
                         <span style={{ fontSize: '0.8125rem', color: 'white', fontWeight: 600 }}>{item.value}</span>
                       </div>
                     ))}
-                    {!venmo && !paypal && !zelle && (
-                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)' }}>No payment info set</p>
-                    )}
+                    {!venmo && !paypal && !zelle && <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)' }}>No payment info set</p>}
                   </div>
                 )}
               </div>
 
-              {/* Hourly rate */}
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)' }}>
                 <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.25rem' }}>Your payout rate</p>
-                {editingProfile && tutorProfile?.custom_rate ? (
-                  <input
-                    type="number"
-                    defaultValue={tutorProfile?.hourly_rate ?? 30}
-                    min={20} max={200}
-                    onChange={e => {}}
-                    style={{ width: '120px', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1px solid rgba(74,222,128,0.3)', background: 'rgba(255,255,255,0.05)', color: 'rgb(74,222,128)', fontSize: '1.25rem', fontWeight: 800, outline: 'none' }}
-                  />
-                ) : (
-                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
-                )}
+                <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
                 {(() => {
                   const canCustomRate = completed.length >= 10 && Number(avgRating) >= 4.5
-                  const sessionsLeft = Math.max(0, 10 - completed.length)
-                  const ratingLeft = avgRating ? Math.max(0, 4.5 - Number(avgRating)).toFixed(1) : '4.5'
                   return canCustomRate ? (
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <p style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 600 }}>✅ Custom rates unlocked! Contact support to update your rate.</p>
-                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 600, marginTop: '0.5rem' }}>✅ Custom rates unlocked! Contact support to update your rate.</p>
                   ) : (
                     <div style={{ marginTop: '0.5rem' }}>
                       <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
@@ -725,13 +764,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                       <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <div style={{ width: '80px', height: '4px', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(100, (completed.length / 10) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '9999px', transition: 'width 0.5s' }} />
+                            <div style={{ width: `${Math.min(100, (completed.length / 10) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '9999px' }} />
                           </div>
                           <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)' }}>{completed.length}/10 sessions</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <div style={{ width: '80px', height: '4px', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(100, (Number(avgRating ?? 0) / 4.5) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '9999px', transition: 'width 0.5s' }} />
+                            <div style={{ width: `${Math.min(100, (Number(avgRating ?? 0) / 4.5) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '9999px' }} />
                           </div>
                           <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)' }}>{avgRating ?? '0'}/4.5★</span>
                         </div>
@@ -740,7 +779,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
                   )
                 })()}
               </div>
-
             </div>
           </div>
         )}

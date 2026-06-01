@@ -10,10 +10,11 @@ export default async function TutoringPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-  const { data: tutors } = await supabase
+ const { data: tutors } = await supabase
     .from('tutor_profiles')
     .select('*')
     .eq('status', 'approved')
+    .eq('is_active', true)
     .order('rating', { ascending: false })
 
   const isPremium = profile?.is_premium ?? false
