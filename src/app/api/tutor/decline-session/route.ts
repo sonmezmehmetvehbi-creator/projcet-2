@@ -4,11 +4,12 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import Stripe from 'stripe'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' as any })
 
 export async function POST(request: Request) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY as string)
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
