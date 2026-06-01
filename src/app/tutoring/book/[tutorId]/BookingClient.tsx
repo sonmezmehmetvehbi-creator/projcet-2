@@ -55,7 +55,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
   const baseRate = isPremium ? 34.99 : 49.99
   const express = getExpressFee(selectedDate, selectedTime)
   const expressFeeForLength = express.fee * (sessionLength === 30 ? 0.5 : sessionLength === 90 ? 1.5 : 1)
-  const baseSessionPrice = sessionLength === 30 ? baseRate / 2 : sessionLength === 90 ? baseRate * 1.5 : baseRate
+  const baseSessionPrice = sessionLength === 30 ? baseRate / 2 : sessionLength === 90 ? (isPremium ? 54.99 : 69.99) : baseRate
   const totalPrice = baseSessionPrice + expressFeeForLength
 
   const tierColors: Record<string, { bg: string; border: string; color: string; icon: string }> = {
@@ -262,7 +262,7 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
               <label className="label">Session Length *</label>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.5rem' }}>
                 {SESSION_LENGTHS.map(sl => {
-                  const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? baseRate * 1.5 : baseRate
+                  const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? (isPremium ? 54.99 : 69.99) : baseRate
                   const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
                   return (
                     <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
