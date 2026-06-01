@@ -5,7 +5,7 @@ import { Resend } from 'resend'
 import Stripe from 'stripe'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' })
 
 export async function POST(request: Request) {
   try {
