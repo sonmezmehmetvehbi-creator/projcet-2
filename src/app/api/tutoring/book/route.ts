@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     const { data: tutor } = await supabase
       .from('tutor_profiles')
-      .select('*, profiles!tutor_profiles_user_id_fkey(email, display_name)')
+      .select('*')
       .eq('id', tutorId)
       .single()
 
