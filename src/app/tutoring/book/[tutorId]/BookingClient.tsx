@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle, Upload, X, FileUp, Zap } from 'lucide-react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const SESSION_LENGTHS = [
@@ -16,7 +20,6 @@ function getExpressFee(date: string, time: string): { fee: number; label: string
   const sessionTime = new Date(`${date}T${time}`)
   const now = new Date()
   const hoursUntil = (sessionTime.getTime() - now.getTime()) / (1000 * 60 * 60)
-
   if (hoursUntil < 0) return { fee: 0, label: '', tier: 'standard' }
   if (hoursUntil < 6) return { fee: 40, label: 'Under 6 hours — Emergency booking', tier: 'emergency' }
   if (hoursUntil < 12) return { fee: 25, label: '6–12 hours — Urgent booking', tier: 'urgent' }
@@ -30,8 +33,10 @@ interface Props {
   availability: any[]
 }
 
-export default function BookingClient({ profile, tutor, availability }: Props) {
+function BookingForm({ profile, tutor, availability }: Props) {
   const router = useRouter()
+  const stripe = useStripe()
+  const elements = useElements()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [subject, setSubject] = useState(tutor.subjects?.[0] ?? '')
@@ -50,6 +55,8 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [step, setStep] = useState<'details' | 'payment'>('details')
+  const [clientSecret, setClientSecret] = useState('')
 
   const isPremium = profile?.is_premium ?? false
   const baseRate = isPremium ? 34.99 : 49.99
@@ -59,10 +66,10 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
   const totalPrice = baseSessionPrice + expressFeeForLength
 
   const tierColors: Record<string, { bg: string; border: string; color: string; icon: string }> = {
-    standard: { bg:'rgba(34,85,14,0.04)', border:'rgba(34,85,14,0.12)', color:'rgb(34,85,14)', icon:'✅' },
-    express:  { bg:'rgba(232,160,32,0.06)', border:'rgba(232,160,32,0.25)', color:'rgb(180,120,10)', icon:'⚡' },
-    urgent:   { bg:'rgba(220,80,20,0.06)', border:'rgba(220,80,20,0.25)', color:'rgb(200,75,20)', icon:'🔥' },
-    emergency:{ bg:'rgba(163,45,45,0.06)', border:'rgba(163,45,45,0.25)', color:'rgb(163,45,45)', icon:'🚨' },
+    standard: { bg: 'rgba(34,85,14,0.04)', border: 'rgba(34,85,14,0.12)', color: 'rgb(34,85,14)', icon: '✅' },
+    express: { bg: 'rgba(232,160,32,0.06)', border: 'rgba(232,160,32,0.25)', color: 'rgb(180,120,10)', icon: '⚡' },
+    urgent: { bg: 'rgba(220,80,20,0.06)', border: 'rgba(220,80,20,0.25)', color: 'rgb(200,75,20)', icon: '🔥' },
+    emergency: { bg: 'rgba(163,45,45,0.06)', border: 'rgba(163,45,45,0.25)', color: 'rgb(163,45,45)', icon: '🚨' },
   }
   const tierStyle = tierColors[express.tier]
 
@@ -79,49 +86,81 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
     setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  async function handleBook() {
+  async function handleContinueToPayment() {
     if (!subject || !topic || !selectedDate || !selectedTime) {
-      setError('Please fill in all required fields.')
-      return
+      setError('Please fill in all required fields.'); return
     }
     if (!agreedToRecording) {
-      setError('Please consent to session recording to proceed.')
-      return
+      setError('Please consent to session recording to proceed.'); return
     }
-
     const sessionTime = new Date(`${selectedDate}T${selectedTime}`)
     if (sessionTime < new Date()) {
-      setError('Please select a future date and time.')
-      return
+      setError('Please select a future date and time.'); return
     }
-
     setError('')
     setLoading(true)
+    try {
+      const res = await fetch('/api/tutoring/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalPrice,
+          tutorName: tutor.display_name,
+          subject,
+          sessionLength,
+          tutorId: tutor.id,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setClientSecret(data.clientSecret)
+      setStep('payment')
+    } catch (err: any) {
+      setError(err.message)
+    }
+    setLoading(false)
+  }
+
+  async function handlePayAndBook() {
+    if (!stripe || !elements) return
+    setLoading(true)
+    setError('')
 
     try {
-      const scheduledAt = sessionTime.toISOString()
+      const cardElement = elements.getElement(CardElement)
+      if (!cardElement) throw new Error('Card element not found')
+
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: cardElement }
+      })
+
+      if (stripeError) throw new Error(stripeError.message)
+      if (paymentIntent?.status !== 'succeeded') throw new Error('Payment failed')
 
       // Upload files
       const fileUrls: string[] = []
       for (const file of uploadedFiles) {
         const formData = new FormData()
         formData.append('file', file)
-        const res = await fetch('/api/tutoring/upload-file', { method:'POST', body:formData })
+        const res = await fetch('/api/tutoring/upload-file', { method: 'POST', body: formData })
         const data = await res.json()
         if (data.url) fileUrls.push(data.url)
       }
 
+      // Create booking
       const res = await fetch('/api/tutoring/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tutorId: tutor.id,
-          subject, topic, grade, sessionLength, scheduledAt,
+          subject, topic, grade, sessionLength,
+          scheduledAt: new Date(`${selectedDate}T${selectedTime}`).toISOString(),
           language, message, wantsIntroCall, wantsContinuing, fileUrls,
           studentPrice: Math.round(totalPrice * 100) / 100,
           tutorPayout: sessionLength === 30 ? 15 : sessionLength === 90 ? 45 : 30,
           expressTier: express.tier,
           expressFee: expressFeeForLength,
+          stripePaymentIntentId: paymentIntent.id,
         }),
       })
 
@@ -136,324 +175,330 @@ export default function BookingClient({ profile, tutor, availability }: Props) {
   }
 
   if (success) return (
-    <div style={{ paddingTop:'6rem', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'6rem 1.5rem 3rem' }}>
-      <div className="card" style={{ padding:'3rem', maxWidth:'32rem', width:'100%', textAlign:'center' }}>
-        <div style={{ width:'4rem', height:'4rem', borderRadius:'50%', background:'rgb(234,243,222)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.25rem' }}>
-          <CheckCircle style={{ width:'2rem', height:'2rem', color:'rgb(59,109,17)' }} />
+    <div style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
+      <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center' }}>
+        <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgb(234,243,222)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <CheckCircle style={{ width: '2rem', height: '2rem', color: 'rgb(59,109,17)' }} />
         </div>
-        <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
-          Session Requested! 🎓
+        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.75rem' }}>
+          Session Booked & Paid! 🎓
         </h2>
-        <p style={{ color:'rgb(107,107,88)', lineHeight:1.7 }}>
-          {wantsIntroCall
-            ? 'Your intro call request has been sent. The tutor will reach out to schedule your free 15-min call first.'
-            : express.tier !== 'standard'
-            ? 'Your express session has been requested. The tutor will confirm ASAP.'
-            : 'Your tutoring session has been requested. The tutor will confirm within 24 hours.'}
+        <p style={{ color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+          Payment successful! Your tutor will confirm within 24 hours and send a Google Meet link.
         </p>
       </div>
     </div>
   )
 
   return (
-    <div style={{ paddingTop:'5rem', minHeight:'100vh', paddingBottom:'4rem' }}>
-      <div style={{ maxWidth:'44rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
+    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+      <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         {/* Tutor card */}
-        <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'1rem' }}>
-          <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
+        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.25rem', fontWeight: 700, flexShrink: 0 }}>
             {tutor.display_name?.[0] ?? '?'}
           </div>
-          <div style={{ flex:1 }}>
-            <p style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.125rem', color:'rgb(26,26,20)' }}>{tutor.display_name}</p>
-            <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{tutor.subjects?.join(', ')}</p>
-            {tutor.rating > 0 && <p style={{ fontSize:'0.875rem', color:'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: 'rgb(26,26,20)' }}>{tutor.display_name}</p>
+            <p style={{ fontSize: '0.875rem', color: 'rgb(107,107,88)' }}>{tutor.subjects?.join(', ')}</p>
+            {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
           </div>
-          <div style={{ textAlign:'right' }}>
-            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>${baseRate}/hr</p>
-            {isPremium && <p style={{ fontSize:'0.75rem', color:'rgb(34,85,14)' }}>Premium rate ⚡</p>}
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${baseRate}/hr</p>
+            {isPremium && <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)' }}>Premium rate ⚡</p>}
           </div>
         </div>
 
-        <div className="card" style={{ padding:'2rem' }}>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1.5rem' }}>
-            Book a Session
-          </h1>
+        {/* Step indicator */}
+        <div style={{ display: 'flex', gap: '0', marginBottom: '1.5rem', borderBottom: '2px solid rgba(34,85,14,0.08)' }}>
+          {[{ id: 'details', label: '1. Session Details' }, { id: 'payment', label: '2. Payment' }].map(s => (
+            <div key={s.id} style={{ flex: 1, padding: '0.625rem 1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: step === s.id ? 700 : 400, color: step === s.id ? 'rgb(34,85,14)' : 'rgb(107,107,88)', borderBottom: step === s.id ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom: '-2px' }}>
+              {s.label}
+            </div>
+          ))}
+        </div>
 
+        <div className="card" style={{ padding: '2rem' }}>
           {error && (
-            <div className="alert-error" style={{ marginBottom:'1.25rem' }}>
-              <AlertCircle style={{ width:'1rem', height:'1rem', flexShrink:0 }} />
-              {error}
+            <div className="alert-error" style={{ marginBottom: '1.25rem' }}>
+              <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />{error}
             </div>
           )}
 
-          <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+          {step === 'details' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Session Details</h1>
 
-            {/* Intro call */}
-            <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.12)' }}>
-              <div style={{ display:'flex', alignItems:'flex-start', gap:'0.875rem', marginBottom: wantsIntroCall ? '0.875rem' : 0 }}>
-                <input type="checkbox" checked={wantsIntroCall} onChange={e => setWantsIntroCall(e.target.checked)}
-                  style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }} />
-                <div onClick={() => setWantsIntroCall(!wantsIntroCall)} style={{ cursor:'pointer' }}>
-                  <p style={{ fontWeight:700, color:'rgb(26,26,20)', fontSize:'0.9375rem', marginBottom:'0.25rem' }}>
-                    🤝 Request a free 15-min intro call first <span style={{ fontWeight:400, fontSize:'0.8125rem', color:'rgb(34,85,14)' }}>(recommended)</span>
-                  </p>
-                  <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-                    Meet your tutor before committing. Completely free, no obligation.
-                  </p>
-                </div>
-              </div>
-              {wantsIntroCall && (
-                <div style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', border:'1px solid rgba(34,85,14,0.15)' }}>
-                  <p style={{ fontSize:'0.8125rem', color:'rgb(34,85,14)', fontWeight:600 }}>
-                    ✅ The tutor will contact you to schedule a free 15-min Google Meet call first.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Continuing sessions */}
-            <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.02)', border:'1px solid rgba(34,85,14,0.08)', display:'flex', alignItems:'flex-start', gap:'0.875rem' }}>
-              <input type="checkbox" checked={wantsContinuing} onChange={e => setWantsContinuing(e.target.checked)}
-                style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }} />
-              <div onClick={() => setWantsContinuing(!wantsContinuing)} style={{ cursor:'pointer' }}>
-                <p style={{ fontWeight:600, color:'rgb(26,26,20)', fontSize:'0.9375rem', marginBottom:'0.25rem' }}>
-                  🔁 I am interested in ongoing sessions with this tutor
-                </p>
-                <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-                  Let the tutor know you want regular sessions so they can prepare a learning plan.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="label">Subject *</label>
-              <select value={subject} onChange={e => setSubject(e.target.value)} className="input">
-                {tutor.subjects?.map((s: string) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
-              <div>
-                <label className="label">Grade Level *</label>
-                <select value={grade} onChange={e => setGrade(e.target.value)} className="input">
-                  <option value="K-5">K–5 (Elementary)</option>
-                  <option value="6-8">6–8 (Middle School)</option>
-                  <option value="9-10">9–10 (High School)</option>
-                  <option value="11-12">11–12 (High School)</option>
-                  <option value="college">College / University</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Language *</label>
-                <select value={language} onChange={e => setLanguage(e.target.value)} className="input">
-                  {tutor.languages?.map((l: string) => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="label">What do you need help with? *</label>
-              <textarea value={topic} onChange={e => setTopic(e.target.value)} className="input" rows={3} style={{ resize:'vertical' }}
-                placeholder="e.g. I have an exam tomorrow on quadratic equations and need help fast..." />
-            </div>
-
-            <div>
-              <label className="label">Session Length *</label>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.5rem' }}>
-                {SESSION_LENGTHS.map(sl => {
-                  const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? (isPremium ? 54.99 : 69.99) : baseRate
-                  const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
-                  return (
-                    <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
-                      style={{ padding:'0.875rem 0.5rem', borderRadius:'0.75rem', border:`2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : 'white', cursor:'pointer', textAlign:'center', transition:'all 0.2s' }}>
-                      <p style={{ fontWeight:700, fontSize:'0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom:'0.25rem' }}>{sl.label}</p>
-                      <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginBottom:'0.25rem' }}>{sl.desc}</p>
-                      <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1rem', color:'rgb(34,85,14)' }}>
-                        ${(price + expFee).toFixed(2)}
-                      </p>
-                      {expFee > 0 && (
-                        <p style={{ fontSize:'0.6875rem', color: tierStyle.color }}>
-                          incl. +${expFee.toFixed(2)} express
-                        </p>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Date & Time with express detection */}
-            <div>
-              <label className="label">Date & Time *</label>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'0.75rem' }}>
-                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]} className="input" />
-                <input type="time" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} className="input" />
-              </div>
-
-              {/* Express tier indicator */}
-              {selectedDate && selectedTime && (
-                <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:tierStyle.bg, border:`1px solid ${tierStyle.border}` }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom: express.tier !== 'standard' ? '0.375rem' : 0 }}>
-                    <span style={{ fontSize:'1rem' }}>{tierStyle.icon}</span>
-                    <p style={{ fontSize:'0.875rem', fontWeight:700, color:tierStyle.color }}>{express.label}</p>
+              {/* Intro call */}
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.12)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', marginBottom: wantsIntroCall ? '0.875rem' : 0 }}>
+                  <input type="checkbox" checked={wantsIntroCall} onChange={e => setWantsIntroCall(e.target.checked)}
+                    style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                  <div onClick={() => setWantsIntroCall(!wantsIntroCall)} style={{ cursor: 'pointer' }}>
+                    <p style={{ fontWeight: 700, color: 'rgb(26,26,20)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>
+                      🤝 Request a free 15-min intro call first <span style={{ fontWeight: 400, fontSize: '0.8125rem', color: 'rgb(34,85,14)' }}>(recommended)</span>
+                    </p>
+                    <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>Meet your tutor before committing. Completely free.</p>
                   </div>
-                  {express.tier !== 'standard' && (
-                    <p style={{ fontSize:'0.8125rem', color:tierStyle.color, marginLeft:'1.5rem' }}>
-                      +${expressFeeForLength.toFixed(2)} express surcharge added · Tutor will be notified of urgency
-                    </p>
-                  )}
-                  {express.tier === 'standard' && (
-                    <p style={{ fontSize:'0.8125rem', color:'rgb(34,85,14)', marginLeft:'1.5rem' }}>
-                      No extra charge — book earlier for the best rates
-                    </p>
-                  )}
                 </div>
-              )}
+                {wantsIntroCall && (
+                  <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.06)', border: '1px solid rgba(34,85,14,0.15)' }}>
+                    <p style={{ fontSize: '0.8125rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>✅ Tutor will contact you to schedule a free 15-min call first.</p>
+                  </div>
+                )}
+              </div>
 
-              {/* Express pricing info */}
-              {(!selectedDate || !selectedTime) && (
-                <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(232,160,32,0.04)', border:'1px solid rgba(232,160,32,0.15)' }}>
-                  <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(180,120,10)', marginBottom:'0.5rem' }}>⚡ Express booking available for urgent needs:</p>
-                  <div style={{ display:'flex', flexDirection:'column', gap:'0.25rem' }}>
+              {/* Continuing */}
+              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+                <input type="checkbox" checked={wantsContinuing} onChange={e => setWantsContinuing(e.target.checked)}
+                  style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                <div onClick={() => setWantsContinuing(!wantsContinuing)} style={{ cursor: 'pointer' }}>
+                  <p style={{ fontWeight: 600, color: 'rgb(26,26,20)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>🔁 Interested in ongoing sessions</p>
+                  <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>Let the tutor know you want regular sessions.</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Subject *</label>
+                <select value={subject} onChange={e => setSubject(e.target.value)} className="input">
+                  {tutor.subjects?.map((s: string) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className="label">Grade Level *</label>
+                  <select value={grade} onChange={e => setGrade(e.target.value)} className="input">
+                    <option value="K-5">K–5 (Elementary)</option>
+                    <option value="6-8">6–8 (Middle School)</option>
+                    <option value="9-10">9–10 (High School)</option>
+                    <option value="11-12">11–12 (High School)</option>
+                    <option value="college">College / University</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Language *</label>
+                  <select value={language} onChange={e => setLanguage(e.target.value)} className="input">
+                    {tutor.languages?.map((l: string) => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="label">What do you need help with? *</label>
+                <textarea value={topic} onChange={e => setTopic(e.target.value)} className="input" rows={3} style={{ resize: 'vertical' }}
+                  placeholder="e.g. I'm struggling with quadratic equations..." />
+              </div>
+
+              <div>
+                <label className="label">Session Length *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem' }}>
+                  {SESSION_LENGTHS.map(sl => {
+                    const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? (isPremium ? 54.99 : 69.99) : baseRate
+                    const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
+                    return (
+                      <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
+                        style={{ padding: '0.875rem 0.5rem', borderRadius: '0.75rem', border: `2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : 'white', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
+                        <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom: '0.25rem' }}>{sl.label}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginBottom: '0.25rem' }}>{sl.desc}</p>
+                        <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'rgb(34,85,14)' }}>${(price + expFee).toFixed(2)}</p>
+                        {expFee > 0 && <p style={{ fontSize: '0.6875rem', color: tierStyle.color }}>+${expFee.toFixed(2)} express</p>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Date & time */}
+              <div>
+                <label className="label">Date & Time *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
+                  <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]} className="input" />
+                  <input type="time" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} className="input" />
+                </div>
+                {selectedDate && selectedTime && (
+                  <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: tierStyle.bg, border: `1px solid ${tierStyle.border}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: express.tier !== 'standard' ? '0.375rem' : 0 }}>
+                      <span>{tierStyle.icon}</span>
+                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: tierStyle.color }}>{express.label}</p>
+                    </div>
+                    {express.tier !== 'standard' && (
+                      <p style={{ fontSize: '0.8125rem', color: tierStyle.color, marginLeft: '1.5rem' }}>+${expressFeeForLength.toFixed(2)} express surcharge added</p>
+                    )}
+                  </div>
+                )}
+                {(!selectedDate || !selectedTime) && (
+                  <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.04)', border: '1px solid rgba(232,160,32,0.15)' }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgb(180,120,10)', marginBottom: '0.5rem' }}>⚡ Express pricing:</p>
                     {[
-                      { label:'24+ hours notice', fee:'No extra charge', color:'rgb(34,85,14)' },
-                      { label:'12–24 hours notice', fee:'+$15', color:'rgb(180,120,10)' },
-                      { label:'6–12 hours notice', fee:'+$25', color:'rgb(200,75,20)' },
-                      { label:'Under 6 hours', fee:'+$40', color:'rgb(163,45,45)' },
+                      { label: '24+ hours notice', fee: 'No extra charge', color: 'rgb(34,85,14)' },
+                      { label: '12–24 hours notice', fee: '+$15', color: 'rgb(180,120,10)' },
+                      { label: '6–12 hours notice', fee: '+$25', color: 'rgb(200,75,20)' },
+                      { label: 'Under 6 hours', fee: '+$40', color: 'rgb(163,45,45)' },
                     ].map(item => (
-                      <div key={item.label} style={{ display:'flex', justifyContent:'space-between' }}>
-                        <span style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{item.label}</span>
-                        <span style={{ fontSize:'0.8125rem', fontWeight:700, color:item.color }}>{item.fee}</span>
+                      <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>{item.label}</span>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: item.color }}>{item.fee}</span>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {availability.length > 0 && (
+                <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.1)' }}>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgb(34,85,14)', marginBottom: '0.375rem' }}>Tutor availability:</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {availability.map((a: any, i: number) => (
+                      <span key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
+                        {DAYS[a.day_of_week]} {a.start_time}–{a.end_time}
+                      </span>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
 
-            {availability.length > 0 && (
-              <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
-                <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(34,85,14)', marginBottom:'0.375rem' }}>
-                  Tutor availability ({availability[0]?.timezone}):
-                </p>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem' }}>
-                  {availability.map((a: any, i: number) => (
-                    <span key={i} style={{ fontSize:'0.75rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)' }}>
-                      {DAYS[a.day_of_week]} {a.start_time}–{a.end_time}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* File upload */}
-            <div>
-              <label className="label">
-                Upload files for your tutor
-                <span style={{ fontWeight:400, color:'rgb(107,107,88)', fontSize:'0.8125rem', marginLeft:'0.375rem' }}>(optional — max 5 files, 20MB each)</span>
-              </label>
-              <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginBottom:'0.75rem' }}>
-                Share notes, past tests, or any material so your tutor can prepare before the session.
-              </p>
-              {uploadedFiles.length < 5 && (
-                <label style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'1rem', borderRadius:'0.75rem', border:'2px dashed rgba(34,85,14,0.2)', cursor:'pointer', background:'rgba(34,85,14,0.02)', marginBottom:'0.75rem' }}>
-                  <Upload style={{ width:'1.25rem', height:'1.25rem', color:'rgb(107,107,88)', flexShrink:0 }} />
-                  <div>
-                    <p style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)', marginBottom:'0.125rem' }}>Click to upload files</p>
-                    <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>Any file type up to 20MB</p>
-                  </div>
-                  <input ref={fileRef} type="file" multiple style={{ display:'none' }} onChange={handleFileAdd} />
-                </label>
-              )}
-              {uploadError && <p style={{ fontSize:'0.8125rem', color:'rgb(163,45,45)', marginBottom:'0.5rem' }}>{uploadError}</p>}
-              {uploadedFiles.length > 0 && (
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                  {uploadedFiles.map((f, i) => (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.15)' }}>
-                      <FileUp style={{ width:'1rem', height:'1rem', color:'rgb(34,85,14)', flexShrink:0 }} />
-                      <span style={{ fontSize:'0.875rem', color:'rgb(26,26,20)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</span>
-                      <span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
-                      <button type="button" onClick={() => removeFile(i)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgb(107,107,88)', display:'flex', padding:'0.25rem' }}>
-                        <X style={{ width:'1rem', height:'1rem' }} />
-                      </button>
+              {/* File upload */}
+              <div>
+                <label className="label">Upload files for your tutor <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(optional)</span></label>
+                {uploadedFiles.length < 5 && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: 'rgba(34,85,14,0.02)', marginBottom: '0.75rem' }}>
+                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'rgb(107,107,88)', flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'rgb(26,26,20)', marginBottom: '0.125rem' }}>Click to upload files</p>
+                      <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)' }}>Any file type up to 20MB</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="label">
-                Additional notes
-                <span style={{ fontWeight:400, color:'rgb(107,107,88)', fontSize:'0.8125rem', marginLeft:'0.375rem' }}>(optional)</span>
-              </label>
-              <textarea value={message} onChange={e => setMessage(e.target.value)} className="input" rows={2} style={{ resize:'vertical' }}
-                placeholder="Anything else the tutor should know..." />
-            </div>
-
-            {/* Price summary */}
-            <div style={{ padding:'1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.12)' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
-                <span style={{ fontSize:'0.9375rem', color:'rgb(107,107,88)' }}>Session ({sessionLength} min)</span>
-                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'rgb(26,26,20)' }}>${baseSessionPrice.toFixed(2)}</span>
+                    <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={handleFileAdd} />
+                  </label>
+                )}
+                {uploadError && <p style={{ fontSize: '0.8125rem', color: 'rgb(163,45,45)', marginBottom: '0.5rem' }}>{uploadError}</p>}
+                {uploadedFiles.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.15)', marginBottom: '0.5rem' }}>
+                    <FileUp style={{ width: '1rem', height: '1rem', color: 'rgb(34,85,14)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.875rem', color: 'rgb(26,26,20)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)' }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
+                    <button type="button" onClick={() => removeFile(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(107,107,88)', display: 'flex', padding: '0.25rem' }}>
+                      <X style={{ width: '1rem', height: '1rem' }} />
+                    </button>
+                  </div>
+                ))}
               </div>
-              {expressFeeForLength > 0 && (
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
-                  <span style={{ fontSize:'0.875rem', color:tierStyle.color, display:'flex', alignItems:'center', gap:'0.375rem' }}>
-                    <Zap style={{ width:'0.875rem', height:'0.875rem' }} />
-                    {express.label.split('—')[0].trim()} surcharge
-                  </span>
-                  <span style={{ fontSize:'0.875rem', color:tierStyle.color, fontWeight:700 }}>+${expressFeeForLength.toFixed(2)}</span>
+
+              <div>
+                <label className="label">Additional notes <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(optional)</span></label>
+                <textarea value={message} onChange={e => setMessage(e.target.value)} className="input" rows={2} style={{ resize: 'vertical' }}
+                  placeholder="Anything else the tutor should know..." />
+              </div>
+
+              {/* Price summary */}
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.12)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)' }}>Session ({sessionLength} min)</span>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(26,26,20)' }}>${baseSessionPrice.toFixed(2)}</span>
                 </div>
-              )}
-              {wantsIntroCall && (
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
-                  <span style={{ fontSize:'0.875rem', color:'rgb(34,85,14)' }}>15-min intro call</span>
-                  <span style={{ fontSize:'0.875rem', color:'rgb(34,85,14)', fontWeight:600 }}>FREE</span>
+                {expressFeeForLength > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: tierStyle.color, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <Zap style={{ width: '0.875rem', height: '0.875rem' }} /> Express surcharge
+                    </span>
+                    <span style={{ fontSize: '0.875rem', color: tierStyle.color, fontWeight: 700 }}>+${expressFeeForLength.toFixed(2)}</span>
+                  </div>
+                )}
+                {wantsIntroCall && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)' }}>15-min intro call</span>
+                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>FREE</span>
+                  </div>
+                )}
+                {isPremium && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)' }}>Premium discount ⚡</span>
+                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>-$15.00/hr</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '1px solid rgba(34,85,14,0.1)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, color: 'rgb(26,26,20)' }}>Total</span>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
                 </div>
-              )}
-              {isPremium && (
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
-                  <span style={{ fontSize:'0.875rem', color:'rgb(34,85,14)' }}>Premium discount ⚡</span>
-                  <span style={{ fontSize:'0.875rem', color:'rgb(34,85,14)', fontWeight:600 }}>-$15.00/hr</span>
+              </div>
+
+              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>⭐</span>
+                <p style={{ fontSize: '0.8125rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>
+                  Complete this session to earn +{sessionLength === 30 ? 50 : sessionLength === 90 ? 150 : 100} XP!
+                </p>
+              </div>
+
+              {/* Recording consent */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.15)' }}>
+                <input type="checkbox" checked={agreedToRecording} onChange={e => setAgreedToRecording(e.target.checked)}
+                  style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                <label style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => setAgreedToRecording(!agreedToRecording)}>
+                  📹 I consent to this session being recorded for quality assurance and dispute resolution.
+                </label>
+              </div>
+
+              <button onClick={handleContinueToPayment} disabled={loading}
+                style={{ width: '100%', justifyContent: 'center', padding: '1rem', fontSize: '1.0625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '0.875rem', background: express.tier === 'emergency' ? 'rgb(163,45,45)' : express.tier === 'urgent' ? 'rgb(200,75,20)' : 'rgb(34,85,14)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                {loading ? 'Processing...' : `Continue to Payment — $${totalPrice.toFixed(2)} →`}
+              </button>
+            </div>
+          )}
+
+          {step === 'payment' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Payment</h1>
+
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.12)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                  <span style={{ color: 'rgb(107,107,88)' }}>{subject} with {tutor.display_name}</span>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
                 </div>
-              )}
-              <div style={{ borderTop:'1px solid rgba(34,85,14,0.1)', paddingTop:'0.5rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontWeight:700, color:'rgb(26,26,20)' }}>Total due now</span>
-                <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.25rem', color:'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
+                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>{sessionLength} min · {new Date(`${selectedDate}T${selectedTime}`).toLocaleString()}</p>
+              </div>
+
+              <div>
+                <label className="label">Card Details *</label>
+                <div style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white' }}>
+                  <CardElement options={{
+                    style: {
+                      base: { fontSize: '16px', color: 'rgb(26,26,20)', '::placeholder': { color: 'rgb(107,107,88)' } },
+                      invalid: { color: 'rgb(163,45,45)' },
+                    },
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.12)' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
+                  🔒 Secured by Stripe. Your card details are never stored on our servers. Full refund if tutor doesn't show.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => setStep('details')}
+                  style={{ flex: 1, padding: '0.875rem', borderRadius: '0.875rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: 'rgb(107,107,88)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
+                  ← Back
+                </button>
+                <button onClick={handlePayAndBook} disabled={loading || !stripe}
+                  style={{ flex: 2, padding: '0.875rem', borderRadius: '0.875rem', background: 'rgb(34,85,14)', border: 'none', color: 'white', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  {loading ? 'Processing payment...' : `💳 Pay $${totalPrice.toFixed(2)} & Book`}
+                </button>
               </div>
             </div>
-
-            {/* XP info */}
-            <div style={{ padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.08)', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <span style={{ fontSize:'1.25rem' }}>⭐</span>
-              <p style={{ fontSize:'0.8125rem', color:'rgb(34,85,14)', fontWeight:600 }}>
-                Complete this session to earn +{sessionLength === 30 ? 50 : sessionLength === 90 ? 150 : 100} XP!
-              </p>
-            </div>
-
-            {/* Recording consent */}
-            <div style={{ display:'flex', alignItems:'flex-start', gap:'0.75rem', padding:'1rem', borderRadius:'0.875rem', background:'rgba(37,99,235,0.04)', border:'1px solid rgba(37,99,235,0.15)' }}>
-              <input type="checkbox" checked={agreedToRecording} onChange={e => setAgreedToRecording(e.target.checked)}
-                style={{ width:'1.125rem', height:'1.125rem', accentColor:'rgb(34,85,14)', flexShrink:0, marginTop:'0.125rem', cursor:'pointer' }} />
-              <label style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6, cursor:'pointer' }} onClick={() => setAgreedToRecording(!agreedToRecording)}>
-                📹 I consent to this session being recorded for quality assurance and dispute resolution. Recordings are only reviewed in case of a dispute and deleted after 30 days.
-              </label>
-            </div>
-
-            <button onClick={handleBook} disabled={loading} className="btn-primary"
-              style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem', background: express.tier === 'emergency' ? 'rgb(163,45,45)' : express.tier === 'urgent' ? 'rgb(200,75,20)' : 'rgb(34,85,14)' }}>
-              {loading ? 'Processing...' : `${express.tier !== 'standard' ? '⚡ Express Book' : 'Request & Pay'} $${totalPrice.toFixed(2)} 🎓`}
-            </button>
-
-            <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', textAlign:'center' }}>
-              🔒 Secure payment via Stripe · Full refund if tutor does not show up
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BookingClient({ profile, tutor, availability }: Props) {
+  return (
+    <Elements stripe={stripePromise}>
+      <BookingForm profile={profile} tutor={tutor} availability={availability} />
+    </Elements>
   )
 }

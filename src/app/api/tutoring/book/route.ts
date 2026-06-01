@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const {
       tutorId, subject, topic, grade, sessionLength, scheduledAt,
       language, message, wantsIntroCall, wantsContinuing,
-      fileUrls, studentPrice, tutorPayout
+      fileUrls, studentPrice, tutorPayout, stripePaymentIntentId
     } = await request.json()
 
     const { data: tutor } = await supabase
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         student_price: studentPrice,
         tutor_payout: tutorPayout,
         recording_consent: true,
+        stripe_payment_intent_id: stripePaymentIntentId || null,
       })
       .select('id')
       .single()
