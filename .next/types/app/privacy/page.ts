@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/privacy/page.tsx
+// File: /Users/aysesamanci/projcet-2/src/app/privacy/page.tsx
 import * as entry from '../../../../src/app/privacy/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

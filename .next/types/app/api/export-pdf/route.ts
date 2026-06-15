@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/api/export-pdf/route.ts
+// File: /Users/aysesamanci/projcet-2/src/app/api/export-pdf/route.ts
 import * as entry from '../../../../../src/app/api/export-pdf/route.js'
 import type { NextRequest } from 'next/server.js'
 

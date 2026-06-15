@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/auth/callback/route.ts
+// File: /Users/aysesamanci/projcet-2/src/app/auth/callback/route.ts
 import * as entry from '../../../../../src/app/auth/callback/route.js'
 import type { NextRequest } from 'next/server.js'
 

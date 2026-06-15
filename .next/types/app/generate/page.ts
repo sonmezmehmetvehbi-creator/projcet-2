@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/generate/page.tsx
+// File: /Users/aysesamanci/projcet-2/src/app/generate/page.tsx
 import * as entry from '../../../../src/app/generate/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

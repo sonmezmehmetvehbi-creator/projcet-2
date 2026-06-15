@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/api/admin/get-messages/route.ts
+// File: /Users/aysesamanci/projcet-2/src/app/api/admin/get-messages/route.ts
 import * as entry from '../../../../../../src/app/api/admin/get-messages/route.js'
 import type { NextRequest } from 'next/server.js'
 

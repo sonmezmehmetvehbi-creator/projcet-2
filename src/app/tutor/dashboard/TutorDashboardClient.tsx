@@ -59,10 +59,14 @@ interface Props {
   availability: any[]
 }
 
-export default function TutorDashboardClient({ profile, tutorProfile, sessions, reviews, payouts, availability: initialAvailability }: Props) {
+export default function TutorDashboardClient({ profile, tutorProfile, sessions: sessionsProp, reviews, payouts, availability: initialAvailability }: Props) {
   const router = useRouter()
   const { theme } = useTutorTheme()
   const isDark = theme === 'dark'
+
+  const [sessions, setSessions] = useState(sessionsProp)
+  // Keep local sessions in sync when the server component refreshes (e.g. realtime updates).
+  useEffect(() => { setSessions(sessionsProp) }, [sessionsProp])
 
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
   const [legalAccepted, setLegalAccepted] = useState(false)
@@ -231,12 +235,15 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
     if (!confirm('Decline this session? The student will be automatically refunded.')) return
     setConfirmingSession(sessionId)
     try {
-      await fetch('/api/tutor/decline-session', {
+      const res = await fetch('/api/tutor/decline-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, paymentIntentId }),
       })
-      window.location.reload()
+      if (res.ok) {
+        // Reactively drop the declined session from the dashboard.
+        setSessions(prev => prev.filter(s => s.id !== sessionId))
+      }
     } catch {}
     setConfirmingSession(null)
   }

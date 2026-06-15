@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/api/sat-generate/route.ts
+// File: /Users/aysesamanci/projcet-2/src/app/api/sat-generate/route.ts
 import * as entry from '../../../../../src/app/api/sat-generate/route.js'
 import type { NextRequest } from 'next/server.js'
 

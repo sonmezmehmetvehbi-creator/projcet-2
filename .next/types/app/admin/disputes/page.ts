@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/admin/disputes/page.tsx
+// File: /Users/aysesamanci/projcet-2/src/app/admin/disputes/page.tsx
 import * as entry from '../../../../../src/app/admin/disputes/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

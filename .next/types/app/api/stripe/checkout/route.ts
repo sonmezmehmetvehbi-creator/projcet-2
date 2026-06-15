@@ -1,4 +1,4 @@
-// File: /workspaces/projcet-2/src/app/api/stripe/checkout/route.ts
+// File: /Users/aysesamanci/projcet-2/src/app/api/stripe/checkout/route.ts
 import * as entry from '../../../../../../src/app/api/stripe/checkout/route.js'
 import type { NextRequest } from 'next/server.js'
 
