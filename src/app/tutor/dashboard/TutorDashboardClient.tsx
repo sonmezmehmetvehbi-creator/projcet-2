@@ -196,7 +196,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
 
   const TABS = [
     { id: 'overview', label: '📊 Overview' },
-    { id: 'sessions', label: `📅 Sessions${pending.length > 0 ? ` (${pending.length})` : ''}` },
+    { id: 'sessions', label: '📅 Sessions' + (pending.length > 0 ? ' (' + pending.length + ')' : '') },
     { id: 'reviews', label: '⭐ Reviews' },
     { id: 'earnings', label: '💰 Earnings' },
     { id: 'availability', label: '🕐 Availability' },
