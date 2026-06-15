@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     const { data: messages } = await adminClient
       .from('session_messages')
-      .select('*, profiles!session_messages_sender_id_fkey(display_name)')
+      .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true })
 

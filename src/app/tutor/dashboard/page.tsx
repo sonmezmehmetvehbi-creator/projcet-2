@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import TutorNavbar from './TutorNavbar'
 import TutorDashboardClient from './TutorDashboardClient'
+import { TutorThemeProvider } from './TutorThemeContext'
 
 export default async function TutorDashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -56,16 +57,18 @@ export default async function TutorDashboardPage() {
     .eq('tutor_id', tutorProfile?.id)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0f1e, #1a1a2e, #16213e)' }}>
-      <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
-      <TutorDashboardClient
-        profile={profile}
-        tutorProfile={tutorProfile}
-        sessions={sessions ?? []}
-        reviews={reviews ?? []}
-        payouts={payouts ?? []}
-        availability={availability ?? []}
-      />
-    </div>
+    <TutorThemeProvider>
+      <div style={{ minHeight: '100vh' }}>
+        <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
+        <TutorDashboardClient
+          profile={profile}
+          tutorProfile={tutorProfile}
+          sessions={sessions ?? []}
+          reviews={reviews ?? []}
+          payouts={payouts ?? []}
+          availability={availability ?? []}
+        />
+      </div>
+    </TutorThemeProvider>
   )
 }

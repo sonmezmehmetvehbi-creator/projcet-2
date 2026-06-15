@@ -39,7 +39,7 @@ export default async function SessionPage({ params }: { params: { sessionId: str
         session={session}
         tutorProfile={tutorProfile}
         profile={profile}
-        isTutor={false}
+        isTutor={isTutor}
       />
     </div>
   )
