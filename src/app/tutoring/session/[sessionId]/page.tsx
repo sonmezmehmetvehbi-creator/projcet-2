@@ -26,14 +26,23 @@ export default async function SessionPage({ params }: { params: { sessionId: str
 
   if (!session) redirect('/tutoring/sessions')
 
-  const { data: tutorProfile } = await adminClient
+  // Manual lookup: fetch the tutor profile by the session's tutor_id with a plain
+  // select. The previous embedded FK join (profiles!tutor_profiles_user_id_fkey)
+  // could error out and return null, which made isTutor always false.
+  const { data: tutorProfile, error: tutorProfileError } = await adminClient
     .from('tutor_profiles')
-    .select('*, profiles!tutor_profiles_user_id_fkey(email)')
+    .select('*')
     .eq('id', session.tutor_id)
     .single()
 
   // The viewer is the tutor if the tutor profile's user_id matches the logged-in user.
-  const isTutor = tutorProfile?.user_id === user.id
+  const isTutor = !!tutorProfile && tutorProfile.user_id === user.id
+
+  console.log('[session page] user.id:', user.id)
+  console.log('[session page] session.tutor_id:', session.tutor_id)
+  console.log('[session page] tutorProfile is null:', tutorProfile === null, 'error:', tutorProfileError?.message)
+  console.log('[session page] tutorProfile?.user_id:', tutorProfile?.user_id)
+  console.log('[session page] isTutor:', isTutor)
 
   return (
     <TutorThemeProvider>

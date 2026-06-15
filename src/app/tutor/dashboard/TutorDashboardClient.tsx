@@ -240,11 +240,19 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, paymentIntentId }),
       })
+      console.log('[declineSession] res.status:', res.status, 'res.ok:', res.ok)
       if (res.ok) {
         // Reactively drop the declined session from the dashboard.
         setSessions(prev => prev.filter(s => s.id !== sessionId))
+      } else {
+        const data = await res.json().catch(() => ({}))
+        console.error('[declineSession] failed:', data)
+        alert(`Could not decline session: ${data.error ?? `server returned ${res.status}`}`)
       }
-    } catch {}
+    } catch (err: any) {
+      console.error('[declineSession] error:', err)
+      alert(`Could not decline session: ${err?.message ?? 'network error'}`)
+    }
     setConfirmingSession(null)
   }
 

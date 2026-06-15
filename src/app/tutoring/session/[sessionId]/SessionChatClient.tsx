@@ -24,6 +24,10 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    console.log('[SessionChatClient] isTutor:', isTutor)
+  }, [])
+
+  useEffect(() => {
     fetchMessages()
     const supabase = createClient()
     const channel = supabase

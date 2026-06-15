@@ -44,8 +44,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Email student
-    await resend.emails.send({
+    // Email student — wrapped so an email failure doesn't fail the decline
+    // (the DB status + refund have already succeeded by this point).
+    try {
+      await resend.emails.send({
       from: 'AceForge <onboarding@resend.dev>',
       to: session.profiles?.email,
       subject: 'Your tutoring session was declined — Full Refund Issued',
@@ -66,7 +68,10 @@ export async function POST(request: Request) {
           <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
         </div>
       `,
-    })
+      })
+    } catch (e: any) {
+      console.error('Decline email error:', e.message)
+    }
 
     return NextResponse.json({ success: true, refundId })
   } catch (error: any) {
