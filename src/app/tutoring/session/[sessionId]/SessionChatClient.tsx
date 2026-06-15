@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Send, Paperclip, X, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   session: any
@@ -22,8 +23,21 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   useEffect(() => {
     fetchMessages()
-    const interval = setInterval(fetchMessages, 3000)
-    return () => clearInterval(interval)
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`session-messages-${session.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'session_messages',
+        filter: `session_id=eq.${session.id}`,
+      }, () => {
+        fetchMessages()
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   useEffect(() => {
@@ -113,11 +127,24 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             ))}
           </div>
 
-          {session.wants_intro_call && (
-            <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', marginBottom: '0.75rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', fontWeight: 600 }}>🤝 You requested a free 15-min intro call — your tutor will send the link via this chat</p>
+          {session.wants_intro_call && session.intro_call_link ? (
+            <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.06)', border: '2px solid rgba(37,99,235,0.25)', marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'rgb(37,99,235)', marginBottom: '0.5rem' }}>🤝 Free 15-Min Intro Call</p>
+              {session.intro_call_date && (
+                <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', marginBottom: '0.625rem' }}>
+                  📅 {new Date(session.intro_call_date).toLocaleString()}
+                </p>
+              )}
+              <a href={session.intro_call_link} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(37,99,235)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>
+                🎥 Join Intro Call →
+              </a>
             </div>
-          )}
+          ) : session.wants_intro_call ? (
+            <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', fontWeight: 600 }}>🤝 You requested a free 15-min intro call — your tutor will send the link when they confirm</p>
+            </div>
+          ) : null}
 
           {session.wants_continuing && (
             <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '0.75rem' }}>
@@ -139,7 +166,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
           {session.status === 'confirmed' && session.meet_link && (
             <a href={session.meet_link} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: '0.875rem', background: 'rgb(34,85,14)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: '0.875rem', background: 'rgb(34,85,14)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem', marginTop: '0.5rem' }}>
               🎥 Join Main Session →
             </a>
           )}

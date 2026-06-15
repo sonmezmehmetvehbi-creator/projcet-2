@@ -348,14 +348,22 @@ function BookingForm({ profile, tutor, availability }: Props) {
               </div>
 
               {availability.length > 0 && (
-                <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.1)' }}>
-                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgb(34,85,14)', marginBottom: '0.375rem' }}>Tutor availability:</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                    {availability.map((a: any, i: number) => (
-                      <span key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
-                        {DAYS[a.day_of_week]} {a.start_time}–{a.end_time}
-                      </span>
-                    ))}
+                <div>
+                  <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgb(34,85,14)', marginBottom: '0.375rem' }}>Tutor availability:</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                      {availability.map((a: any, i: number) => (
+                        <span key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
+                          {DAYS[a.day_of_week]} {a.start_time}–{a.end_time}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(234,179,8,0.08)', border: '1.5px solid rgba(234,179,8,0.3)', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <p style={{ fontSize: '0.8125rem', color: 'rgb(133,100,0)', lineHeight: 1.5 }}>
+                      Sessions requested outside these hours may be declined. Your payment will be automatically refunded if declined.
+                    </p>
                   </div>
                 </div>
               )}

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Send, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   profile: any
@@ -40,6 +42,7 @@ function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: 
 }
 
 export default function AdminDashboardClient({ profile, stats, recentUsers, tickets, pendingTutorList, currentUserId }: Props) {
+  const router = useRouter()
   const [tab, setTab] = useState<'overview' | 'support' | 'tutors' | 'users'>('overview')
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
   const [messages, setMessages] = useState<any[]>([])
@@ -48,6 +51,26 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
   const [uploadingImage, setUploadingImage] = useState(false)
   const [liveTickets, setLiveTickets] = useState(tickets)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tutoring_sessions' }, () => {
+        router.refresh()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
+        router.refresh()
+        setLiveTickets((prev: any[]) => prev)
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tutor_profiles' }, () => {
+        router.refresh()
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

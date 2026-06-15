@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Edit, Save, X, Plus, Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -57,6 +59,7 @@ interface Props {
 }
 
 export default function TutorDashboardClient({ profile, tutorProfile, sessions, reviews, payouts, availability: initialAvailability }: Props) {
+  const router = useRouter()
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
   const [legalAccepted, setLegalAccepted] = useState(false)
   const [showLegal, setShowLegal] = useState(true)
@@ -83,6 +86,25 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions, 
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
   const [introLink, setIntroLink] = useState<Record<string, string>>({})
   const [introDate, setIntroDate] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!tutorProfile?.id) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel('tutor-sessions-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tutoring_sessions',
+        filter: `tutor_id=eq.${tutorProfile.id}`,
+      }, () => {
+        router.refresh()
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tutorProfile?.id])
 
   const accent = 'rgb(99,102,241)'
   const accentBg = 'rgba(99,102,241,0.1)'

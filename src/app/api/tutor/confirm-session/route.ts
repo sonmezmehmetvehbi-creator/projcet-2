@@ -19,9 +19,15 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // SQL: ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS intro_call_link text;
+    // SQL: ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS intro_call_date timestamptz;
+    const updateData: Record<string, any> = { status: 'confirmed', meet_link: meetLink }
+    if (introCallLink) updateData.intro_call_link = introCallLink
+    if (introCallDate) updateData.intro_call_date = introCallDate
+
     const { data: session } = await adminClient
       .from('tutoring_sessions')
-      .update({ status: 'confirmed', meet_link: meetLink })
+      .update(updateData)
       .eq('id', sessionId)
       .select('*')
       .single()
