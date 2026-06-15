@@ -13,8 +13,8 @@ export default async function TutoringSessionsPage() {
 
   const { createClient } = await import('@supabase/supabase-js')
   const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
   const { data: sessionsRaw } = await adminClient
     .from('tutoring_sessions')

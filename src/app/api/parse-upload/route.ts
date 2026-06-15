@@ -5,9 +5,8 @@ import OpenAI from 'openai'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export async function POST(request: Request) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -53,7 +52,7 @@ export async function POST(request: Request) {
 
       } else if (fileName.endsWith('.pdf') || fileType === 'application/pdf') {
         // Use OpenAI file API for PDFs
-        extractedText = await extractPDFWithOpenAI(buffer, file.name)
+        extractedText = await extractPDFWithOpenAI(openai, buffer, file.name)
 
       } else if (
         fileType.startsWith('image/') ||
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
       ) {
         // Images — use vision
         const mime = fileType || 'image/jpeg'
-        extractedText = await extractImageWithVision(buffer, mime)
+        extractedText = await extractImageWithVision(openai, buffer, mime)
 
       } else {
         return NextResponse.json({
@@ -92,7 +91,7 @@ export async function POST(request: Request) {
 }
 
 // PDF — use OpenAI Assistants file upload API
-async function extractPDFWithOpenAI(buffer: Buffer, fileName: string): Promise<string> {
+async function extractPDFWithOpenAI(openai: OpenAI, buffer: Buffer, fileName: string): Promise<string> {
   console.log('Starting PDF extraction, buffer size:', buffer.length)
   
   const blob = new Blob([new Uint8Array(buffer)], { type: 'application/pdf' })
@@ -132,7 +131,7 @@ async function extractPDFWithOpenAI(buffer: Buffer, fileName: string): Promise<s
 }
 
 // Images — OpenAI vision
-async function extractImageWithVision(buffer: Buffer, mimeType: string): Promise<string> {
+async function extractImageWithVision(openai: OpenAI, buffer: Buffer, mimeType: string): Promise<string> {
   const base64 = buffer.toString('base64')
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
