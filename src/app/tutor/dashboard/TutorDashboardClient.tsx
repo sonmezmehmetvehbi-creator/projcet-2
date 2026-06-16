@@ -69,8 +69,14 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   useEffect(() => { setSessions(sessionsProp) }, [sessionsProp])
 
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
-  const [legalAccepted, setLegalAccepted] = useState(false)
-  const [showLegal, setShowLegal] = useState(true)
+  const [legalAccepted, setLegalAccepted] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('aceforge_legal_accepted') === 'true'
+    return false
+  })
+  const [showLegal, setShowLegal] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('aceforge_legal_accepted') !== 'true'
+    return true
+  })
   const [isActive, setIsActive] = useState(tutorProfile?.is_active !== false)
   const [togglingActive, setTogglingActive] = useState(false)
 
@@ -94,14 +100,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
   const [introLink, setIntroLink] = useState<Record<string, string>>({})
   const [introDate, setIntroDate] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    const saved = localStorage.getItem('aceforge_legal_accepted')
-    if (saved === 'true') {
-      setLegalAccepted(true)
-      setShowLegal(false)
-    }
-  }, [])
 
   useEffect(() => {
     if (!tutorProfile?.id) return
@@ -240,16 +238,15 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, paymentIntentId }),
       })
-      console.log('decline response:', res.status, await res.clone().text())
-      console.log('[declineSession] res.status:', res.status, 'res.ok:', res.ok)
-      if (res.ok) {
-        // Reactively drop the declined session from the dashboard.
-        setSessions(prev => prev.filter(s => s.id !== sessionId))
-      } else {
-        const data = await res.json().catch(() => ({}))
-        console.error('[declineSession] failed:', data)
-        alert(`Could not decline session: ${data.error ?? `server returned ${res.status}`}`)
+      const responseText = await res.clone().text()
+      console.log('decline status:', res.status, 'body:', responseText)
+      if (!res.ok) {
+        alert('Decline failed: ' + responseText)
+        setConfirmingSession(null)
+        return
       }
+      // Reactively drop the declined session from the dashboard.
+      setSessions(prev => prev.filter(s => s.id !== sessionId))
     } catch (err: any) {
       console.error('[declineSession] error:', err)
       alert(`Could not decline session: ${err?.message ?? 'network error'}`)

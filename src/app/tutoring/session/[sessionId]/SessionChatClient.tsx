@@ -18,7 +18,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-  const [tutorTheme, setTutorTheme] = useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -26,7 +26,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
     console.log('[SessionChatClient] isTutor:', isTutor)
     if (isTutor) {
       const saved = localStorage.getItem('aceforge_tutor_theme')
-      if (saved === 'light' || saved === 'dark') setTutorTheme(saved)
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
     }
   }, [])
 
@@ -91,8 +91,8 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   }
 
   // Theme: when isTutor, use tutor dark/light; otherwise student green/white
-  const isDark = isTutor && tutorTheme === 'dark'
-  const isLight = isTutor && tutorTheme === 'light'
+  const isDark = isTutor && theme === 'dark'
+  const isLight = isTutor && theme === 'light'
 
   const accent = isTutor
     ? (isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)')
@@ -311,6 +311,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             )}
             {messages.map(msg => {
               const isMe = getIsMe(msg)
+              console.log('msg:', msg.id, 'is_tutor:', msg.is_tutor, 'isTutor prop:', isTutor, 'isMe:', isMe)
               return (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                   {!isMe && (

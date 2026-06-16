@@ -14,19 +14,23 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { sessionId, paymentIntentId } = await request.json()
+    console.log('decline-session called for:', sessionId)
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { data: session } = await adminClient
+    const { data: session, error } = await adminClient
       .from('tutoring_sessions')
       .update({ status: 'declined' })
       .eq('id', sessionId)
       .select('*, profiles!tutoring_sessions_student_id_fkey(email, display_name)')
       .single()
 
+    console.log('update result:', JSON.stringify(session), JSON.stringify(error))
+
+    if (error) return NextResponse.json({ error: error.message, details: error }, { status: 500 })
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
     // Auto refund via Stripe
