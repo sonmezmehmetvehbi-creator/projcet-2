@@ -10,7 +10,7 @@
             <p style="margin:0 0 8px"><strong>📅 Date & Time:</strong> ${x}</p>
             <p style="margin:0 0 8px"><strong>⏱ Duration:</strong> ${f.session_length} minutes</p>
             <p style="margin:0 0 8px"><strong>🌐 Language:</strong> ${f.language}</p>
-            ${f.wants_intro_call?`<p style="margin:0 0 8px"><strong>🤝 Intro Call:</strong> Your tutor will also send a separate 15-min intro call link below.</p>`:""}
+            ${f.wants_intro_call?`<p style="margin:0 0 8px"><strong>🤝 Intro Call:</strong> Your tutor will reach out via the session chat to schedule your free 15-minute intro call.</p>`:""}
           </div>
 
          ${f.wants_intro_call&&i?`
@@ -66,8 +66,8 @@
             <p style="color:#374151;margin:0 0 8px">This student requested a free 15-minute intro call before the main session.</p>
             <p style="color:#374151;margin:0 0 8px"><strong>What to do:</strong></p>
             <ol style="color:#374151;margin:0;padding-left:20px">
-              <li style="margin-bottom:6px">Create a <strong>separate</strong> Google Meet link for the 15-min intro call</li>
-              <li style="margin-bottom:6px">Email the student directly at <a href="mailto:${m?.email}" style="color:#22550e"><strong>${m?.email}</strong></a> with the intro call link and a suggested time</li>
+              <li style="margin-bottom:6px">Open the <a href="https://aceforge.app/tutoring/session/${f.id}" style="color:#22550e"><strong>session chat</strong></a></li>
+              <li style="margin-bottom:6px">Send the student a Google Meet link for the intro call and suggest a time, right in the chat</li>
               <li style="margin-bottom:6px">Keep the intro call to 15 minutes maximum — it's free of charge</li>
               <li>The main session link (above) is separate and will be used for the paid session</li>
             </ol>

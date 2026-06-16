@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         tutor_id: tutorId,
         subject,
         topic,
+        grade,
         session_length: sessionLength,
         scheduled_at: scheduledAt,
         language,
@@ -40,6 +41,9 @@ export async function POST(request: Request) {
         student_price: studentPrice,
         tutor_payout: tutorPayout,
         recording_consent: true,
+        wants_intro_call: !!wantsIntroCall,
+        wants_continuing: !!wantsContinuing,
+        file_urls: fileUrls ?? [],
         stripe_payment_intent_id: stripePaymentIntentId || null,
       })
       .select('id')

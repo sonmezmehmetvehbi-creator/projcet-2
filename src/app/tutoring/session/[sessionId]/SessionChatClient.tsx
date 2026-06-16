@@ -291,6 +291,26 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
           )}
         </div>
 
+        {/* Intro call coordination banner */}
+        {session.wants_intro_call && session.status === 'confirmed' && (
+          <div style={{ padding: '0.875rem 1.25rem', borderRadius: '0.875rem', marginBottom: '1rem', background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.25)' }}>
+            <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', fontWeight: 600, lineHeight: 1.5 }}>
+              🤝 Coordinate your free 15-min intro call here — {isTutor ? 'send the student a Meet link and a suggested time via this chat.' : 'your tutor will send you a Meet link and suggested time via this chat.'}
+            </p>
+          </div>
+        )}
+
+        {/* Follow-up booking — student side */}
+        {!isTutor && session.status === 'completed' && session.wants_continuing && (
+          <div style={{ padding: '1rem 1.25rem', borderRadius: '0.875rem', marginBottom: '1rem', background: 'rgba(34,85,14,0.06)', border: '1.5px solid rgba(34,85,14,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>🔁 Want to keep learning with {tutorProfile?.display_name}?</p>
+            <a href={`/tutoring/book/${session.tutor_id}`}
+              style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(34,85,14)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+              📅 Schedule Follow-up Session
+            </a>
+          </div>
+        )}
+
         {/* Chat */}
         <div style={{ borderRadius: '1rem', overflow: 'hidden', background: cardBg, border: `1px solid ${cardBorder}`, boxShadow: isTutor && isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${chatHeaderBorder}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

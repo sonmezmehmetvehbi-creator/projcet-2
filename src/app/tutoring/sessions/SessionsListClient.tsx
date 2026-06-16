@@ -34,8 +34,9 @@ export default function SessionsListClient({ sessions, userId }: Props) {
     }
   }, [userId])
 
+  const proposed = sessions.filter(s => s.status === 'proposed')
   const upcoming = sessions.filter(s => ['pending', 'confirmed'].includes(s.status) && new Date(s.scheduled_at) > new Date())
-  const past = sessions.filter(s => s.status === 'completed' || new Date(s.scheduled_at) < new Date())
+  const past = sessions.filter(s => s.status !== 'proposed' && (s.status === 'completed' || new Date(s.scheduled_at) < new Date()))
 
   return (
     <div className={isDark ? 'student-dark' : ''} style={{ paddingTop: '5rem', minHeight: '100vh', background: 'var(--af-bg)' }}>
@@ -48,6 +49,43 @@ export default function SessionsListClient({ sessions, userId }: Props) {
             + Book New Session
           </Link>
         </div>
+
+        {proposed.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '1rem' }}>
+              Follow-up Proposals
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {proposed.map(s => (
+                <div key={s.id} className="card" style={{ padding: '1.25rem', border: '2px solid rgba(37,99,235,0.25)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
+                        <p style={{ fontWeight: 700, color: 'var(--af-text)', fontSize: '1rem' }}>{s.subject}</p>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(37,99,235,0.12)', color: 'rgb(37,99,235)' }}>
+                          📅 Proposed
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)', marginBottom: '0.25rem' }}>
+                        with {s.tutor_profiles?.display_name}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)' }}>
+                        📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                      <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(34,85,14)' }}>${s.student_price}</p>
+                      <Link href={`/tutoring/followup/${s.id}`}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgb(34,85,14)', color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 700 }}>
+                        View & Pay →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {upcoming.length > 0 && (
           <div style={{ marginBottom: '2rem' }}>

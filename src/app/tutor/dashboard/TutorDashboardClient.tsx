@@ -98,8 +98,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
-  const [introLink, setIntroLink] = useState<Record<string, string>>({})
-  const [introDate, setIntroDate] = useState<Record<string, string>>({})
+
+  // Follow-up proposal form state (keyed by the completed session id)
+  const [followupOpen, setFollowupOpen] = useState<string | null>(null)
+  const [followupLength, setFollowupLength] = useState<Record<string, number>>({})
+  const [followupDate, setFollowupDate] = useState<Record<string, string>>({})
+  const [followupTime, setFollowupTime] = useState<Record<string, string>>({})
+  const [proposingFollowup, setProposingFollowup] = useState<string | null>(null)
 
   useEffect(() => {
     if (!tutorProfile?.id) return
@@ -162,11 +167,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const statusColors: Record<string, string> = {
     completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)',
-    pending: 'rgb(251,191,36)', declined: 'rgb(107,107,88)'
+    pending: 'rgb(251,191,36)', declined: 'rgb(107,107,88)', proposed: 'rgb(96,165,250)'
   }
   const statusBgs: Record<string, string> = {
     completed: 'rgba(34,197,94,0.1)', confirmed: accentBg, disputed: 'rgba(239,68,68,0.1)',
-    pending: 'rgba(234,179,8,0.1)', declined: 'rgba(107,107,88,0.1)'
+    pending: 'rgba(234,179,8,0.1)', declined: 'rgba(107,107,88,0.1)', proposed: 'rgba(59,130,246,0.12)'
   }
 
   function toggleSubject(sub: string) {
@@ -211,22 +216,43 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
     setTogglingActive(false)
   }
 
-  async function confirmSession(sessionId: string, wantsIntroCall?: boolean, introCallLink?: string, introCallDate?: string) {
+  async function confirmSession(sessionId: string) {
     const link = meetLink[sessionId]
     if (!link) { alert('Please enter a Google Meet link first'); return }
-    if (wantsIntroCall && (!introCallLink || !introCallDate)) {
-      alert('Please enter the intro call Meet link and date/time'); return
-    }
     setConfirmingSession(sessionId)
     try {
       await fetch('/api/tutor/confirm-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, meetLink: link, introCallLink, introCallDate }),
+        body: JSON.stringify({ sessionId, meetLink: link }),
       })
       window.location.reload()
     } catch {}
     setConfirmingSession(null)
+  }
+
+  async function proposeFollowup(session: any) {
+    const length = followupLength[session.id] ?? 60
+    const date = followupDate[session.id]
+    const time = followupTime[session.id]
+    if (!date || !time) { alert('Please pick a date and time for the follow-up'); return }
+    const scheduledAt = new Date(`${date}T${time}`)
+    if (scheduledAt < new Date()) { alert('Please pick a future date and time'); return }
+    setProposingFollowup(session.id)
+    try {
+      const res = await fetch('/api/tutoring/propose-followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, sessionLength: length, scheduledAt: scheduledAt.toISOString() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Could not propose follow-up: ${data.error ?? `server returned ${res.status}`}`); setProposingFollowup(null); return }
+      alert('✅ Follow-up proposed! The student has been notified via chat and email.')
+      setFollowupOpen(null)
+    } catch (err: any) {
+      alert(`Could not propose follow-up: ${err?.message ?? 'network error'}`)
+    }
+    setProposingFollowup(null)
   }
 
   async function declineSession(sessionId: string, paymentIntentId: string) {
@@ -454,27 +480,18 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '220px' }}>
                           {s.wants_intro_call && (
                             <div style={{ padding: '0.625rem 0.75rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, marginBottom: '0.25rem' }}>
-                              <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: isDark ? 'rgb(165,180,252)' : accent, marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Intro Call Details</p>
-                              <input
-                                value={introLink[s.id] ?? ''}
-                                onChange={e => setIntroLink(prev => ({ ...prev, [s.id]: e.target.value }))}
-                                placeholder="Intro call Meet link"
-                                style={{ width: '100%', padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.75rem', outline: 'none', marginBottom: '0.375rem', boxSizing: 'border-box' }} />
-                              <input
-                                type="datetime-local"
-                                value={introDate[s.id] ?? ''}
-                                onChange={e => setIntroDate(prev => ({ ...prev, [s.id]: e.target.value }))}
-                                style={{ width: '100%', padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box' }} />
-                              <p style={{ fontSize: '0.6875rem', color: text5, marginTop: '0.25rem' }}>Schedule intro call BEFORE main session</p>
+                              <p style={{ fontSize: '0.8125rem', color: isDark ? 'rgb(165,180,252)' : accent, fontWeight: 600, lineHeight: 1.5 }}>
+                                🤝 This student wants a free 15-min intro call first. After accepting, use the chat to send them a Google Meet link and suggest a time. Keep it under 15 minutes.
+                              </p>
                             </div>
                           )}
                           <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Main Session Meet Link</p>
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
                             placeholder="Paste Google Meet link"
                             style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none' }} />
-                          <button onClick={() => confirmSession(s.id, s.wants_intro_call, introLink[s.id], introDate[s.id])} disabled={confirmingSession === s.id}
+                          <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                            {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Links'}
+                            {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Link'}
                           </button>
                           <a href={`/tutoring/session/${s.id}`}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
@@ -560,7 +577,49 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       🎥 Join
                     </a>
                   )}
+                  {s.status === 'completed' && s.wants_continuing && (
+                    <button onClick={() => setFollowupOpen(followupOpen === s.id ? null : s.id)}
+                      style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg2, border: `1px solid ${accentBorder}`, color: accent, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                      📅 Schedule Follow-up Session
+                    </button>
+                  )}
                 </div>
+
+                {s.status === 'completed' && s.wants_continuing && followupOpen === s.id && (
+                  <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${accentBorder2}` }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: text2, marginBottom: '0.75rem' }}>📅 Propose a follow-up session with {s.profiles?.display_name ?? 'this student'}</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '0.625rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Subject</label>
+                        <input value={s.subject} readOnly
+                          style={{ width: '100%', padding: '0.5rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text2, fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Length</label>
+                        <select value={followupLength[s.id] ?? 60} onChange={e => setFollowupLength(prev => ({ ...prev, [s.id]: parseInt(e.target.value) }))}
+                          style={{ width: '100%', padding: '0.5rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none' }}>
+                          <option value={30} style={{ background: optionBg }}>30 minutes</option>
+                          <option value={60} style={{ background: optionBg }}>60 minutes</option>
+                          <option value={90} style={{ background: optionBg }}>90 minutes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Date</label>
+                        <input type="date" value={followupDate[s.id] ?? ''} min={new Date().toISOString().split('T')[0]} onChange={e => setFollowupDate(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          style={{ width: '100%', padding: '0.5rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Time</label>
+                        <input type="time" value={followupTime[s.id] ?? ''} onChange={e => setFollowupTime(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          style={{ width: '100%', padding: '0.5rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    <button onClick={() => proposeFollowup(s)} disabled={proposingFollowup === s.id}
+                      style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                      {proposingFollowup === s.id ? 'Proposing...' : 'Propose Follow-up'}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
