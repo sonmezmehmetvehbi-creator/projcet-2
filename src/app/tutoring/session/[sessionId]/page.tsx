@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import TutorNavbar from '@/app/tutor/dashboard/TutorNavbar'
+import { TutorThemeProvider } from '@/app/tutor/dashboard/TutorThemeContext'
 import SessionChatClient from './SessionChatClient'
 
 export default async function SessionPage({ params }: { params: { sessionId: string } }) {
@@ -43,7 +44,7 @@ export default async function SessionPage({ params }: { params: { sessionId: str
   console.log('[session page] tutorProfile?.user_id:', tutorProfile?.user_id)
   console.log('[session page] isTutor:', isTutor)
 
-  return (
+  const content = (
     <div style={{ minHeight: '100vh', background: isTutor ? 'rgb(15,15,30)' : 'rgb(250,250,247)' }}>
       {isTutor ? (
         <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
@@ -58,4 +59,8 @@ export default async function SessionPage({ params }: { params: { sessionId: str
       />
     </div>
   )
+
+  // Wrap tutors in the theme provider so the navbar toggle (useTutorTheme) works
+  // here too. Students use the regular Navbar and don't need it.
+  return isTutor ? <TutorThemeProvider>{content}</TutorThemeProvider> : content
 }
