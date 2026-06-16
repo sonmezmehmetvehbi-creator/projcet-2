@@ -25,13 +25,21 @@ export async function POST(request: Request) {
       .from('tutoring_sessions')
       .update({ status: 'declined' })
       .eq('id', sessionId)
-      .select('*, profiles!tutoring_sessions_student_id_fkey(email, display_name)')
+      .select('*')
       .single()
 
     console.log('update result:', JSON.stringify(session), JSON.stringify(error))
 
     if (error) return NextResponse.json({ error: error.message, details: error }, { status: 500 })
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    // Fetch the student profile separately — the embedded FK join was failing
+    // with "Could not find a relationship between 'tutoring_sessions' and 'profiles'".
+    const { data: student } = await adminClient
+      .from('profiles')
+      .select('email, display_name')
+      .eq('id', session.student_id)
+      .single()
 
     // Auto refund via Stripe
     let refundId = null
@@ -53,12 +61,12 @@ export async function POST(request: Request) {
     try {
       await resend.emails.send({
       from: 'AceForge <onboarding@resend.dev>',
-      to: session.profiles?.email,
+      to: student?.email,
       subject: 'Your tutoring session was declined — Full Refund Issued',
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#1a1a14">Session Declined</h2>
-          <p>Hi ${session.profiles?.display_name?.split(' ')[0] ?? 'there'},</p>
+          <p>Hi ${student?.display_name?.split(' ')[0] ?? 'there'},</p>
           <p>Unfortunately, the tutor was unable to accept your session request for <strong>${session.subject}</strong> scheduled on <strong>${new Date(session.scheduled_at).toLocaleString()}</strong>.</p>
           <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:16px;margin:20px 0">
             <p style="color:#22550e;margin:0;font-weight:700">✅ Full Refund Issued</p>
