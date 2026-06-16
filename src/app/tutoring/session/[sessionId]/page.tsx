@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import TutorNavbar from '@/app/tutor/dashboard/TutorNavbar'
-import { TutorThemeProvider } from '@/app/tutor/dashboard/TutorThemeContext'
 import SessionChatClient from './SessionChatClient'
 
 export default async function SessionPage({ params }: { params: { sessionId: string } }) {
@@ -45,20 +44,18 @@ export default async function SessionPage({ params }: { params: { sessionId: str
   console.log('[session page] isTutor:', isTutor)
 
   return (
-    <TutorThemeProvider>
-      <div style={{ minHeight: '100vh', background: isTutor ? 'rgb(15,15,30)' : 'rgb(250,250,247)' }}>
-        {isTutor ? (
-          <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
-        ) : (
-          <Navbar profile={profile} />
-        )}
-        <SessionChatClient
-          session={session}
-          tutorProfile={tutorProfile}
-          profile={profile}
-          isTutor={isTutor}
-        />
-      </div>
-    </TutorThemeProvider>
+    <div style={{ minHeight: '100vh', background: isTutor ? 'rgb(15,15,30)' : 'rgb(250,250,247)' }}>
+      {isTutor ? (
+        <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
+      ) : (
+        <Navbar profile={profile} />
+      )}
+      <SessionChatClient
+        session={session}
+        tutorProfile={tutorProfile}
+        profile={profile}
+        isTutor={isTutor}
+      />
+    </div>
   )
 }

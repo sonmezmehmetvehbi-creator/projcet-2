@@ -240,6 +240,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, paymentIntentId }),
       })
+      console.log('decline response:', res.status, await res.clone().text())
       console.log('[declineSession] res.status:', res.status, 'res.ok:', res.ok)
       if (res.ok) {
         // Reactively drop the declined session from the dashboard.

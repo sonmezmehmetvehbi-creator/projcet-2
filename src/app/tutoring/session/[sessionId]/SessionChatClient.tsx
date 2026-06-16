@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Paperclip, X, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { useTutorTheme } from '@/app/tutor/dashboard/TutorThemeContext'
 
 interface Props {
   session: any
@@ -19,12 +18,16 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-  const { theme: tutorTheme } = useTutorTheme()
+  const [tutorTheme, setTutorTheme] = useState<'dark' | 'light'>('dark')
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     console.log('[SessionChatClient] isTutor:', isTutor)
+    if (isTutor) {
+      const saved = localStorage.getItem('aceforge_tutor_theme')
+      if (saved === 'light' || saved === 'dark') setTutorTheme(saved)
+    }
   }, [])
 
   useEffect(() => {
