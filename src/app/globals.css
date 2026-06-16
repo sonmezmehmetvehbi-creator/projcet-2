@@ -20,7 +20,43 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(34,85,14,0.2); border-radius: 9999px; }
+
+  /* Student theme tokens — default (light). Components that opt in reference
+     these via var(); the .student-dark wrapper below overrides them. Green
+     accents are intentionally NOT tokenized so they stay identical in both modes. */
+  :root {
+    --af-bg: rgb(250,250,247);
+    --af-card: white;
+    --af-card-2: rgb(243,244,246);
+    --af-text: rgb(26,26,20);
+    --af-text-muted: rgb(107,107,88);
+    --af-border: rgba(34,85,14,0.08);
+  }
 }
+
+/* Dark mode is scoped to wrappers that carry .student-dark, so unthemed pages
+   are never affected. Inline styles using var(--af-*) flip automatically; the
+   class-based .card/.card-hover/.input rules below cover structural surfaces. */
+.student-dark {
+  --af-bg: rgb(15,15,25);
+  --af-card: rgba(255,255,255,0.05);
+  --af-card-2: rgba(255,255,255,0.08);
+  --af-text: rgb(255,255,255);
+  --af-text-muted: rgba(255,255,255,0.6);
+  --af-border: rgba(255,255,255,0.1);
+}
+.student-dark .card,
+.student-dark .card-hover {
+  background-color: var(--af-card);
+  border-color: var(--af-border);
+  color: var(--af-text);
+}
+.student-dark .input {
+  background-color: var(--af-card);
+  border-color: var(--af-border);
+  color: var(--af-text);
+}
+.student-dark .input::placeholder { color: var(--af-text-muted); }
 
 @layer components {
   sup { font-size: 0.75em; vertical-align: super; line-height: 0; }

@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { Settings, LogOut, FileText, Crown, ChevronDown, Zap, BookOpen, Menu, X, Headphones } from 'lucide-react'
+import { Settings, LogOut, FileText, Crown, ChevronDown, Zap, BookOpen, Menu, X, Headphones, Sun, Moon } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
 import type { Profile } from '@/types'
 
 const LEVELS = [
@@ -42,6 +43,8 @@ export default function Navbar({ profile }: NavbarProps) {
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
+  const { theme, toggle } = useStudentTheme()
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -188,6 +191,12 @@ export default function Navbar({ profile }: NavbarProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Dark mode toggle */}
+              <button onClick={toggle} title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                style={{ padding:'0.5rem', borderRadius:'0.625rem', border:'1px solid rgba(34,85,14,0.2)', background:'rgba(34,85,14,0.05)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'rgb(34,85,14)', flexShrink:0 }}>
+                {isDark ? <Sun style={{ width:'1.05rem', height:'1.05rem' }} /> : <Moon style={{ width:'1.05rem', height:'1.05rem' }} />}
+              </button>
 
               {/* Mobile menu button */}
               <button onClick={() => setMobileOpen(o => !o)}

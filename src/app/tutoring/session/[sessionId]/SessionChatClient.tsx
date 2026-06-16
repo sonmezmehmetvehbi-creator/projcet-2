@@ -5,6 +5,7 @@ import { Send, Paperclip, X, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from '@/app/tutor/dashboard/TutorThemeContext'
+import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
 
 interface Props {
   session: any
@@ -22,6 +23,9 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   // Theme comes from the shared TutorThemeContext (provider wraps tutors at the
   // page level), so the navbar toggle updates this page live.
   const { theme } = useTutorTheme()
+  // Students get their own dark mode via the student theme toggle in the navbar.
+  const { theme: studentTheme } = useStudentTheme()
+  const sDark = !isTutor && studentTheme === 'dark'
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -99,39 +103,39 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const pageBg = isTutor
     ? (isDark ? 'rgb(15,15,30)' : 'linear-gradient(135deg, #fff5ef, #fff8f5)')
-    : 'rgb(250,250,247)'
+    : (sDark ? 'rgb(15,15,25)' : 'rgb(250,250,247)')
 
   const cardBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.04)' : 'white')
-    : 'white'
+    : (sDark ? 'rgba(255,255,255,0.05)' : 'white')
 
   const cardBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(234,88,12,0.1)')
-    : 'rgba(34,85,14,0.08)'
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
 
   const text1 = isTutor
     ? (isDark ? 'white' : 'rgb(26,26,20)')
-    : 'rgb(26,26,20)'
+    : (sDark ? 'white' : 'rgb(26,26,20)')
 
   const text2 = isTutor
     ? (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(26,26,20,0.7)')
-    : 'rgb(107,107,88)'
+    : (sDark ? 'rgba(255,255,255,0.7)' : 'rgb(107,107,88)')
 
   const text3 = isTutor
     ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.5)')
-    : 'rgb(107,107,88)'
+    : (sDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)')
 
   const detailCardBg = isTutor
     ? (isDark ? 'rgba(99,102,241,0.05)' : 'rgba(234,88,12,0.03)')
-    : 'rgba(34,85,14,0.03)'
+    : (sDark ? 'rgba(255,255,255,0.04)' : 'rgba(34,85,14,0.03)')
 
   const detailCardBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(234,88,12,0.1)')
-    : 'rgba(34,85,14,0.08)'
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
 
   const chatHeaderBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(234,88,12,0.1)')
-    : 'rgba(34,85,14,0.08)'
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
 
   const avatarBg = isTutor
     ? (isDark ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #ea580c, #f97316)')
@@ -143,27 +147,27 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const otherMsgBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgb(243,244,246)')
-    : 'rgb(243,244,246)'
+    : (sDark ? 'rgba(255,255,255,0.08)' : 'rgb(243,244,246)')
 
   const otherMsgColor = isTutor
     ? (isDark ? 'white' : 'rgb(26,26,20)')
-    : 'rgb(26,26,20)'
+    : (sDark ? 'white' : 'rgb(26,26,20)')
 
   const inputBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.05)' : 'white')
-    : 'white'
+    : (sDark ? 'rgba(255,255,255,0.05)' : 'white')
 
   const inputBorderStyle = isTutor
     ? (isDark ? '1.5px solid rgba(99,102,241,0.3)' : `1.5px solid rgba(234,88,12,0.25)`)
-    : '1.5px solid rgba(34,85,14,0.2)'
+    : (sDark ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(34,85,14,0.2)')
 
   const attachBtnBorder = isTutor
     ? (isDark ? '1.5px solid rgba(99,102,241,0.3)' : '1.5px solid rgba(234,88,12,0.2)')
-    : '1.5px solid rgba(34,85,14,0.2)'
+    : (sDark ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(34,85,14,0.2)')
 
   const attachBtnBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.05)' : 'white')
-    : 'white'
+    : (sDark ? 'rgba(255,255,255,0.05)' : 'white')
 
   const sendBtnBg = isTutor
     ? (isDark ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #ea580c, #f97316)')
@@ -171,7 +175,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const backLinkColor = isTutor
     ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.5)')
-    : 'rgb(107,107,88)'
+    : (sDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)')
 
   const statusColors: Record<string, string> = {
     pending: 'rgb(180,120,10)', confirmed: isTutor ? accent : 'rgb(34,85,14)',
@@ -299,7 +303,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             </div>
           </div>
 
-          <div style={{ height: '400px', overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: isTutor && isDark ? 'rgba(0,0,0,0.15)' : undefined }}>
+          <div style={{ height: '400px', overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: (isTutor && isDark) || sDark ? 'rgba(0,0,0,0.15)' : undefined }}>
             {messages.length === 0 && (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem' }}>
                 <p style={{ fontSize: '2rem' }}>💬</p>

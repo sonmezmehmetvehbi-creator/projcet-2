@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, FileText, Plus, Zap, Download } from 'lucide-react'
 import type { Profile } from '@/types'
 import { Suspense } from 'react'
+import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
 
 const LEVELS = [
   { level: 1, name: 'Freshman', emoji: '📚', xpRequired: 0 },
@@ -42,6 +43,8 @@ interface Props {
 
 function DashboardInner({ profile, sessions, usage }: Props) {
   const searchParams = useSearchParams()
+  const { theme } = useStudentTheme()
+  const isDark = theme === 'dark'
   const initialTabValue = searchParams.get('tab') === 'pdfs' ? 'pdfs' : searchParams.get('tab') === 'sat' ? 'sat' : 'all'
   const [tab, setTab] = useState<'all' | 'pdfs' | 'sat'>(initialTabValue)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -81,7 +84,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   }
 
   return (
-    <div style={{ paddingTop:'5rem' }}>
+    <div className={isDark ? 'student-dark' : ''} style={{ paddingTop:'5rem', minHeight:'100vh', background:'var(--af-bg)' }}>
       <div style={{ display:'flex', gap:'1.5rem', maxWidth:'80rem', margin:'0 auto' }}>
 
         {/* Left sidebar ad */}
@@ -102,17 +105,17 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <span style={{ fontSize:'1.5rem' }}>🎉</span>
               <div>
                 <p style={{ fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.125rem' }}>Welcome to Premium!</p>
-                <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>You now have unlimited generations and faster loading.</p>
+                <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>You now have unlimited generations and faster loading.</p>
               </div>
             </div>
           )}
 
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'1rem' }}>
             <div>
-              <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+              <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.25rem' }}>
                 Welcome back{profile?.display_name ? `, ${profile.display_name.split(' ')[0]}` : ''}! 👋
               </h1>
-              <p style={{ color:'rgb(107,107,88)' }}>What are you studying today?</p>
+              <p style={{ color:'var(--af-text-muted)' }}>What are you studying today?</p>
             </div>
             <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
               {profile?.is_premium && (
@@ -138,7 +141,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <div style={{ display:'flex', alignItems:'center', gap:'0.625rem', marginBottom:'1rem' }}>
                 <span style={{ fontSize:'2rem' }}>{levelInfo.current.emoji}</span>
                 <div>
-                  <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.125rem', color:'rgb(26,26,20)', lineHeight:1.2 }}>
+                  <p style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.125rem', color:'var(--af-text)', lineHeight:1.2 }}>
                     Level {levelInfo.current.level}
                   </p>
                   <p style={{ fontFamily:'Syne, sans-serif', fontSize:'0.8125rem', color:'rgb(34,85,14)', fontWeight:600 }}>
@@ -147,7 +150,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 </div>
                 <div style={{ marginLeft:'auto', textAlign:'right' }}>
                   <p style={{ fontFamily:'Syne, sans-serif', fontSize:'1.25rem', fontWeight:800, color:'rgb(34,85,14)' }}>{xp}</p>
-                  <p style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>XP total</p>
+                  <p style={{ fontSize:'0.6875rem', color:'var(--af-text-muted)', fontFamily:'Syne, sans-serif' }}>XP total</p>
                 </div>
               </div>
 
@@ -170,11 +173,11 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 </div>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>
+                <span style={{ fontSize:'0.6875rem', color:'var(--af-text-muted)', fontFamily:'Syne, sans-serif' }}>
                   {levelInfo.xpIntoLevel}/{levelInfo.xpNeeded} XP
                 </span>
                 {levelInfo.next ? (
-                  <span style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>
+                  <span style={{ fontSize:'0.6875rem', color:'var(--af-text-muted)', fontFamily:'Syne, sans-serif' }}>
                     {levelInfo.next.xpRequired - xp} to {levelInfo.next.name} {levelInfo.next.emoji}
                   </span>
                 ) : (
@@ -194,23 +197,23 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 ))}
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.25rem' }}>
-                <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)' }}>Lv.1</span>
-                <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)' }}>Lv.10 👑</span>
+                <span style={{ fontSize:'0.6rem', color:'var(--af-text-muted)' }}>Lv.1</span>
+                <span style={{ fontSize:'0.6rem', color:'var(--af-text-muted)' }}>Lv.10 👑</span>
               </div>
             </div>
 
             {/* Streak card */}
-            <div className="card" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'white', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'rgba(34,85,14,0.08)'}` }}>
+            <div className="card" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'var(--af-card)', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'rgba(34,85,14,0.08)'}` }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
                 <div>
-                  <p style={{ fontFamily:'Syne, sans-serif', fontSize:'0.75rem', fontWeight:700, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>
+                  <p style={{ fontFamily:'Syne, sans-serif', fontSize:'0.75rem', fontWeight:700, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>
                     Study Streak
                   </p>
                   <div style={{ display:'flex', alignItems:'baseline', gap:'0.375rem' }}>
                     <span style={{ fontFamily:'Syne, sans-serif', fontSize:'2.5rem', fontWeight:800, color: streak >= 7 ? 'rgb(180,120,10)' : streak > 0 ? 'rgb(34,85,14)' : 'rgb(107,107,88)', lineHeight:1 }}>
                       {streak}
                     </span>
-                    <span style={{ fontFamily:'Syne, sans-serif', fontSize:'0.875rem', color:'rgb(107,107,88)', fontWeight:600 }}>days</span>
+                    <span style={{ fontFamily:'Syne, sans-serif', fontSize:'0.875rem', color:'var(--af-text-muted)', fontWeight:600 }}>days</span>
                   </div>
                 </div>
                 <div style={{ fontSize:'3rem', animation: streak >= 3 ? 'fireAnim 0.8s ease-in-out infinite alternate' : 'none' }}>
@@ -218,7 +221,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 </div>
               </div>
 
-              <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.5, marginBottom:'0.875rem' }}>
+              <p style={{ fontSize:'0.8125rem', color:'var(--af-text-muted)', lineHeight:1.5, marginBottom:'0.875rem' }}>
                 {streak === 0
                   ? 'Study today to start your streak!'
                   : streak === 1
@@ -240,8 +243,8 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 ))}
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.25rem' }}>
-                <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)' }}>Day 1</span>
-                <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)' }}>Day 7 🔥</span>
+                <span style={{ fontSize:'0.6rem', color:'var(--af-text-muted)' }}>Day 1</span>
+                <span style={{ fontSize:'0.6rem', color:'var(--af-text-muted)' }}>Day 7 🔥</span>
               </div>
 
               {!profile?.is_premium && bonusGenerations > 0 && (
@@ -262,14 +265,14 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                   const used = usage[type]
                   return (
                     <div key={type}>
-                      <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', marginBottom:'0.375rem', textTransform:'capitalize' }}>{type} today</p>
+                      <p style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', marginBottom:'0.375rem', textTransform:'capitalize' }}>{type} today</p>
                       <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
                         <div style={{ display:'flex', gap:'0.25rem' }}>
                           {[0,1].map(i => (
                             <div key={i} style={{ width:'2rem', height:'0.5rem', borderRadius:'9999px', background: i < used ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)' }} />
                           ))}
                         </div>
-                        <span style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)' }}>{used}/2</span>
+                        <span style={{ fontSize:'0.875rem', fontWeight:600, color:'var(--af-text)' }}>{used}/2</span>
                       </div>
                     </div>
                   )
@@ -310,10 +313,10 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'rgba(34,85,14,0.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
                 {tab === 'pdfs' ? <FileText style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} /> : <BookOpen style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} />}
               </div>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
+              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.75rem' }}>
                 {tab === 'pdfs' ? 'No PDFs yet' : tab === 'sat' ? 'No SAT sessions yet' : 'No sessions yet'}
               </h2>
-              <p style={{ color:'rgb(107,107,88)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
+              <p style={{ color:'var(--af-text-muted)', marginBottom:'2rem', maxWidth:'24rem', margin:'0 auto 2rem' }}>
                 {tab === 'pdfs'
                   ? 'Download a PDF from any questions or worksheet session and it will appear here.'
                   : tab === 'sat'
@@ -345,16 +348,16 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                         : session.output_type === 'questions' ? '❓ Questions' : '📄 Worksheet'}
                     </span>
                     {session.pdf_downloaded && (
-                      <span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', display:'flex', alignItems:'center', gap:'0.25rem' }}>
+                      <span style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', display:'flex', alignItems:'center', gap:'0.25rem' }}>
                         <FileText style={{ width:'0.75rem', height:'0.75rem' }} /> PDF
                       </span>
                     )}
                   </div>
                   <Link href={`/${session.output_type === 'questions' ? 'questions' : 'worksheet'}/${session.id}`} style={{ textDecoration:'none' }}>
-                    <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+                    <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.25rem' }}>
                       {session.topic}
                     </h3>
-                    <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'0.75rem' }}>
+                    <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', marginBottom:'0.75rem' }}>
                       {session.subject} · {session.grade}
                     </p>
                     <p style={{ fontSize:'0.75rem', color:'rgba(107,107,88,0.7)' }}>
@@ -400,7 +403,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
 
 export default function DashboardClient(props: Props) {
   return (
-    <Suspense fallback={<div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ paddingTop:'6rem', textAlign:'center', color:'var(--af-text-muted)' }}>Loading...</div>}>
       <DashboardInner {...props} />
     </Suspense>
   )
