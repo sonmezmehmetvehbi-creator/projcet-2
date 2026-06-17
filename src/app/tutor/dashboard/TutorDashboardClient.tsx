@@ -50,6 +50,10 @@ const TIMEZONES = [
   'Australia/Sydney', 'Africa/Cairo',
 ]
 
+// Force pasted Meet links to absolute https:// so they open externally and are
+// never treated as internal Next.js routes (which 404'd).
+const safeMeetLink = (url: string) => (url.startsWith('http') ? url : 'https://' + url)
+
 interface Props {
   profile: any
   tutorProfile: any
@@ -521,7 +525,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {s.meet_link && (
-                          <a href={s.meet_link} target="_blank"
+                          <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
                             style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: btnGrad, color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
                             🎥 Join Meet
                           </a>
@@ -572,7 +576,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     <p style={{ fontSize: '0.875rem', color: text3 }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}</p>
                   </div>
                   {s.status === 'confirmed' && s.meet_link && (
-                    <a href={s.meet_link} target="_blank"
+                    <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
                       style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: btnGrad, color: 'white', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
                       🎥 Join
                     </a>

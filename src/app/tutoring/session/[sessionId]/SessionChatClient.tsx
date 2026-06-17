@@ -14,6 +14,10 @@ interface Props {
   isTutor: boolean
 }
 
+// Ensure pasted Meet links open externally and are never treated as internal
+// Next.js routes (which 404'd). Force an absolute https:// URL.
+const safeMeetLink = (url: string) => (url.startsWith('http') ? url : 'https://' + url)
+
 export default function SessionChatClient({ session, tutorProfile, profile, isTutor }: Props) {
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
@@ -239,7 +243,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
                   📅 {new Date(session.intro_call_date).toLocaleString()}
                 </p>
               )}
-              <a href={session.intro_call_link} target="_blank" rel="noopener noreferrer"
+              <a href={safeMeetLink(session.intro_call_link)} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(37,99,235)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>
                 🎥 Join Intro Call →
               </a>
@@ -271,7 +275,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
           )}
 
           {session.status === 'confirmed' && session.meet_link && (
-            <a href={session.meet_link} target="_blank" rel="noopener noreferrer"
+            <a href={safeMeetLink(session.meet_link)} target="_blank" rel="noopener noreferrer"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: '0.875rem', background: isTutor ? sendBtnBg : 'rgb(34,85,14)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem', marginTop: '0.5rem' }}>
               🎥 Join Main Session →
             </a>

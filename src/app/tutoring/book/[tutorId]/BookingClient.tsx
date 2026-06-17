@@ -180,10 +180,10 @@ function BookingForm({ profile, tutor, availability }: Props) {
         <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgb(234,243,222)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
           <CheckCircle style={{ width: '2rem', height: '2rem', color: 'rgb(59,109,17)' }} />
         </div>
-        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.75rem' }}>
+        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '0.75rem' }}>
           Session Booked & Paid! 🎓
         </h2>
-        <p style={{ color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+        <p style={{ color: 'var(--af-text-muted)', lineHeight: 1.7 }}>
           Payment successful! Your tutor will confirm within 24 hours and send a Google Meet link.
         </p>
       </div>
@@ -200,8 +200,8 @@ function BookingForm({ profile, tutor, availability }: Props) {
             {tutor.display_name?.[0] ?? '?'}
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: 'rgb(26,26,20)' }}>{tutor.display_name}</p>
-            <p style={{ fontSize: '0.875rem', color: 'rgb(107,107,88)' }}>{tutor.subjects?.join(', ')}</p>
+            <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: 'var(--af-text)' }}>{tutor.display_name}</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)' }}>{tutor.subjects?.join(', ')}</p>
             {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -228,7 +228,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
 
           {step === 'details' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Session Details</h1>
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'var(--af-text)' }}>Session Details</h1>
 
               {/* Intro call */}
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.12)' }}>
@@ -236,10 +236,10 @@ function BookingForm({ profile, tutor, availability }: Props) {
                   <input type="checkbox" checked={wantsIntroCall} onChange={e => setWantsIntroCall(e.target.checked)}
                     style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
                   <div onClick={() => setWantsIntroCall(!wantsIntroCall)} style={{ cursor: 'pointer' }}>
-                    <p style={{ fontWeight: 700, color: 'rgb(26,26,20)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>
+                    <p style={{ fontWeight: 700, color: 'var(--af-text)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>
                       🤝 Request a free 15-min intro call first <span style={{ fontWeight: 400, fontSize: '0.8125rem', color: 'rgb(34,85,14)' }}>(recommended)</span>
                     </p>
-                    <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>Meet your tutor before committing. Completely free.</p>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>Meet your tutor before committing. Completely free.</p>
                   </div>
                 </div>
                 {wantsIntroCall && (
@@ -254,8 +254,8 @@ function BookingForm({ profile, tutor, availability }: Props) {
                 <input type="checkbox" checked={wantsContinuing} onChange={e => setWantsContinuing(e.target.checked)}
                   style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
                 <div onClick={() => setWantsContinuing(!wantsContinuing)} style={{ cursor: 'pointer' }}>
-                  <p style={{ fontWeight: 600, color: 'rgb(26,26,20)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>🔁 Interested in ongoing sessions</p>
-                  <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>Let the tutor know you want regular sessions.</p>
+                  <p style={{ fontWeight: 600, color: 'var(--af-text)', fontSize: '0.9375rem', marginBottom: '0.25rem' }}>🔁 Interested in ongoing sessions</p>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>Let the tutor know you want regular sessions.</p>
                 </div>
               </div>
 
@@ -299,9 +299,9 @@ function BookingForm({ profile, tutor, availability }: Props) {
                     const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
                     return (
                       <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
-                        style={{ padding: '0.875rem 0.5rem', borderRadius: '0.75rem', border: `2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : 'white', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
+                        style={{ padding: '0.875rem 0.5rem', borderRadius: '0.75rem', border: `2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : 'var(--af-card)', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
                         <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom: '0.25rem' }}>{sl.label}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)', marginBottom: '0.25rem' }}>{sl.desc}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)', marginBottom: '0.25rem' }}>{sl.desc}</p>
                         <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'rgb(34,85,14)' }}>${(price + expFee).toFixed(2)}</p>
                         {expFee > 0 && <p style={{ fontSize: '0.6875rem', color: tierStyle.color }}>+${expFee.toFixed(2)} express</p>}
                       </button>
@@ -339,7 +339,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                       { label: 'Under 6 hours', fee: '+$40', color: 'rgb(163,45,45)' },
                     ].map(item => (
                       <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>{item.label}</span>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)' }}>{item.label}</span>
                         <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: item.color }}>{item.fee}</span>
                       </div>
                     ))}
@@ -370,13 +370,13 @@ function BookingForm({ profile, tutor, availability }: Props) {
 
               {/* File upload */}
               <div>
-                <label className="label">Upload files for your tutor <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(optional)</span></label>
+                <label className="label">Upload files for your tutor <span style={{ fontWeight: 400, color: 'var(--af-text-muted)', fontSize: '0.8125rem' }}>(optional)</span></label>
                 {uploadedFiles.length < 5 && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: 'rgba(34,85,14,0.02)', marginBottom: '0.75rem' }}>
-                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'rgb(107,107,88)', flexShrink: 0 }} />
+                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'var(--af-text-muted)', flexShrink: 0 }} />
                     <div>
-                      <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'rgb(26,26,20)', marginBottom: '0.125rem' }}>Click to upload files</p>
-                      <p style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)' }}>Any file type up to 20MB</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--af-text)', marginBottom: '0.125rem' }}>Click to upload files</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)' }}>Any file type up to 20MB</p>
                     </div>
                     <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={handleFileAdd} />
                   </label>
@@ -385,9 +385,9 @@ function BookingForm({ profile, tutor, availability }: Props) {
                 {uploadedFiles.map((f, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.15)', marginBottom: '0.5rem' }}>
                     <FileUp style={{ width: '1rem', height: '1rem', color: 'rgb(34,85,14)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.875rem', color: 'rgb(26,26,20)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                    <span style={{ fontSize: '0.75rem', color: 'rgb(107,107,88)' }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
-                    <button type="button" onClick={() => removeFile(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(107,107,88)', display: 'flex', padding: '0.25rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--af-text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)' }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
+                    <button type="button" onClick={() => removeFile(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--af-text-muted)', display: 'flex', padding: '0.25rem' }}>
                       <X style={{ width: '1rem', height: '1rem' }} />
                     </button>
                   </div>
@@ -395,7 +395,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
               </div>
 
               <div>
-                <label className="label">Additional notes <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(optional)</span></label>
+                <label className="label">Additional notes <span style={{ fontWeight: 400, color: 'var(--af-text-muted)', fontSize: '0.8125rem' }}>(optional)</span></label>
                 <textarea value={message} onChange={e => setMessage(e.target.value)} className="input" rows={2} style={{ resize: 'vertical' }}
                   placeholder="Anything else the tutor should know..." />
               </div>
@@ -403,8 +403,8 @@ function BookingForm({ profile, tutor, availability }: Props) {
               {/* Price summary */}
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.12)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)' }}>Session ({sessionLength} min)</span>
-                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(26,26,20)' }}>${baseSessionPrice.toFixed(2)}</span>
+                  <span style={{ fontSize: '0.9375rem', color: 'var(--af-text-muted)' }}>Session ({sessionLength} min)</span>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'var(--af-text)' }}>${baseSessionPrice.toFixed(2)}</span>
                 </div>
                 {expressFeeForLength > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -427,7 +427,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                   </div>
                 )}
                 <div style={{ borderTop: '1px solid rgba(34,85,14,0.1)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, color: 'rgb(26,26,20)' }}>Total</span>
+                  <span style={{ fontWeight: 700, color: 'var(--af-text)' }}>Total</span>
                   <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
                 </div>
               </div>
@@ -443,7 +443,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.15)' }}>
                 <input type="checkbox" checked={agreedToRecording} onChange={e => setAgreedToRecording(e.target.checked)}
                   style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
-                <label style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => setAgreedToRecording(!agreedToRecording)}>
+                <label style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => setAgreedToRecording(!agreedToRecording)}>
                   📹 I consent to this session being recorded for quality assurance and dispute resolution.
                 </label>
               </div>
@@ -457,14 +457,14 @@ function BookingForm({ profile, tutor, availability }: Props) {
 
           {step === 'payment' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Payment</h1>
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: 'var(--af-text)' }}>Payment</h1>
 
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.12)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
-                  <span style={{ color: 'rgb(107,107,88)' }}>{subject} with {tutor.display_name}</span>
+                  <span style={{ color: 'var(--af-text-muted)' }}>{subject} with {tutor.display_name}</span>
                   <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${totalPrice.toFixed(2)}</span>
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)' }}>{sessionLength} min · {new Date(`${selectedDate}T${selectedTime}`).toLocaleString()}</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)' }}>{sessionLength} min · {new Date(`${selectedDate}T${selectedTime}`).toLocaleString()}</p>
               </div>
 
               <div>
@@ -480,14 +480,14 @@ function BookingForm({ profile, tutor, availability }: Props) {
               </div>
 
               <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.12)' }}>
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>
                   🔒 Secured by Stripe. Your card details are never stored on our servers. Full refund if tutor doesn't show.
                 </p>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button onClick={() => setStep('details')}
-                  style={{ flex: 1, padding: '0.875rem', borderRadius: '0.875rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: 'rgb(107,107,88)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
+                  style={{ flex: 1, padding: '0.875rem', borderRadius: '0.875rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'var(--af-card)', color: 'var(--af-text-muted)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
                   ← Back
                 </button>
                 <button onClick={handlePayAndBook} disabled={loading || !stripe}

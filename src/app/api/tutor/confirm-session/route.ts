@@ -186,6 +186,16 @@ export async function POST(request: Request) {
       `,
     })
 
+    // Schedule the 1-hour and 15-minute email reminders (best-effort).
+    try {
+      const origin = new URL(request.url).origin
+      await fetch(`${origin}/api/tutoring/schedule-reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') ?? '' },
+        body: JSON.stringify({ sessionId }),
+      })
+    } catch (e) { console.error('schedule-reminders call failed:', e) }
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Confirm session error:', error)

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 
 export default async function TutoringPage() {
   const supabase = await createServerSupabaseClient()
@@ -21,7 +22,7 @@ export default async function TutoringPage() {
   const hourlyRate = isPremium ? 34.99 : 49.99
 
   return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+    <StudentThemeShell lightBg="linear-gradient(135deg, #F4F7EC, #EFF5E3)">
       <Navbar profile={profile} />
       <div style={{ paddingTop:'5rem' }}>
         <div style={{ maxWidth:'64rem', margin:'0 auto', padding:'3rem 1.5rem' }}>
@@ -31,14 +32,14 @@ export default async function TutoringPage() {
             <div style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', background:'rgba(34,85,14,0.06)', border:'1px solid rgba(34,85,14,0.15)', padding:'0.375rem 1rem', borderRadius:'9999px', marginBottom:'1rem' }}>
               <span style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif', textTransform:'uppercase', letterSpacing:'0.05em' }}>1-on-1 Tutoring</span>
             </div>
-            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
+            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.75rem', fontWeight:700, color:'var(--af-text)', marginBottom:'1rem' }}>
               Learn from expert tutors
             </h1>
-            <p style={{ color:'rgb(107,107,88)', fontSize:'1.0625rem', maxWidth:'36rem', margin:'0 auto 1.5rem' }}>
+            <p style={{ color:'var(--af-text-muted)', fontSize:'1.0625rem', maxWidth:'36rem', margin:'0 auto 1.5rem' }}>
               Live 1-on-1 sessions via Google Meet. All sessions recorded for quality assurance.
             </p>
             <div style={{ display:'inline-flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
-              <div style={{ padding:'0.625rem 1.25rem', borderRadius:'9999px', background: isPremium ? 'rgba(34,85,14,0.08)' : 'white', border:`2px solid ${isPremium ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}` }}>
+              <div style={{ padding:'0.625rem 1.25rem', borderRadius:'9999px', background: isPremium ? 'rgba(34,85,14,0.08)' : 'var(--af-card)', border:`2px solid ${isPremium ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}` }}>
                 <span style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'1rem', color:'rgb(34,85,14)' }}>
                   ${hourlyRate}/hr {isPremium ? '⚡ Premium rate' : ''}
                 </span>
@@ -53,7 +54,7 @@ export default async function TutoringPage() {
 
           {/* How it works */}
           <div className="card" style={{ padding:'2rem', marginBottom:'2rem' }}>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1.5rem', textAlign:'center' }}>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'var(--af-text)', marginBottom:'1.5rem', textAlign:'center' }}>
               How it works
             </h2>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px,1fr))', gap:'1.5rem' }}>
@@ -66,8 +67,8 @@ export default async function TutoringPage() {
                 <div key={s.step} style={{ textAlign:'center' }}>
                   <div style={{ fontSize:'2rem', marginBottom:'0.75rem' }}>{s.emoji}</div>
                   <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'0.875rem', color:'rgb(34,85,14)', marginBottom:'0.375rem' }}>Step {s.step}</p>
-                  <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.375rem' }}>{s.title}</p>
-                  <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>{s.desc}</p>
+                  <p style={{ fontWeight:700, color:'var(--af-text)', marginBottom:'0.375rem' }}>{s.title}</p>
+                  <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', lineHeight:1.6 }}>{s.desc}</p>
                 </div>
               ))}
             </div>
@@ -75,7 +76,7 @@ export default async function TutoringPage() {
 
           {/* Refund policy */}
           <div style={{ padding:'1.25rem 1.5rem', borderRadius:'1rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'2rem' }}>
-            <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.625rem' }}>🛡️ Our Refund Policy</p>
+            <p style={{ fontWeight:700, color:'var(--af-text)', marginBottom:'0.625rem' }}>🛡️ Our Refund Policy</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px,1fr))', gap:'0.5rem' }}>
               {[
                 '✅ Full refund if tutor no-shows',
@@ -85,23 +86,23 @@ export default async function TutoringPage() {
                 '✅ All sessions recorded for dispute resolution',
                 '⚠️ 50% refund if you cancel under 24hrs',
               ].map(p => (
-                <p key={p} style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{p}</p>
+                <p key={p} style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>{p}</p>
               ))}
             </div>
           </div>
 
           {/* Tutor listing */}
-          <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1.25rem' }}>
+          <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'var(--af-text)', marginBottom:'1.25rem' }}>
             {isPremium ? 'Choose your tutor' : 'Our tutors'}
           </h2>
 
           {!tutors || tutors.length === 0 ? (
             <div className="card" style={{ padding:'4rem', textAlign:'center' }}>
               <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>🎓</div>
-              <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem' }}>
+              <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.75rem' }}>
                 Tutors coming soon!
               </h3>
-              <p style={{ color:'rgb(107,107,88)', marginBottom:'1.5rem' }}>
+              <p style={{ color:'var(--af-text-muted)', marginBottom:'1.5rem' }}>
                 We are onboarding our first tutors. Check back soon!
               </p>
               <Link href="/dashboard" className="btn-primary" style={{ display:'inline-flex' }}>
@@ -117,7 +118,7 @@ export default async function TutoringPage() {
                       {tutor.display_name?.[0] ?? '?'}
                     </div>
                     <div>
-                      <p style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.0625rem', color:'rgb(26,26,20)', marginBottom:'0.125rem' }}>
+                      <p style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.0625rem', color:'var(--af-text)', marginBottom:'0.125rem' }}>
                         {tutor.display_name}
                       </p>
                       {tutor.rating > 0 && (
@@ -134,14 +135,14 @@ export default async function TutoringPage() {
                       </span>
                     ))}
                   </div>
-                  <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', lineHeight:1.6, marginBottom:'1rem', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+                  <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', lineHeight:1.6, marginBottom:'1rem', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
                     {tutor.bio || 'Experienced tutor ready to help you succeed.'}
                   </p>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
                     <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>
                       ${hourlyRate}/hr
                     </span>
-                    <span style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>
+                    <span style={{ fontSize:'0.75rem', color:'var(--af-text-muted)' }}>
                       {tutor.total_sessions} sessions
                     </span>
                   </div>
@@ -164,13 +165,13 @@ export default async function TutoringPage() {
 
           {/* Legal policy link */}
           <div style={{ marginTop:'1rem', textAlign:'center' }}>
-            <Link href="/tutoring/legal" style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', textDecoration:'none' }}>
+            <Link href="/tutoring/legal" style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', textDecoration:'none' }}>
               ⚖️ View full tutoring policies, refund policy & legal terms →
             </Link>
           </div>
 
         </div>
       </div>
-    </div>
+    </StudentThemeShell>
   )
 }

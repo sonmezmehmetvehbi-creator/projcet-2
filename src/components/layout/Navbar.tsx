@@ -46,6 +46,17 @@ export default function Navbar({ profile }: NavbarProps) {
   const { theme, toggle } = useStudentTheme()
   const isDark = theme === 'dark'
 
+  // Theme tokens — green accents stay identical in both modes.
+  const navSolidBg = isDark ? 'rgba(15,15,25,0.95)' : 'rgba(255,255,255,0.95)'
+  const navBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(34,85,14,0.08)'
+  const tText = isDark ? 'rgb(255,255,255)' : 'rgb(26,26,20)'
+  const tMuted = isDark ? 'rgba(255,255,255,0.6)' : 'rgb(107,107,88)'
+  const tHover = isDark ? 'rgba(255,255,255,0.08)' : 'rgb(249,250,251)'
+  const dropBg = isDark ? 'rgb(20,20,32)' : 'white'
+  const dropDivider = isDark ? 'rgba(255,255,255,0.08)' : 'rgb(243,244,246)'
+  const dropBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.1)'
+  const overlayBg = isDark ? 'rgba(15,15,25,0.98)' : 'rgba(255,255,255,0.98)'
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -105,9 +116,9 @@ export default function Navbar({ profile }: NavbarProps) {
     <>
       <nav style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50,
-        background: isTransparent ? 'transparent' : 'rgba(255,255,255,0.95)',
+        background: isTransparent ? 'transparent' : navSolidBg,
         backdropFilter: isTransparent ? 'none' : 'blur(12px)',
-        borderBottom: isTransparent ? 'none' : '1px solid rgba(34,85,14,0.08)',
+        borderBottom: isTransparent ? 'none' : `1px solid ${navBorderColor}`,
         boxShadow: isTransparent ? 'none' : '0 1px 12px rgba(34,85,14,0.06)',
         transition: 'all 0.3s ease',
       }}>
@@ -131,12 +142,12 @@ export default function Navbar({ profile }: NavbarProps) {
                     style={{
                       padding:'0.5rem 0.875rem', borderRadius:'0.625rem',
                       fontSize:'0.9375rem', fontWeight: isActive ? 600 : 500,
-                      color: isActive ? 'rgb(34,85,14)' : isTransparent ? 'rgb(34,85,14)' : 'rgb(107,107,88)',
+                      color: isActive ? 'rgb(34,85,14)' : isTransparent ? 'rgb(34,85,14)' : tMuted,
                       textDecoration:'none', transition:'all 0.2s', whiteSpace:'nowrap',
                       background: isActive ? 'rgba(34,85,14,0.08)' : 'transparent',
                     }}
-                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(34,85,14,0.06)'; e.currentTarget.style.color = 'rgb(34,85,14)' }}}
-                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isTransparent ? 'rgb(34,85,14)' : 'rgb(107,107,88)' }}}>
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(34,85,14,0.06)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.9)' : 'rgb(34,85,14)' }}}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isTransparent ? 'rgb(34,85,14)' : tMuted }}}>
                     {link.label}
                   </Link>
                 )
@@ -177,7 +188,7 @@ export default function Navbar({ profile }: NavbarProps) {
                     <span style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>
                       Lv.{levelInfo.current.level}
                     </span>
-                    <span style={{ fontSize:'0.6rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>
+                    <span style={{ fontSize:'0.6rem', color:tMuted, fontFamily:'Syne, sans-serif' }}>
                       {xp} XP
                     </span>
                   </div>
@@ -220,13 +231,13 @@ export default function Navbar({ profile }: NavbarProps) {
                       <Zap style={{ width:'0.5rem', height:'0.5rem', color:'white' }} strokeWidth={3} />
                     </div>
                   )}
-                  <ChevronDown className="af-nav-links" style={{ width:'0.875rem', height:'0.875rem', color:'rgb(107,107,88)', transform: open ? 'rotate(180deg)' : 'none', transition:'transform 0.2s' }} />
+                  <ChevronDown className="af-nav-links" style={{ width:'0.875rem', height:'0.875rem', color:tMuted, transform: open ? 'rotate(180deg)' : 'none', transition:'transform 0.2s' }} />
                 </button>
 
                 {open && (
-                  <div style={{ position:'absolute', right:0, top:'calc(100% + 0.5rem)', width:'17rem', background:'white', borderRadius:'1rem', boxShadow:'0 20px 60px rgba(0,0,0,0.12)', border:'1px solid rgba(34,85,14,0.1)', overflow:'hidden', zIndex:100 }}>
+                  <div style={{ position:'absolute', right:0, top:'calc(100% + 0.5rem)', width:'17rem', background:dropBg, borderRadius:'1rem', boxShadow:'0 20px 60px rgba(0,0,0,0.12)', border:`1px solid ${dropBorder}`, overflow:'hidden', zIndex:100 }}>
 
-                    <div style={{ padding:'0.75rem 1rem', borderBottom:'1px solid rgb(243,244,246)', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid `, display:'flex', alignItems:'center', gap:'0.75rem' }}>
                       {profile.avatar_url ? (
                         <img src={profile.avatar_url} alt="" style={{ width:'2.5rem', height:'2.5rem', borderRadius:'50%', objectFit:'cover' }} />
                       ) : (
@@ -235,16 +246,16 @@ export default function Navbar({ profile }: NavbarProps) {
                         </div>
                       )}
                       <div style={{ minWidth:0, flex:1 }}>
-                        <p style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.display_name ?? 'Student'}</p>
-                        <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.email}</p>
+                        <p style={{ fontSize:'0.875rem', fontWeight:600, color:tText, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.display_name ?? 'Student'}</p>
+                        <p style={{ fontSize:'0.75rem', color:tMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.email}</p>
                       </div>
                     </div>
 
-                    <div style={{ padding:'0.75rem 1rem', borderBottom:'1px solid rgb(243,244,246)', background:'rgba(34,85,14,0.02)' }}>
+                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid `, background:'rgba(34,85,14,0.02)' }}>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.5rem' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
                           <span style={{ fontSize:'1rem' }}>{levelInfo.current.emoji}</span>
-                          <span style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(26,26,20)', fontFamily:'Syne, sans-serif' }}>
+                          <span style={{ fontSize:'0.8125rem', fontWeight:700, color:tText, fontFamily:'Syne, sans-serif' }}>
                             Level {levelInfo.current.level} — {levelInfo.current.name}
                           </span>
                         </div>
@@ -265,9 +276,9 @@ export default function Navbar({ profile }: NavbarProps) {
                         }} />
                       </div>
                       <div style={{ display:'flex', justifyContent:'space-between' }}>
-                        <span style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>{xp} XP total</span>
+                        <span style={{ fontSize:'0.6875rem', color:tMuted, fontFamily:'Syne, sans-serif' }}>{xp} XP total</span>
                         {levelInfo.next && (
-                          <span style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)', fontFamily:'Syne, sans-serif' }}>
+                          <span style={{ fontSize:'0.6875rem', color:tMuted, fontFamily:'Syne, sans-serif' }}>
                             {levelInfo.next.xpRequired - xp} XP to {levelInfo.next.name} {levelInfo.next.emoji}
                           </span>
                         )}
@@ -283,16 +294,16 @@ export default function Navbar({ profile }: NavbarProps) {
                       { href:'/privacy', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Privacy Policy' },
                     ].map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
-                          style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
-                          onMouseEnter={e => (e.currentTarget.style.background='rgb(249,250,251)')}
+                          style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:tText, textDecoration:'none' }}
+                          onMouseEnter={e => (e.currentTarget.style.background=tHover)}
                           onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
-                          <span style={{ color:'rgb(107,107,88)' }}>{item.icon}</span>{item.label}
+                          <span style={{ color:tMuted }}>{item.icon}</span>{item.label}
                         </Link>
                       ))}
 
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.625rem 1rem' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', fontSize:'0.875rem', color:'rgb(26,26,20)' }}>
-                          <Crown style={{ width:'1rem', height:'1rem', color:'rgb(107,107,88)' }} />
+                        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', fontSize:'0.875rem', color:tText }}>
+                          <Crown style={{ width:'1rem', height:'1rem', color:tMuted }} />
                           Plan: {profile.is_premium
                             ? <span style={{ fontWeight:600, color:'rgb(217,119,6)' }}>Premium ⚡</span>
                             : <span>Free</span>}
@@ -303,14 +314,14 @@ export default function Navbar({ profile }: NavbarProps) {
                       </div>
 
                       <Link href="/settings?section=password" onClick={() => setOpen(false)}
-                        style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(26,26,20)', textDecoration:'none' }}
-                        onMouseEnter={e => (e.currentTarget.style.background='rgb(249,250,251)')}
+                        style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 1rem', fontSize:'0.875rem', color:tText, textDecoration:'none' }}
+                        onMouseEnter={e => (e.currentTarget.style.background=tHover)}
                         onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
-                        <span style={{ color:'rgb(107,107,88)' }}>🔑</span> Change Password
+                        <span style={{ color:tMuted }}>🔑</span> Change Password
                       </Link>
                     </div>
 
-                    <div style={{ borderTop:'1px solid rgb(243,244,246)', padding:'0.5rem 0' }}>
+                    <div style={{ borderTop:`1px solid `, padding:'0.5rem 0' }}>
                       <button onClick={() => { setOpen(false); signOut() }}
                         style={{ display:'flex', alignItems:'center', gap:'0.75rem', width:'100%', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(163,45,45)', background:'transparent', border:'none', cursor:'pointer', textAlign:'left' }}
                         onMouseEnter={e => (e.currentTarget.style.background='rgb(254,242,242)')}
@@ -335,7 +346,7 @@ export default function Navbar({ profile }: NavbarProps) {
       {profile && mobileOpen && (
         <div style={{
           position:'fixed', top:'4rem', left:0, right:0, bottom:0,
-          background:'rgba(255,255,255,0.98)', zIndex:49,
+          background:overlayBg, zIndex:49,
           backdropFilter:'blur(12px)', padding:'1.5rem',
           display:'flex', flexDirection:'column', gap:'0.5rem',
           overflowY:'auto',
@@ -347,7 +358,7 @@ export default function Navbar({ profile }: NavbarProps) {
                 style={{
                   padding:'1rem 1.25rem', borderRadius:'0.875rem',
                   fontSize:'1.0625rem', fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'rgb(34,85,14)' : 'rgb(26,26,20)',
+                  color: isActive ? 'rgb(34,85,14)' : tText,
                   textDecoration:'none', transition:'all 0.2s',
                   background: isActive ? 'rgba(34,85,14,0.08)' : 'transparent',
                   border: isActive ? '1.5px solid rgba(34,85,14,0.2)' : '1.5px solid transparent',
@@ -361,8 +372,8 @@ export default function Navbar({ profile }: NavbarProps) {
             <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.75rem' }}>
               <span style={{ fontSize:'1.25rem' }}>{levelInfo.current.emoji}</span>
               <div>
-                <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>Level {levelInfo.current.level} — {levelInfo.current.name}</p>
-                <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{xp} XP total</p>
+                <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'0.9375rem', color:tText }}>Level {levelInfo.current.level} — {levelInfo.current.name}</p>
+                <p style={{ fontSize:'0.8125rem', color:tMuted }}>{xp} XP total</p>
               </div>
               {streak > 0 && <span style={{ marginLeft:'auto', fontSize:'0.9375rem', fontWeight:700, color:'rgb(180,120,10)' }}>🔥 {streak}</span>}
             </div>

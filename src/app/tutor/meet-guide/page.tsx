@@ -1,30 +1,50 @@
+'use client'
+
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { TutorThemeProvider, useTutorTheme } from '../dashboard/TutorThemeContext'
 
-export default function MeetGuidePage() {
+function MeetGuideContent() {
+  const { theme } = useTutorTheme()
+  const isDark = theme === 'dark'
+
+  const pageBg = isDark ? 'linear-gradient(135deg, #0f0f1e, #1a1a2e)' : 'linear-gradient(135deg, #fff5ef, #fff8f5)'
+  const text1 = isDark ? 'white' : 'rgb(26,26,20)'
+  const text2 = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.55)'
+  const text3 = isDark ? 'rgba(255,255,255,0.65)' : 'rgba(26,26,20,0.7)'
+  const cardBg = isDark ? 'rgba(255,255,255,0.04)' : 'white'
+  const cardBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(234,88,12,0.12)'
+  const accent = isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)'
+  const stepGrad = isDark ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #ea580c, #f97316)'
+  const quickBg = isDark ? 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))' : 'linear-gradient(135deg, rgba(234,88,12,0.1), rgba(249,115,22,0.1))'
+  const quickBorder = isDark ? 'rgba(99,102,241,0.3)' : 'rgba(234,88,12,0.25)'
+  const tipBg = isDark ? 'rgba(99,102,241,0.1)' : 'rgba(234,88,12,0.08)'
+  const tipBorder = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(234,88,12,0.2)'
+  const tipText = isDark ? 'rgb(165,180,252)' : 'rgb(194,65,12)'
+
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0f1e, #1a1a2e)', paddingTop: '5rem', paddingBottom: '4rem' }}>
+    <div style={{ minHeight: '100vh', background: pageBg, paddingTop: '5rem', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
-        <Link href="/tutor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+        <Link href="/tutor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', color: text2, textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
           <ArrowLeft style={{ width: '1rem', height: '1rem' }} /> Back to Dashboard
         </Link>
 
-        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: 'white', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>
           How to Create a Google Meet 🎥
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '2rem', fontSize: '1rem' }}>
+        <p style={{ color: text2, marginBottom: '2rem', fontSize: '1rem' }}>
           Step-by-step guide to setting up your tutoring sessions on Google Meet.
         </p>
 
         {/* Quick link */}
-        <div style={{ padding: '1.25rem 1.5rem', borderRadius: '1rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))', border: '1px solid rgba(99,102,241,0.3)', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderRadius: '1rem', background: quickBg, border: `1px solid ${quickBorder}`, marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>🚀 Quick Start</p>
-            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>Go directly to Google Meet and create a new meeting</p>
+            <p style={{ fontWeight: 700, color: text1, marginBottom: '0.25rem' }}>🚀 Quick Start</p>
+            <p style={{ fontSize: '0.875rem', color: text3 }}>Go directly to Google Meet and create a new meeting</p>
           </div>
           <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer"
-            style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
+            style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', background: stepGrad, color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
             Create Meet Now →
           </a>
         </div>
@@ -60,30 +80,30 @@ export default function MeetGuidePage() {
             {
               step: 5,
               title: 'Paste the Link in AceForge',
-              desc: 'Go back to your AceForge tutor dashboard, find the pending session, paste the Meet link in the field provided, and click "Accept & Send Links".',
+              desc: 'Go back to your AceForge tutor dashboard, find the pending session, paste the Meet link in the field provided, and click "Accept & Send Link".',
               tip: 'The student will receive the link by email automatically once you confirm.',
             },
             {
               step: 6,
               title: 'For Intro Calls (15-min)',
-              desc: 'If the student requested a free 15-minute intro call, create a SEPARATE Google Meet link for it. Schedule it BEFORE the main session — ideally 1-2 days before.',
+              desc: 'If the student requested a free 15-minute intro call, coordinate it through the session chat — send a Google Meet link and a suggested time right in the chat. Keep it under 15 minutes.',
               tip: 'Intro calls are a great way to introduce yourself, understand the student\'s needs, and make them feel comfortable.',
             },
           ].map(item => (
-            <div key={item.step} style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div key={item.step} style={{ padding: '1.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${cardBorder}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>
+                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: stepGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>
                   {item.step}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, color: 'white', fontSize: '1rem', marginBottom: '0.5rem' }}>{item.title}</p>
-                  <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.7, marginBottom: '0.625rem' }}>{item.desc}</p>
-                  <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                    <p style={{ fontSize: '0.8125rem', color: 'rgb(165,180,252)' }}>💡 {item.tip}</p>
+                  <p style={{ fontWeight: 700, color: text1, fontSize: '1rem', marginBottom: '0.5rem' }}>{item.title}</p>
+                  <p style={{ fontSize: '0.9375rem', color: text3, lineHeight: 1.7, marginBottom: '0.625rem' }}>{item.desc}</p>
+                  <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: tipBg, border: `1px solid ${tipBorder}` }}>
+                    <p style={{ fontSize: '0.8125rem', color: tipText }}>💡 {item.tip}</p>
                   </div>
                   {item.link && (
                     <a href={item.link.url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: 'inline-block', marginTop: '0.75rem', color: 'rgb(99,102,241)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'underline' }}>
+                      style={{ display: 'inline-block', marginTop: '0.75rem', color: accent, fontSize: '0.875rem', fontWeight: 600, textDecoration: 'underline' }}>
                       {item.link.label}
                     </a>
                   )}
@@ -95,7 +115,7 @@ export default function MeetGuidePage() {
 
         {/* Common issues */}
         <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: '1rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
-          <p style={{ fontWeight: 700, color: 'rgb(248,113,113)', marginBottom: '1rem' }}>⚠️ Common Issues & Fixes</p>
+          <p style={{ fontWeight: 700, color: isDark ? 'rgb(248,113,113)' : 'rgb(220,38,38)', marginBottom: '1rem' }}>⚠️ Common Issues & Fixes</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {[
               { issue: 'Student can\'t join the meet', fix: 'Make sure you shared the correct link. The link should start with meet.google.com/. Check that the student\'s email was added as a guest.' },
@@ -103,19 +123,27 @@ export default function MeetGuidePage() {
               { issue: 'Video/audio not working', fix: 'Ask the student to check their browser permissions for camera and microphone. Chrome works best with Google Meet.' },
               { issue: 'Student didn\'t receive the calendar invite', fix: 'Make sure you added their email correctly as a guest in the calendar event. You can also manually share the Meet link via AceForge chat.' },
             ].map(item => (
-              <div key={item.issue} style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.03)' }}>
-                <p style={{ fontWeight: 600, color: 'rgb(248,113,113)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>❌ {item.issue}</p>
-                <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>✅ {item.fix}</p>
+              <div key={item.issue} style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.03)' }}>
+                <p style={{ fontWeight: 600, color: isDark ? 'rgb(248,113,113)' : 'rgb(220,38,38)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>❌ {item.issue}</p>
+                <p style={{ fontSize: '0.8125rem', color: text3, lineHeight: 1.6 }}>✅ {item.fix}</p>
               </div>
             ))}
           </div>
         </div>
 
         <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>Still having trouble? Contact us at contactinfo21342@gmail.com</p>
+          <p style={{ color: text2, fontSize: '0.875rem' }}>Still having trouble? Contact us at contactinfo21342@gmail.com</p>
         </div>
 
       </div>
     </div>
+  )
+}
+
+export default function MeetGuidePage() {
+  return (
+    <TutorThemeProvider>
+      <MeetGuideContent />
+    </TutorThemeProvider>
   )
 }
