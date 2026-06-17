@@ -101,35 +101,35 @@ export default function SessionsListClient({ sessions, userId }: Props) {
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {upcoming.map(s => (
-                <Link key={s.id} href={`/tutoring/session/${s.id}`} style={{ textDecoration: 'none' }}>
-                  <div className="card" style={{ padding: '1.25rem', border: s.status === 'confirmed' ? '2px solid rgba(34,85,14,0.2)' : '1px solid rgba(34,85,14,0.08)', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
-                          <p style={{ fontWeight: 700, color: 'var(--af-text)', fontSize: '1rem' }}>{s.subject}</p>
-                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: s.status === 'confirmed' ? 'rgba(34,85,14,0.08)' : 'rgba(232,160,32,0.1)', color: s.status === 'confirmed' ? 'rgb(34,85,14)' : 'rgb(180,120,10)' }}>
-                            {s.status === 'confirmed' ? '✅ Confirmed' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)', marginBottom: '0.25rem' }}>
-                          with {s.tutor_profiles?.display_name}
-                        </p>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)' }}>
-                          📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min
-                        </p>
+                <div key={s.id} className="card" style={{ padding: '1.25rem', border: s.status === 'confirmed' ? '2px solid rgba(34,85,14,0.2)' : '1px solid rgba(34,85,14,0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                    {/* Info area links to the session page; the Meet link is a sibling
+                        (not nested in the Link) so its target="_blank" isn't blocked. */}
+                    <Link href={`/tutoring/session/${s.id}`} style={{ textDecoration: 'none', flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
+                        <p style={{ fontWeight: 700, color: 'var(--af-text)', fontSize: '1rem' }}>{s.subject}</p>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: s.status === 'confirmed' ? 'rgba(34,85,14,0.08)' : 'rgba(232,160,32,0.1)', color: s.status === 'confirmed' ? 'rgb(34,85,14)' : 'rgb(180,120,10)' }}>
+                          {s.status === 'confirmed' ? '✅ Confirmed' : '⏳ Pending'}
+                        </span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(34,85,14)' }}>${s.student_price}</p>
-                        {s.meet_link && (
-                          <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                            style={{ fontSize: '0.8125rem', color: 'rgb(37,99,235)', fontWeight: 600, textDecoration: 'none' }}>
-                            🎥 Join Meet
-                          </a>
-                        )}
-                      </div>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)', marginBottom: '0.25rem' }}>
+                        with {s.tutor_profiles?.display_name}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)' }}>
+                        📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min
+                      </p>
+                    </Link>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(34,85,14)' }}>${s.student_price}</p>
+                      {s.meet_link && (
+                        <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: '0.8125rem', color: 'rgb(37,99,235)', fontWeight: 600, textDecoration: 'none' }}>
+                          🎥 Join Meet
+                        </a>
+                      )}
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
