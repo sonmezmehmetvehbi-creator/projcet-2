@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle } from 'lucide-react'
 
+// Force pasted Meet links to absolute https:// so they open externally and are
+// never treated as internal Next.js routes (which 404'd).
+const safeMeetLink = (url: string) => {
+  const u = (url || '').trim()
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u
+}
+
 interface Props {
   profile: any
   session: any
@@ -107,7 +114,7 @@ export default function SessionClient({ profile, session, existingReview }: Prop
           )}
 
           {session.meet_link && (isConfirmed || isCompleted) && (
-            <a href={session.meet_link} target="_blank"
+            <a href={safeMeetLink(session.meet_link)} target="_blank" rel="noopener noreferrer"
               className="btn-primary" style={{ display:'flex', justifyContent:'center', textDecoration:'none', marginBottom:'1rem' }}>
               🎥 Join Google Meet
             </a>

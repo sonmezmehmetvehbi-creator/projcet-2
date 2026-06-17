@@ -16,7 +16,10 @@ interface Props {
 
 // Ensure pasted Meet links open externally and are never treated as internal
 // Next.js routes (which 404'd). Force an absolute https:// URL.
-const safeMeetLink = (url: string) => (url.startsWith('http') ? url : 'https://' + url)
+const safeMeetLink = (url: string) => {
+  const u = (url || '').trim()
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u
+}
 
 export default function SessionChatClient({ session, tutorProfile, profile, isTutor }: Props) {
   const [messages, setMessages] = useState<any[]>([])

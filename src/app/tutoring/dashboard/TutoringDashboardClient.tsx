@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+// Force pasted Meet links to absolute https:// so they open externally and are
+// never treated as internal Next.js routes (which 404'd).
+const safeMeetLink = (url: string) => {
+  const u = (url || '').trim()
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u
+}
+
 interface Props {
   profile: any
   sessions: any[]
@@ -108,7 +115,7 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
                       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.5rem' }}>
                         <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'rgb(34,85,14)' }}>${s.student_price}</p>
                         {s.meet_link && (
-                          <a href={s.meet_link} target="_blank" onClick={e => e.stopPropagation()}
+                          <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                             className="btn-primary" style={{ fontSize:'0.8125rem', padding:'0.375rem 0.875rem', textDecoration:'none' }}>
                             🎥 Join Meet
                           </a>

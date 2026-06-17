@@ -6,6 +6,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
 
+// Open the tutor's pasted Meet link externally; force absolute https:// so it's
+// never treated as an internal Next.js route (which 404'd).
+const safeMeetLink = (url: string) => {
+  const u = (url || '').trim()
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u
+}
+
 interface Props {
   sessions: any[]
   userId: string
@@ -114,7 +121,7 @@ export default function SessionsListClient({ sessions, userId }: Props) {
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'rgb(34,85,14)' }}>${s.student_price}</p>
                         {s.meet_link && (
-                          <a href={s.meet_link} target="_blank" onClick={e => e.stopPropagation()}
+                          <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                             style={{ fontSize: '0.8125rem', color: 'rgb(37,99,235)', fontWeight: 600, textDecoration: 'none' }}>
                             🎥 Join Meet
                           </a>

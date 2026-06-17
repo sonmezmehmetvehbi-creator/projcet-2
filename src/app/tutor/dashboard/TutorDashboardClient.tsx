@@ -52,7 +52,10 @@ const TIMEZONES = [
 
 // Force pasted Meet links to absolute https:// so they open externally and are
 // never treated as internal Next.js routes (which 404'd).
-const safeMeetLink = (url: string) => (url.startsWith('http') ? url : 'https://' + url)
+const safeMeetLink = (url: string) => {
+  const u = (url || '').trim()
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u
+}
 
 interface Props {
   profile: any
