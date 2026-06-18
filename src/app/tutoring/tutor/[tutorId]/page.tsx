@@ -3,6 +3,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 import StudentThemeShell from '@/app/contexts/StudentThemeShell'
+import ShareButton from './ShareButton'
+
+// Disable caching so newly submitted reviews and updated ratings always show.
+export const revalidate = 0
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -15,7 +19,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
 
   const { data: tutor } = await supabase
     .from('tutor_profiles')
-    .select('*, education, institution, linkedin_url, avatar_url, subjects, languages, bio, rating, total_reviews, total_sessions, hourly_rate, is_active')
+    .select('id, display_name, bio, subjects, languages, rating, total_reviews, total_sessions, hourly_rate, avatar_url, education, institution, linkedin_url, is_active')
     .eq('id', params.tutorId)
     .eq('status', 'approved')
     .single()
@@ -246,11 +250,14 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                 <p style={{ color: 'var(--af-text-muted)', marginBottom: '1rem', fontSize: '0.9375rem' }}>
                   Ready to learn with {tutor.display_name}?
                 </p>
-                <Link href={`/tutoring/book/${params.tutorId}`}
-                  className="btn-primary"
-                  style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none', fontSize: '1.0625rem', padding: '0.875rem 2.5rem' }}>
-                  Book a Session →
-                </Link>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Link href={`/tutoring/book/${params.tutorId}`}
+                    className="btn-primary"
+                    style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none', fontSize: '1.0625rem', padding: '0.875rem 2.5rem' }}>
+                    Book a Session →
+                  </Link>
+                  <ShareButton tutorId={params.tutorId} />
+                </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)', marginTop: '0.75rem' }}>
                   Full refund if tutor declines or doesn't show
                 </p>

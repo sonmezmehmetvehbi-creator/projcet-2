@@ -141,6 +141,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
+  const [education, setEducation] = useState(tutorProfile?.education ?? '')
+  const [institution, setInstitution] = useState(tutorProfile?.institution ?? '')
   const [subjects, setSubjects] = useState<string[]>(tutorProfile?.subjects ?? [])
   const [languages, setLanguages] = useState<string[]>(tutorProfile?.languages ?? ['English'])
   const [subjectSearch, setSubjectSearch] = useState('')
@@ -257,7 +259,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
       await fetch('/api/tutor/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio, subjects, languages, hourlyRate: tutorProfile?.hourly_rate ?? 30, availability, timezone, tutorId: tutorProfile?.id, venmo, paypal, zelle }),
+        body: JSON.stringify({ bio, subjects, languages, education, institution, hourlyRate: tutorProfile?.hourly_rate ?? 30, availability, timezone, tutorId: tutorProfile?.id, venmo, paypal, zelle }),
       })
       setEditingProfile(false)
     } catch {}
@@ -947,6 +949,34 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   </p>
                 )}
               </div>
+
+              {/* Education */}
+              {editingProfile ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '1rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education Level</label>
+                    <select value={education} onChange={e => setEducation(e.target.value)}
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }}>
+                      <option value="" style={{ background: optionBg }}>Select education level</option>
+                      {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
+                        <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Institution</label>
+                    <input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="e.g. MIT, Harvard, Community College"
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              ) : (tutorProfile?.education || tutorProfile?.institution) ? (
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
+                  <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
+                    🎓 {[tutorProfile.education, tutorProfile.institution].filter(Boolean).join(' at ')}
+                  </p>
+                </div>
+              ) : null}
 
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Subjects</label>

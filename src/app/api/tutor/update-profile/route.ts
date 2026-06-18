@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { bio, subjects, languages, hourlyRate, availability, timezone, tutorId, venmo, paypal, zelle } = await request.json()
+    const { bio, subjects, languages, hourlyRate, availability, timezone, tutorId, venmo, paypal, zelle, education, institution } = await request.json()
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +37,8 @@ export async function POST(request: Request) {
       bio,
       subjects,
       languages,
+      education: education || null,
+      institution: institution || null,
       venmo: venmo || null,
       paypal: paypal || null,
       zelle: zelle || null,

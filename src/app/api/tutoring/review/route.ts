@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (reviews && reviews.length > 0) {
       const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       await supabase.from('tutor_profiles').update({
-        rating: Math.round(avg * 10) / 10,
+        rating: parseFloat(avg.toFixed(2)),
         total_reviews: reviews.length,
       }).eq('id', tutorId)
     }
