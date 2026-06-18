@@ -141,16 +141,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
-  // Degrees are stored as a JSONB array on tutor_profiles.degrees. Seed from the
-  // older single education/institution columns so existing tutors aren't blanked.
-  const [degrees, setDegrees] = useState<{ level: string; field: string; institution: string }[]>(
-    tutorProfile?.degrees?.length
-      ? tutorProfile.degrees
-      : (tutorProfile?.education || tutorProfile?.institution)
-        ? [{ level: tutorProfile.education ?? '', field: tutorProfile.field_of_study ?? '', institution: tutorProfile.institution ?? '' }]
-        : []
-  )
-  const [newDegree, setNewDegree] = useState<{ level: string; field: string; institution: string }>({ level: '', field: '', institution: '' })
+  // Degrees are stored as a JSONB array on tutor_profiles.degrees. Each field has
+  // its own independent state to keep the inline add form from glitching.
+  const [degrees, setDegrees] = useState<{ level: string; field: string; institution: string }[]>(tutorProfile?.degrees ?? [])
+  const [showDegreeForm, setShowDegreeForm] = useState(false)
+  const [newDegreeLevel, setNewDegreeLevel] = useState('')
+  const [newDegreeField, setNewDegreeField] = useState('')
+  const [newDegreeInstitution, setNewDegreeInstitution] = useState('')
   const [subjects, setSubjects] = useState<string[]>(tutorProfile?.subjects ?? [])
   const [languages, setLanguages] = useState<string[]>(tutorProfile?.languages ?? ['English'])
   const [subjectSearch, setSubjectSearch] = useState('')
@@ -252,9 +249,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
     setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
   }
   function addDegree() {
-    if (!newDegree.level && !newDegree.field && !newDegree.institution) return
-    setDegrees(prev => [...prev, newDegree])
-    setNewDegree({ level: '', field: '', institution: '' })
+    if (!newDegreeLevel && !newDegreeField && !newDegreeInstitution) return
+    setDegrees(prev => [...prev, { level: newDegreeLevel, field: newDegreeField, institution: newDegreeInstitution }])
+    setNewDegreeLevel('')
+    setNewDegreeField('')
+    setNewDegreeInstitution('')
+    setShowDegreeForm(false)
   }
   function removeDegree(index: number) {
     setDegrees(prev => prev.filter((_, i) => i !== index))
@@ -978,10 +978,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   {degrees.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
                       {degrees.map((d, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
+                        <div key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
                           <span style={{ fontSize: '0.875rem', color: text2 }}>🎓 {formatDegree(d)}</span>
                           <button type="button" onClick={() => removeDegree(i)}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text4, display: 'flex', flexShrink: 0 }}>
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(248,113,113)', display: 'flex', flexShrink: 0 }}>
                             <X style={{ width: '1rem', height: '1rem' }} />
                           </button>
                         </div>
@@ -989,33 +989,46 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     </div>
                   )}
 
-                  {/* Add a degree */}
-                  <div style={{ padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border3}` }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.625rem' }}>
-                      <select value={newDegree.level} onChange={e => setNewDegree(prev => ({ ...prev, level: e.target.value }))}
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}>
-                        <option value="" style={{ background: optionBg }}>Education level</option>
-                        {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
-                          <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
-                        ))}
-                      </select>
-                      <input value={newDegree.field} onChange={e => setNewDegree(prev => ({ ...prev, field: e.target.value }))} placeholder="Field of Study, e.g. Computer Science"
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
-                      <input value={newDegree.institution} onChange={e => setNewDegree(prev => ({ ...prev, institution: e.target.value }))} placeholder="Institution, e.g. MIT"
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                    <button type="button" onClick={addDegree}
+                  {/* Add Degree toggle + inline form */}
+                  {!showDegreeForm ? (
+                    <button type="button" onClick={() => setShowDegreeForm(true)}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
                       <Plus style={{ width: '0.875rem', height: '0.875rem' }} /> Add Degree
                     </button>
-                  </div>
+                  ) : (
+                    <div style={{ padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border3}` }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.625rem' }}>
+                        <select value={newDegreeLevel} onChange={e => setNewDegreeLevel(e.target.value)}
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}>
+                          <option value="" style={{ background: optionBg }}>Education level</option>
+                          {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
+                            <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
+                          ))}
+                        </select>
+                        <input value={newDegreeField} onChange={e => setNewDegreeField(e.target.value)} placeholder="Field of Study, e.g. Computer Science"
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                        <input value={newDegreeInstitution} onChange={e => setNewDegreeInstitution(e.target.value)} placeholder="Institution, e.g. MIT"
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button type="button" onClick={addDegree}
+                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                          Add
+                        </button>
+                        <button type="button" onClick={() => { setShowDegreeForm(false); setNewDegreeLevel(''); setNewDegreeField(''); setNewDegreeInstitution('') }}
+                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: 'transparent', border: `1px solid ${border4}`, color: text3, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : degrees.length > 0 ? (
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {degrees.map((d, i) => (
-                      <p key={i} style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
+                      <p key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
                         🎓 {formatDegree(d)}
                       </p>
                     ))}

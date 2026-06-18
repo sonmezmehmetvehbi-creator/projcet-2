@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import ShareButton from './ShareButton'
+import ReviewsSection from './ReviewsSection'
 
 // Disable caching so newly submitted reviews and updated ratings always show.
 export const revalidate = 0
@@ -49,12 +50,18 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
     .eq('tutor_id', params.tutorId)
     .order('day_of_week', { ascending: true })
 
-  const { data: reviews } = await supabase
+  // Fetch all reviews, then look up student names manually — the embedded FK
+  // join was unreliable and sometimes returned no names.
+  const { data: reviewsRaw } = await supabase
     .from('tutor_reviews')
-    .select('rating, comment, created_at, profiles(display_name)')
+    .select('id, rating, comment, created_at, student_id')
     .eq('tutor_id', params.tutorId)
     .order('created_at', { ascending: false })
-    .limit(5)
+
+  const reviews = await Promise.all((reviewsRaw ?? []).map(async (r) => {
+    const { data: student } = await supabase.from('profiles').select('display_name').eq('id', r.student_id).single()
+    return { ...r, profiles: student }
+  }))
 
   const isPremium = profile?.is_premium ?? false
   const freeRate = 49.99
@@ -230,27 +237,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
           )}
 
           {/* Reviews */}
-          {reviews && reviews.length > 0 && (
-            <div className="card" style={{ padding: '1.75rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '1rem' }}>
-                ⭐ Recent Reviews
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {reviews.map((r: any, i: number) => (
-                  <div key={i} style={{ padding: '1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
-                      <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
-                        {(r.profiles as any)?.display_name?.[0] ?? '?'}
-                      </div>
-                      <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--af-text)' }}>{(r.profiles as any)?.display_name ?? 'Student'}</p>
-                      <span style={{ marginLeft: 'auto', fontSize: '0.875rem' }}>{'⭐'.repeat(r.rating)}</span>
-                    </div>
-                    {r.comment && <p style={{ fontSize: '0.875rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>{r.comment}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ReviewsSection reviews={reviews} />
 
           {/* Book CTA */}
           <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>

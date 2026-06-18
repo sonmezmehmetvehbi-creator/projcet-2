@@ -38,11 +38,18 @@ export default async function TutorDashboardPage() {
     return { ...s, profiles: studentProfile }
   }))
 
-  const { data: reviews } = await adminClient
+  // Fetch reviews then look up student names manually — the embedded FK join
+  // (profiles!tutor_reviews_student_id_fkey) was failing and returning nothing.
+  const { data: reviewsRaw } = await adminClient
     .from('tutor_reviews')
-    .select('*, profiles!tutor_reviews_student_id_fkey(display_name)')
+    .select('*')
     .eq('tutor_id', tutorProfile?.id)
     .order('created_at', { ascending: false })
+
+  const reviews = await Promise.all((reviewsRaw ?? []).map(async (r) => {
+    const { data: student } = await adminClient.from('profiles').select('display_name').eq('id', r.student_id).single()
+    return { ...r, profiles: student }
+  }))
 
   const { data: payouts } = await adminClient
     .from('tutor_payouts')
