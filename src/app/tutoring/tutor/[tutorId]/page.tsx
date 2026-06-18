@@ -64,9 +64,14 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
           {/* Profile card */}
           <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ width: '5rem', height: '5rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', fontWeight: 700, flexShrink: 0 }}>
-                {tutor.display_name?.[0] ?? '?'}
-              </div>
+              {tutor.avatar_url ? (
+                <img src={tutor.avatar_url} alt={tutor.display_name}
+                  style={{ width: '5rem', height: '5rem', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: '5rem', height: '5rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', fontWeight: 700, flexShrink: 0 }}>
+                  {tutor.display_name?.[0] ?? '?'}
+                </div>
+              )}
               <div style={{ flex: 1 }}>
                 <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '0.375rem' }}>
                   {tutor.display_name}

@@ -113,10 +113,15 @@ export default async function TutoringPage() {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px,1fr))', gap:'1.25rem' }}>
               {tutors.map((tutor: any) => (
                 <div key={tutor.id} className="card" style={{ padding:'1.5rem', transition:'all 0.2s' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem' }}>
-                    <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
-                      {tutor.display_name?.[0] ?? '?'}
-                    </div>
+                  <Link href={`/tutoring/tutor/${tutor.id}`} style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem', textDecoration:'none' }}>
+                    {tutor.avatar_url ? (
+                      <img src={tutor.avatar_url} alt={tutor.display_name}
+                        style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
+                    ) : (
+                      <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
+                        {tutor.display_name?.[0] ?? '?'}
+                      </div>
+                    )}
                     <div>
                       <p style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.0625rem', color:'var(--af-text)', marginBottom:'0.125rem' }}>
                         {tutor.display_name}
@@ -127,7 +132,7 @@ export default async function TutoringPage() {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </Link>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem', marginBottom:'0.875rem' }}>
                     {tutor.subjects?.slice(0,3).map((s: string) => (
                       <span key={s} style={{ fontSize:'0.75rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600 }}>

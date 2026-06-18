@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Edit, Save, X, Plus, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -93,6 +93,30 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   })
   const [isActive, setIsActive] = useState(tutorProfile?.is_active !== false)
   const [togglingActive, setTogglingActive] = useState(false)
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(tutorProfile?.avatar_url ?? null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) { alert('Please choose a JPG or PNG image.'); return }
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB.'); return }
+    setUploadingAvatar(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/tutor/update-avatar', { method: 'POST', body: formData })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Upload failed: ${data.error ?? res.status}`); setUploadingAvatar(false); return }
+      setAvatarUrl(data.url)
+    } catch (err: any) {
+      alert(`Upload failed: ${err?.message ?? 'network error'}`)
+    }
+    setUploadingAvatar(false)
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+  }
 
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
@@ -373,9 +397,14 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, boxShadow: `0 4px 20px ${accentBg2}` }}>
-            {profile?.display_name?.[0] ?? '?'}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={tutorProfile?.display_name ?? 'Tutor'}
+              style={{ width: '4rem', height: '4rem', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: `0 4px 20px ${accentBg2}` }} />
+          ) : (
+            <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0, boxShadow: `0 4px 20px ${accentBg2}` }}>
+              {profile?.display_name?.[0] ?? '?'}
+            </div>
+          )}
           <div style={{ flex: 1 }}>
             <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: text1, marginBottom: '0.375rem' }}>
               {tutorProfile?.display_name} 🎓
@@ -827,6 +856,29 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Profile picture */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.75rem' }}>Profile Picture</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={tutorProfile?.display_name ?? 'Tutor'}
+                      style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${accentBorder}` }} />
+                  ) : (
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', fontWeight: 700, flexShrink: 0 }}>
+                      {tutorProfile?.display_name?.[0] ?? '?'}
+                    </div>
+                  )}
+                  <div>
+                    <input ref={avatarInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+                    <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}
+                      style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: uploadingAvatar ? 'default' : 'pointer', opacity: uploadingAvatar ? 0.6 : 1 }}>
+                      {uploadingAvatar ? 'Uploading…' : '📷 Upload Photo'}
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: text4, marginTop: '0.5rem' }}>JPG or PNG, max 2MB.</p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Bio</label>
                 {editingProfile ? (

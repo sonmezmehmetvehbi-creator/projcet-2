@@ -3,6 +3,7 @@ import './globals.css'
 import CookieBanner from '@/components/ui/CookieBanner'
 import Script from 'next/script'
 import { StudentThemeProvider } from '@/app/contexts/StudentThemeContext'
+import { ReviewProvider } from '@/app/contexts/ReviewContext'
 
 export const metadata: Metadata = {
   title: 'AceForge — AI-Powered Study Materials',
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen flex flex-col antialiased">
         <StudentThemeProvider>
-          {children}
+          <ReviewProvider>
+            {children}
+          </ReviewProvider>
         </StudentThemeProvider>
         <CookieBanner />
         <Script

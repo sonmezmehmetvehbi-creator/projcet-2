@@ -7,14 +7,17 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { sessionId, tutorId, rating, comment } = await request.json()
+    const { sessionId, tutorId, rating, comment, wouldRecommend } = await request.json()
 
+    // SQL — add to tutor_reviews (run manually in Supabase):
+    //   ALTER TABLE tutor_reviews ADD COLUMN IF NOT EXISTS would_recommend boolean;
     await supabase.from('tutor_reviews').insert({
       session_id: sessionId,
       student_id: user.id,
       tutor_id: tutorId,
       rating,
       comment,
+      would_recommend: wouldRecommend ?? null,
     })
 
     // Update tutor avg rating

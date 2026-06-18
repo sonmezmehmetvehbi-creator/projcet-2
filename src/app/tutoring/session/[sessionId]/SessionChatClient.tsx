@@ -291,9 +291,14 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
         {/* Chat */}
         <div style={{ borderRadius: '1rem', overflow: 'hidden', background: cardBg, border: `1px solid ${cardBorder}`, boxShadow: isTutor && isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${chatHeaderBorder}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.875rem' }}>
-              {tutorProfile?.display_name?.[0] ?? '?'}
-            </div>
+            {tutorProfile?.avatar_url ? (
+              <img src={tutorProfile.avatar_url} alt={tutorProfile?.display_name ?? 'Tutor'}
+                style={{ width: '2rem', height: '2rem', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.875rem' }}>
+                {tutorProfile?.display_name?.[0] ?? '?'}
+              </div>
+            )}
             <div>
               <p style={{ fontWeight: 700, color: text1, fontSize: '0.9375rem' }}>{tutorProfile?.display_name}</p>
               <p style={{ fontSize: '0.75rem', color: text2 }}>{isTutor ? 'Session chat — monitored by AceForge' : 'Your tutor — messages are monitored by AceForge'}</p>
