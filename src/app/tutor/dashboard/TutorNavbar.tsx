@@ -7,9 +7,10 @@ import { LogOut, ChevronDown, GraduationCap, FileText, Headphones, Sun, Moon } f
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
 
-interface Props { profile: any; tutorProfile: any }
+interface Props { profile: any; tutorProfile: any; avatarUrl?: string | null }
 
-export default function TutorNavbar({ profile, tutorProfile }: Props) {
+export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props) {
+  const photo = avatarUrl ?? tutorProfile?.avatar_url ?? null
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -99,9 +100,14 @@ export default function TutorNavbar({ profile, tutorProfile }: Props) {
           <div style={{ position: 'relative' }} ref={ref}>
             <button onClick={() => setOpen(o => !o)}
               style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.375rem 0.75rem', borderRadius: '0.75rem', border: `1px solid ${btnBorder}`, background: btnBg, cursor: 'pointer' }}>
-              <div style={{ width: '1.875rem', height: '1.875rem', borderRadius: '50%', background: logoGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8125rem', fontWeight: 700 }}>
-                {profile?.display_name?.[0] ?? 'T'}
-              </div>
+              {photo ? (
+                <img src={photo} alt={profile?.display_name ?? 'Tutor'}
+                  style={{ width: '1.875rem', height: '1.875rem', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: '1.875rem', height: '1.875rem', borderRadius: '50%', background: logoGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8125rem', fontWeight: 700 }}>
+                  {profile?.display_name?.[0] ?? 'T'}
+                </div>
+              )}
               <div style={{ textAlign: 'left' }}>
                 <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: textColor, lineHeight: 1.2 }}>{profile?.display_name ?? 'Tutor'}</p>
                 <p style={{ fontSize: '0.625rem', color: textFaint, lineHeight: 1.2, fontFamily: 'Syne, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>

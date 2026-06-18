@@ -5,6 +5,7 @@ import { Edit, Save, X, Plus, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
+import TutorNavbar from './TutorNavbar'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -95,27 +96,47 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const [togglingActive, setTogglingActive] = useState(false)
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(tutorProfile?.avatar_url ?? null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarSuccess, setAvatarSuccess] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  // Pick a file and show a preview — nothing is uploaded until the tutor saves.
+  function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) { alert('Please choose a JPG or PNG image.'); return }
     if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB.'); return }
+    setAvatarSuccess(false)
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview)
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+  }
+
+  function cancelAvatar() {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview)
+    setAvatarFile(null)
+    setAvatarPreview(null)
+  }
+
+  async function saveAvatar() {
+    if (!avatarFile) return
     setUploadingAvatar(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', avatarFile)
       const res = await fetch('/api/tutor/update-avatar', { method: 'POST', body: formData })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { alert(`Upload failed: ${data.error ?? res.status}`); setUploadingAvatar(false); return }
       setAvatarUrl(data.url)
+      cancelAvatar()
+      setAvatarSuccess(true)
     } catch (err: any) {
       alert(`Upload failed: ${err?.message ?? 'network error'}`)
     }
     setUploadingAvatar(false)
-    if (avatarInputRef.current) avatarInputRef.current.value = ''
   }
 
   const [editingProfile, setEditingProfile] = useState(false)
@@ -345,6 +366,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   return (
     <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: pageBg }}>
+
+      <TutorNavbar profile={profile} tutorProfile={tutorProfile} avatarUrl={avatarUrl} />
 
       {/* Legal banner */}
       {showLegal && (
@@ -860,7 +883,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.75rem' }}>Profile Picture</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  {avatarUrl ? (
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Preview"
+                      style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${accent}` }} />
+                  ) : avatarUrl ? (
                     <img src={avatarUrl} alt={tutorProfile?.display_name ?? 'Tutor'}
                       style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${accentBorder}` }} />
                   ) : (
@@ -869,11 +895,27 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     </div>
                   )}
                   <div>
-                    <input ref={avatarInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleAvatarUpload} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}
-                      style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: uploadingAvatar ? 'default' : 'pointer', opacity: uploadingAvatar ? 0.6 : 1 }}>
-                      {uploadingAvatar ? 'Uploading…' : '📷 Upload Photo'}
-                    </button>
+                    <input ref={avatarInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleAvatarSelect} style={{ display: 'none' }} />
+                    {avatarPreview ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={saveAvatar} disabled={uploadingAvatar}
+                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: uploadingAvatar ? 'default' : 'pointer', opacity: uploadingAvatar ? 0.6 : 1 }}>
+                          {uploadingAvatar ? 'Saving…' : '✓ Save Profile Picture'}
+                        </button>
+                        <button type="button" onClick={cancelAvatar} disabled={uploadingAvatar}
+                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: 'transparent', border: `1px solid ${border4}`, color: text3, fontWeight: 600, fontSize: '0.875rem', cursor: uploadingAvatar ? 'default' : 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => avatarInputRef.current?.click()}
+                        style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                        📷 Upload Photo
+                      </button>
+                    )}
+                    {avatarSuccess && (
+                      <p style={{ fontSize: '0.8125rem', color: 'rgb(74,222,128)', fontWeight: 600, marginTop: '0.5rem' }}>✓ Profile picture updated!</p>
+                    )}
                     <p style={{ fontSize: '0.75rem', color: text4, marginTop: '0.5rem' }}>JPG or PNG, max 2MB.</p>
                   </div>
                 </div>

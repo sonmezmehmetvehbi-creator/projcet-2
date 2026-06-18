@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import TutorNavbar from './TutorNavbar'
 import TutorDashboardClient from './TutorDashboardClient'
 import { TutorThemeProvider } from './TutorThemeContext'
 
@@ -59,7 +58,6 @@ export default async function TutorDashboardPage() {
   return (
     <TutorThemeProvider>
       <div style={{ minHeight: '100vh' }}>
-        <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
         <TutorDashboardClient
           profile={profile}
           tutorProfile={tutorProfile}

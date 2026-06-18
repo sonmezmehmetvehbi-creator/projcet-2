@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle, Upload, X, FileUp, Zap } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
@@ -202,14 +203,21 @@ function BookingForm({ profile, tutor, availability }: Props) {
 
         {/* Tutor card */}
         <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.25rem', fontWeight: 700, flexShrink: 0 }}>
-            {tutor.display_name?.[0] ?? '?'}
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: textPrimary }}>{tutor.display_name}</p>
-            <p style={{ fontSize: '0.875rem', color: textSecondary }}>{tutor.subjects?.join(', ')}</p>
-            {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
-          </div>
+          <Link href={`/tutoring/tutor/${tutor.id}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, textDecoration: 'none', minWidth: 0 }}>
+            {tutor.avatar_url ? (
+              <img src={tutor.avatar_url} alt={tutor.display_name}
+                style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', background: 'rgb(34,85,14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.25rem', fontWeight: 700, flexShrink: 0 }}>
+                {tutor.display_name?.[0] ?? '?'}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: textPrimary }}>{tutor.display_name}</p>
+              <p style={{ fontSize: '0.875rem', color: textSecondary }}>{tutor.subjects?.join(', ')}</p>
+              {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
+            </div>
+          </Link>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: 'rgb(34,85,14)' }}>${baseRate}/hr</p>
             {isPremium && <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)' }}>Premium rate ⚡</p>}
