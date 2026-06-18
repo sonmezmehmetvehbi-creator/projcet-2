@@ -151,10 +151,10 @@ export default async function TutoringPage() {
                       {tutor.total_sessions} sessions
                     </span>
                   </div>
-                  <Link href={`/tutoring/tutor/${tutor.id}`}
-                    className={isPremium ? 'btn-primary' : 'btn-secondary'}
+                  <Link href={`/tutoring/book/${tutor.id}`}
+                    className="btn-primary"
                     style={{ width:'100%', justifyContent:'center', display:'flex', textDecoration:'none' }}>
-                    {isPremium ? 'View & Book' : 'View Profile'}
+                    Book Session
                   </Link>
                 </div>
               ))}

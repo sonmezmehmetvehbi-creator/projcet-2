@@ -23,7 +23,7 @@ export default async function TutoringSessionsPage() {
     .order('scheduled_at', { ascending: false })
 
   const sessions = await Promise.all((sessionsRaw ?? []).map(async (s) => {
-    const { data: tp } = await adminClient.from('tutor_profiles').select('display_name, rating, subjects').eq('id', s.tutor_id).single()
+    const { data: tp } = await adminClient.from('tutor_profiles').select('id, display_name, rating, subjects, avatar_url').eq('id', s.tutor_id).single()
     return { ...s, tutor_profiles: tp }
   }))
 

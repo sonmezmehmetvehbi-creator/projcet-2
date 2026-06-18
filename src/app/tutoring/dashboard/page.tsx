@@ -12,7 +12,7 @@ export default async function TutoringDashboardPage() {
 
   const { data: sessions } = await supabase
     .from('tutoring_sessions')
-    .select('*, tutor_profiles(id, display_name, rating, subjects, bio, languages)')
+    .select('*, tutor_profiles(id, display_name, rating, subjects, bio, languages, avatar_url)')
     .eq('student_id', user.id)
     .order('scheduled_at', { ascending: false })
 

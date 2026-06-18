@@ -139,15 +139,20 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px,1fr))', gap:'1rem' }}>
               {favoriteTutors.map(t => (
                 <div key={t.id} className="card" style={{ padding:'1.25rem' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.875rem', marginBottom:'0.875rem' }}>
-                    <div style={{ width:'3rem', height:'3rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.125rem', fontWeight:700, flexShrink:0 }}>
-                      {t.display_name?.[0] ?? '?'}
-                    </div>
+                  <Link href={`/tutoring/tutor/${t.id}`} style={{ display:'flex', alignItems:'center', gap:'0.875rem', marginBottom:'0.875rem', textDecoration:'none' }}>
+                    {t.avatar_url ? (
+                      <img src={t.avatar_url} alt={t.display_name}
+                        style={{ width:'3rem', height:'3rem', borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
+                    ) : (
+                      <div style={{ width:'3rem', height:'3rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.125rem', fontWeight:700, flexShrink:0 }}>
+                        {t.display_name?.[0] ?? '?'}
+                      </div>
+                    )}
                     <div>
                       <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.125rem' }}>{t.display_name}</p>
                       {t.rating > 0 && <p style={{ fontSize:'0.8125rem', color:'rgb(180,120,10)' }}>⭐ {t.rating} ({t.total_reviews})</p>}
                     </div>
-                  </div>
+                  </Link>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'0.25rem', marginBottom:'0.875rem' }}>
                     {t.subjects?.slice(0,2).map((s: string) => (
                       <span key={s} style={{ fontSize:'0.6875rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600 }}>{s}</span>
@@ -155,7 +160,7 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
                   </div>
                   <Link href={`/tutoring/book/${t.id}`} className="btn-primary"
                     style={{ width:'100%', justifyContent:'center', display:'flex', textDecoration:'none', fontSize:'0.875rem', padding:'0.5rem' }}>
-                    Book Again
+                    Book Again →
                   </Link>
                 </div>
               ))}
@@ -184,16 +189,21 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px,1fr))', gap:'1rem' }}>
               {(favoriteTutors.length > 0 ? newTutors : allTutors).map(t => (
                 <div key={t.id} className="card" style={{ padding:'1.5rem' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.875rem', marginBottom:'0.875rem' }}>
-                    <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
-                      {t.display_name?.[0] ?? '?'}
-                    </div>
+                  <Link href={`/tutoring/tutor/${t.id}`} style={{ display:'flex', alignItems:'center', gap:'0.875rem', marginBottom:'0.875rem', textDecoration:'none' }}>
+                    {t.avatar_url ? (
+                      <img src={t.avatar_url} alt={t.display_name}
+                        style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
+                    ) : (
+                      <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
+                        {t.display_name?.[0] ?? '?'}
+                      </div>
+                    )}
                     <div>
                       <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.125rem' }}>{t.display_name}</p>
                       {t.rating > 0 && <p style={{ fontSize:'0.875rem', color:'rgb(180,120,10)' }}>⭐ {t.rating} ({t.total_reviews} reviews)</p>}
                       {t.total_sessions > 0 && <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>{t.total_sessions} sessions</p>}
                     </div>
-                  </div>
+                  </Link>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem', marginBottom:'0.75rem' }}>
                     {t.subjects?.slice(0,3).map((s: string) => (
                       <span key={s} style={{ fontSize:'0.75rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600 }}>{s}</span>

@@ -101,6 +101,24 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
               </div>
             )}
 
+            {/* Qualifications */}
+            {(tutor.education && tutor.institution) || tutor.linkedin_url ? (
+              <div style={{ marginBottom: '1.5rem', padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.1)' }}>
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Qualifications</h2>
+                {tutor.education && tutor.institution && (
+                  <p style={{ fontSize: '0.9375rem', color: 'var(--af-text)', fontWeight: 600, marginBottom: tutor.linkedin_url ? '0.75rem' : 0 }}>
+                    🎓 {tutor.education} at {tutor.institution}
+                  </p>
+                )}
+                {tutor.linkedin_url && (
+                  <a href={tutor.linkedin_url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 600, color: 'rgb(10,102,194)', textDecoration: 'none' }}>
+                    🔗 View LinkedIn Profile →
+                  </a>
+                )}
+              </div>
+            ) : null}
+
             {/* Subjects */}
             {tutor.subjects?.length > 0 && (
               <div style={{ marginBottom: '1.25rem' }}>
