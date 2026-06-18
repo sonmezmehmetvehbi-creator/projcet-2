@@ -15,12 +15,18 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
 
   const { data: tutor } = await supabase
     .from('tutor_profiles')
-    .select('*')
+    .select('*, education, institution, linkedin_url, avatar_url, subjects, languages, bio, rating, total_reviews, total_sessions, hourly_rate, is_active')
     .eq('id', params.tutorId)
     .eq('status', 'approved')
     .single()
 
   if (!tutor) redirect('/tutoring')
+
+  // Stored LinkedIn URLs may lack the scheme; ensure it's absolute so the link
+  // doesn't resolve to an internal 404 route.
+  const linkedinUrl = tutor.linkedin_url
+    ? (tutor.linkedin_url.startsWith('http') ? tutor.linkedin_url : 'https://' + tutor.linkedin_url)
+    : null
 
   const { data: availability } = await supabase
     .from('tutor_availability')
@@ -101,23 +107,25 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
               </div>
             )}
 
-            {/* Qualifications */}
-            {(tutor.education && tutor.institution) || tutor.linkedin_url ? (
-              <div style={{ marginBottom: '1.5rem', padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.1)' }}>
-                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Qualifications</h2>
-                {tutor.education && tutor.institution && (
-                  <p style={{ fontSize: '0.9375rem', color: 'var(--af-text)', fontWeight: 600, marginBottom: tutor.linkedin_url ? '0.75rem' : 0 }}>
-                    🎓 {tutor.education} at {tutor.institution}
-                  </p>
-                )}
-                {tutor.linkedin_url && (
-                  <a href={tutor.linkedin_url} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 600, color: 'rgb(10,102,194)', textDecoration: 'none' }}>
-                    🔗 View LinkedIn Profile →
-                  </a>
-                )}
+            {/* Education */}
+            {(tutor.education || tutor.institution) && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.625rem' }}>Education</h2>
+                <p style={{ fontSize: '0.9375rem', color: 'var(--af-text)', lineHeight: 1.7 }}>
+                  🎓 {[tutor.education, tutor.institution].filter(Boolean).join(' at ')}
+                </p>
               </div>
-            ) : null}
+            )}
+
+            {/* LinkedIn */}
+            {linkedinUrl && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 600, color: 'rgb(10,102,194)', textDecoration: 'none' }}>
+                  🔗 View LinkedIn Profile →
+                </a>
+              </div>
+            )}
 
             {/* Subjects */}
             {tutor.subjects?.length > 0 && (
@@ -229,17 +237,25 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
 
           {/* Book CTA */}
           <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--af-text-muted)', marginBottom: '1rem', fontSize: '0.9375rem' }}>
-              Ready to learn with {tutor.display_name}?
-            </p>
-            <Link href={`/tutoring/book/${params.tutorId}`}
-              className="btn-primary"
-              style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none', fontSize: '1.0625rem', padding: '0.875rem 2.5rem' }}>
-              Book a Session →
-            </Link>
-            <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)', marginTop: '0.75rem' }}>
-              Full refund if tutor declines or doesn't show
-            </p>
+            {tutor.is_active === false ? (
+              <p style={{ color: 'var(--af-text-muted)', fontSize: '0.9375rem', fontWeight: 600 }}>
+                This tutor is currently not accepting new bookings
+              </p>
+            ) : (
+              <>
+                <p style={{ color: 'var(--af-text-muted)', marginBottom: '1rem', fontSize: '0.9375rem' }}>
+                  Ready to learn with {tutor.display_name}?
+                </p>
+                <Link href={`/tutoring/book/${params.tutorId}`}
+                  className="btn-primary"
+                  style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none', fontSize: '1.0625rem', padding: '0.875rem 2.5rem' }}>
+                  Book a Session →
+                </Link>
+                <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)', marginTop: '0.75rem' }}>
+                  Full refund if tutor declines or doesn't show
+                </p>
+              </>
+            )}
           </div>
 
         </div>

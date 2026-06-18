@@ -165,6 +165,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const [followupDate, setFollowupDate] = useState<Record<string, string>>({})
   const [followupTime, setFollowupTime] = useState<Record<string, string>>({})
   const [proposingFollowup, setProposingFollowup] = useState<string | null>(null)
+  const [proposedFollowups, setProposedFollowups] = useState<string[]>([])
 
   useEffect(() => {
     if (!tutorProfile?.id) return
@@ -264,15 +265,24 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   }
 
   async function toggleActive() {
+    const next = !isActive
+    const message = next
+      ? 'Set your profile to active? Students will be able to find and book you.'
+      : 'Are you sure you want to set your profile to inactive? Students will not be able to find or book you until you reactivate.'
+    if (!confirm(message)) return
     setTogglingActive(true)
     try {
-      await fetch('/api/tutor/toggle-active', {
+      const res = await fetch('/api/tutor/toggle-active', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tutorId: tutorProfile?.id, isActive: !isActive }),
+        body: JSON.stringify({ tutorId: tutorProfile?.id, isActive: next }),
       })
-      setIsActive(!isActive)
-    } catch {}
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Could not update status: ${data.error ?? res.status}`); setTogglingActive(false); return }
+      setIsActive(next)
+    } catch (err: any) {
+      alert(`Could not update status: ${err?.message ?? 'network error'}`)
+    }
     setTogglingActive(false)
   }
 
@@ -309,6 +319,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
       if (!res.ok) { alert(`Could not propose follow-up: ${data.error ?? `server returned ${res.status}`}`); setProposingFollowup(null); return }
       alert('✅ Follow-up proposed! The student has been notified via chat and email.')
       setFollowupOpen(null)
+      setProposedFollowups(prev => prev.includes(session.id) ? prev : [...prev, session.id])
     } catch (err: any) {
       alert(`Could not propose follow-up: ${err?.message ?? 'network error'}`)
     }
@@ -680,11 +691,16 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       🎥 Join
                     </a>
                   )}
-                  {isCompleted && (
+                  {isCompleted && !proposedFollowups.includes(s.id) && (
                     <button onClick={() => setFollowupOpen(followupOpen === s.id ? null : s.id)}
                       style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg2, border: `1px solid ${accentBorder}`, color: accent, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       📅 Propose Follow-up
                     </button>
+                  )}
+                  {isCompleted && proposedFollowups.includes(s.id) && (
+                    <span style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: 'rgb(74,222,128)', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      ✅ Follow-up proposed
+                    </span>
                   )}
                 </div>
 

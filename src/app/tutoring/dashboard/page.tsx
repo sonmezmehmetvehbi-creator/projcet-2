@@ -20,6 +20,7 @@ export default async function TutoringDashboardPage() {
     .from('tutor_profiles')
     .select('*')
     .eq('status', 'approved')
+    .eq('is_active', true)
     .order('rating', { ascending: false })
 
   return (

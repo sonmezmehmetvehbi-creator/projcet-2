@@ -22,9 +22,32 @@ const ReviewContext = createContext<ReviewCtx>({
   refreshPendingReview: () => {},
 })
 
+const REVIEWED_KEY = 'aceforge_reviewed_sessions'
+
+function loadReviewed(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(REVIEWED_KEY)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function markReviewed(sessionId: string) {
+  if (typeof window === 'undefined') return
+  try {
+    const arr = loadReviewed()
+    if (!arr.includes(sessionId)) {
+      localStorage.setItem(REVIEWED_KEY, JSON.stringify([...arr, sessionId]))
+    }
+  } catch {}
+}
+
 export function ReviewProvider({ children }: { children: React.ReactNode }) {
   const [pending, setPending] = useState<PendingReview | null>(null)
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set(loadReviewed()))
   const pathname = usePathname()
 
   const refreshPendingReview = useCallback(async () => {
@@ -61,8 +84,13 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
           sessionId={pending!.sessionId}
           tutorId={pending!.tutorId}
           tutorName={pending!.tutorName}
-          onClose={() => setDismissed(prev => new Set(prev).add(pending!.sessionId))}
+          onClose={() => {
+            markReviewed(pending!.sessionId)
+            setDismissed(prev => new Set(prev).add(pending!.sessionId))
+            setPending(null)
+          }}
           onSubmitted={() => {
+            markReviewed(pending!.sessionId)
             setDismissed(prev => new Set(prev).add(pending!.sessionId))
             setPending(null)
             refreshPendingReview()
