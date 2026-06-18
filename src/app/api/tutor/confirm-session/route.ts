@@ -12,27 +12,41 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-   const { sessionId, meetLink, introCallLink, introCallDate } = await request.json()
+   const { sessionId, meetLink } = await request.json()
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // SQL: ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS intro_call_link text;
-    // SQL: ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS intro_call_date timestamptz;
-    const updateData: Record<string, any> = { status: 'confirmed', meet_link: meetLink }
-    if (introCallLink) updateData.intro_call_link = introCallLink
-    if (introCallDate) updateData.intro_call_date = introCallDate
-
     const { data: session } = await adminClient
       .from('tutoring_sessions')
-      .update(updateData)
+      .update({ status: 'confirmed', meet_link: meetLink })
       .eq('id', sessionId)
       .select('*')
       .single()
 
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    // Compute and persist the email reminder due-times so a (manual or cron)
+    // sweep can pick them up later.
+    // SQL — add these columns to tutoring_sessions (run manually in Supabase):
+    //   ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS reminder_1hr_due timestamptz;
+    //   ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS reminder_15min_due timestamptz;
+    //   ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS reminder_1hr_sent boolean DEFAULT false;
+    //   ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS reminder_15min_sent boolean DEFAULT false;
+    const scheduledAt = new Date(session.scheduled_at)
+    const reminder1hr = new Date(scheduledAt.getTime() - 60 * 60 * 1000)
+    const reminder15min = new Date(scheduledAt.getTime() - 15 * 60 * 1000)
+    await adminClient
+      .from('tutoring_sessions')
+      .update({
+        reminder_1hr_due: reminder1hr.toISOString(),
+        reminder_15min_due: reminder15min.toISOString(),
+        reminder_1hr_sent: false,
+        reminder_15min_sent: false,
+      })
+      .eq('id', sessionId)
 
     // Get student info
     const { data: student } = await adminClient
@@ -76,18 +90,7 @@ export async function POST(request: Request) {
             <p style="margin:0 0 8px"><strong>📅 Date & Time:</strong> ${sessionDate}</p>
             <p style="margin:0 0 8px"><strong>⏱ Duration:</strong> ${session.session_length} minutes</p>
             <p style="margin:0 0 8px"><strong>🌐 Language:</strong> ${session.language}</p>
-            ${session.wants_intro_call ? `<p style="margin:0 0 8px"><strong>🤝 Intro Call:</strong> Your tutor will reach out via the session chat to schedule your free 15-minute intro call.</p>` : ''}
           </div>
-
-         ${session.wants_intro_call && introCallLink ? `
-          <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:12px;padding:20px;margin:20px 0">
-            <p style="color:#1e40af;font-weight:700;margin:0 0 8px">🤝 Free 15-Min Intro Call</p>
-            <p style="color:#374151;margin:0 0 8px">Your tutor has scheduled a free 15-minute intro call with you:</p>
-            <p style="color:#374151;margin:0 0 8px"><strong>📅 Date & Time:</strong> ${introCallDate ? new Date(introCallDate).toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'TBD'}</p>
-            <a href="${introCallLink}" style="display:inline-block;background:#1e40af;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Join Intro Call →</a>
-            <p style="color:#6b7280;font-size:12px;margin:8px 0 0">Or copy: ${introCallLink}</p>
-          </div>
-          ` : ''}
 
           <div style="background:#22550e;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
             <p style="color:white;font-weight:700;font-size:18px;margin:0 0 12px">🎥 Join Your Session</p>
@@ -134,20 +137,6 @@ export async function POST(request: Request) {
             <p style="margin:0"><strong>🎥 Meet Link you provided:</strong> <a href="${meetLink}" style="color:#22550e">${meetLink}</a></p>
           </div>
 
-          ${session.wants_intro_call ? `
-          <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:20px;margin:20px 0">
-            <p style="color:#92400e;font-weight:700;margin:0 0 12px">🤝 ACTION REQUIRED: Free 15-Min Intro Call Requested</p>
-            <p style="color:#374151;margin:0 0 8px">This student requested a free 15-minute intro call before the main session.</p>
-            <p style="color:#374151;margin:0 0 8px"><strong>What to do:</strong></p>
-            <ol style="color:#374151;margin:0;padding-left:20px">
-              <li style="margin-bottom:6px">Open the <a href="https://aceforge.app/tutoring/session/${session.id}" style="color:#22550e"><strong>session chat</strong></a></li>
-              <li style="margin-bottom:6px">Send the student a Google Meet link for the intro call and suggest a time, right in the chat</li>
-              <li style="margin-bottom:6px">Keep the intro call to 15 minutes maximum — it's free of charge</li>
-              <li>The main session link (above) is separate and will be used for the paid session</li>
-            </ol>
-          </div>
-          ` : ''}
-
           ${session.wants_continuing ? `
           <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;margin:20px 0">
             <p style="color:#166534;margin:0">🔁 <strong>Ongoing sessions interest:</strong> This student is interested in regular sessions. Feel free to discuss a recurring schedule with them!</p>
@@ -164,7 +153,6 @@ export async function POST(request: Request) {
           <div style="background:#1e1e2e;border-radius:12px;padding:20px;margin:20px 0">
             <p style="color:white;font-weight:700;margin:0 0 12px">📋 Your Checklist</p>
             <p style="color:rgba(255,255,255,0.8);margin:0 0 8px;font-size:14px">
-              ${session.wants_intro_call ? '☐ Send intro call link to student at ' + student?.email + '<br>' : ''}
               ☐ Review student's topic and any uploaded files before the session<br>
               ☐ Join the Google Meet on time: ${sessionDate}<br>
               ☐ Mark session as complete in your dashboard after it ends<br>
@@ -185,16 +173,6 @@ export async function POST(request: Request) {
         </div>
       `,
     })
-
-    // Schedule the 1-hour and 15-minute email reminders (best-effort).
-    try {
-      const origin = new URL(request.url).origin
-      await fetch(`${origin}/api/tutoring/schedule-reminders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') ?? '' },
-        body: JSON.stringify({ sessionId }),
-      })
-    } catch (e) { console.error('schedule-reminders call failed:', e) }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

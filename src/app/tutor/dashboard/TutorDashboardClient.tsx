@@ -466,12 +466,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             ))}
                           </div>
 
-                          {s.wants_intro_call && (
-                            <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: accentBg2, border: `1px solid ${accentBorder}`, marginBottom: '0.5rem' }}>
-                              <p style={{ fontSize: '0.8125rem', color: isDark ? 'rgb(165,180,252)' : accent, fontWeight: 600 }}>🤝 Student requested a free 15-min intro call first</p>
-                            </div>
-                          )}
-
                           {s.wants_continuing && (
                             <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: '0.5rem' }}>
                               <p style={{ fontSize: '0.8125rem', color: 'rgb(134,239,172)', fontWeight: 600 }}>🔁 Student interested in ongoing sessions</p>
@@ -492,13 +486,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '220px' }}>
-                          {s.wants_intro_call && (
-                            <div style={{ padding: '0.625rem 0.75rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, marginBottom: '0.25rem' }}>
-                              <p style={{ fontSize: '0.8125rem', color: isDark ? 'rgb(165,180,252)' : accent, fontWeight: 600, lineHeight: 1.5 }}>
-                                🤝 This student wants a free 15-min intro call first. After accepting, use the chat to send them a Google Meet link and suggest a time. Keep it under 15 minutes.
-                              </p>
-                            </div>
-                          )}
                           <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Main Session Meet Link</p>
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: extractMeetLink(e.target.value) }))}
                             placeholder="Paste Google Meet link"

@@ -83,12 +83,6 @@ function MeetGuideContent() {
               desc: 'Go back to your AceForge tutor dashboard, find the pending session, paste the Meet link in the field provided, and click "Accept & Send Link".',
               tip: 'The student will receive the link by email automatically once you confirm.',
             },
-            {
-              step: 6,
-              title: 'For Intro Calls (15-min)',
-              desc: 'If the student requested a free 15-minute intro call, coordinate it through the session chat — send a Google Meet link and a suggested time right in the chat. Keep it under 15 minutes.',
-              tip: 'Intro calls are a great way to introduce yourself, understand the student\'s needs, and make them feel comfortable.',
-            },
           ].map(item => (
             <div key={item.step} style={{ padding: '1.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${cardBorder}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>

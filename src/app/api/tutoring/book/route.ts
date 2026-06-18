@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     const {
       tutorId, subject, topic, grade, sessionLength, scheduledAt,
-      language, message, wantsIntroCall, wantsContinuing,
+      language, message, wantsContinuing,
       fileUrls, studentPrice, tutorPayout, stripePaymentIntentId
     } = await request.json()
 
@@ -41,7 +41,6 @@ export async function POST(request: Request) {
         student_price: studentPrice,
         tutor_payout: tutorPayout,
         recording_consent: true,
-        wants_intro_call: !!wantsIntroCall,
         wants_continuing: !!wantsContinuing,
         file_urls: fileUrls ?? [],
         stripe_payment_intent_id: stripePaymentIntentId || null,
@@ -70,7 +69,6 @@ export async function POST(request: Request) {
             <p><strong>Language:</strong> ${language}</p>
             ${message ? `<p><strong>Student note:</strong> ${message}</p>` : ''}
             <p><strong>Your payout:</strong> $${tutorPayout}</p>
-            ${wantsIntroCall ? '<p style="color:#22550e;font-weight:700">🤝 Student requested a FREE 15-min intro call first. Please reach out to schedule it.</p>' : ''}
             ${wantsContinuing ? '<p style="color:#22550e;font-weight:700">🔁 Student is interested in ongoing sessions.</p>' : ''}
             ${fileUrls && fileUrls.length > 0 ? `
               <div style="margin-top:16px">
@@ -103,7 +101,6 @@ export async function POST(request: Request) {
             <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
             <p><strong>Duration:</strong> ${sessionLength} minutes</p>
             <p><strong>Amount:</strong> $${studentPrice}</p>
-            ${wantsIntroCall ? '<p style="color:#22550e;font-weight:700">🤝 Your tutor will contact you to schedule a free 15-min intro call first.</p>' : ''}
           </div>
           <p>The tutor will confirm within 24 hours and send you a Google Meet link.</p>
           <p>Complete your session to earn <strong>+${sessionLength === 30 ? 50 : sessionLength === 90 ? 150 : 100} XP</strong>! ⭐</p>

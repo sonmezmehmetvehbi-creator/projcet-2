@@ -54,7 +54,6 @@ function BookingForm({ profile, tutor, availability }: Props) {
   const [selectedTime, setSelectedTime] = useState('')
   const [language, setLanguage] = useState(tutor.languages?.[0] ?? 'English')
   const [message, setMessage] = useState('')
-  const [wantsIntroCall, setWantsIntroCall] = useState(false)
   const [wantsContinuing, setWantsContinuing] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [uploadError, setUploadError] = useState('')
@@ -162,7 +161,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
           tutorId: tutor.id,
           subject, topic, grade, sessionLength,
           scheduledAt: new Date(`${selectedDate}T${selectedTime}`).toISOString(),
-          language, message, wantsIntroCall, wantsContinuing, fileUrls,
+          language, message, wantsContinuing, fileUrls,
           studentPrice: Math.round(totalPrice * 100) / 100,
           tutorPayout: sessionLength === 30 ? 15 : sessionLength === 90 ? 45 : 30,
           expressTier: express.tier,
@@ -236,25 +235,6 @@ function BookingForm({ profile, tutor, availability }: Props) {
           {step === 'details' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: textPrimary }}>Session Details</h1>
-
-              {/* Intro call */}
-              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.12)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', marginBottom: wantsIntroCall ? '0.875rem' : 0 }}>
-                  <input type="checkbox" checked={wantsIntroCall} onChange={e => setWantsIntroCall(e.target.checked)}
-                    style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
-                  <div onClick={() => setWantsIntroCall(!wantsIntroCall)} style={{ cursor: 'pointer' }}>
-                    <p style={{ fontWeight: 700, color: textPrimary, fontSize: '0.9375rem', marginBottom: '0.25rem' }}>
-                      🤝 Request a free 15-min intro call first <span style={{ fontWeight: 400, fontSize: '0.8125rem', color: 'rgb(34,85,14)' }}>(recommended)</span>
-                    </p>
-                    <p style={{ fontSize: '0.8125rem', color: textSecondary, lineHeight: 1.6 }}>Meet your tutor before committing. Completely free.</p>
-                  </div>
-                </div>
-                {wantsIntroCall && (
-                  <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.06)', border: '1px solid rgba(34,85,14,0.15)' }}>
-                    <p style={{ fontSize: '0.8125rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>✅ Tutor will contact you to schedule a free 15-min call first.</p>
-                  </div>
-                )}
-              </div>
 
               {/* Continuing */}
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
@@ -419,12 +399,6 @@ function BookingForm({ profile, tutor, availability }: Props) {
                       <Zap style={{ width: '0.875rem', height: '0.875rem' }} /> Express surcharge
                     </span>
                     <span style={{ fontSize: '0.875rem', color: tierStyle.color, fontWeight: 700 }}>+${expressFeeForLength.toFixed(2)}</span>
-                  </div>
-                )}
-                {wantsIntroCall && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)' }}>15-min intro call</span>
-                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>FREE</span>
                   </div>
                 )}
                 {isPremium && (

@@ -238,27 +238,6 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             ))}
           </div>
 
-          {session.wants_intro_call && session.intro_call_link ? (
-            <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.06)', border: '2px solid rgba(37,99,235,0.25)', marginBottom: '0.75rem' }}>
-              <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'rgb(37,99,235)', marginBottom: '0.5rem' }}>🤝 Free 15-Min Intro Call</p>
-              {session.intro_call_date && (
-                <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', marginBottom: '0.625rem' }}>
-                  📅 {new Date(session.intro_call_date).toLocaleString()}
-                </p>
-              )}
-              <a href={safeMeetLink(session.intro_call_link)} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(37,99,235)', color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>
-                🎥 Join Intro Call →
-              </a>
-            </div>
-          ) : session.wants_intro_call ? (
-            <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', marginBottom: '0.75rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', fontWeight: 600 }}>
-                🤝 {isTutor ? 'Student requested a free 15-min intro call — fill in the intro call link when confirming' : 'You requested a free 15-min intro call — your tutor will send the link when they confirm'}
-              </p>
-            </div>
-          ) : null}
-
           {session.wants_continuing && (
             <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '0.75rem' }}>
               <p style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>🔁 {isTutor ? 'Student is interested in ongoing sessions' : 'You expressed interest in ongoing sessions'}</p>
@@ -297,15 +276,6 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             </div>
           )}
         </div>
-
-        {/* Intro call coordination banner */}
-        {session.wants_intro_call && session.status === 'confirmed' && (
-          <div style={{ padding: '0.875rem 1.25rem', borderRadius: '0.875rem', marginBottom: '1rem', background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.25)' }}>
-            <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', fontWeight: 600, lineHeight: 1.5 }}>
-              🤝 Coordinate your free 15-min intro call here — {isTutor ? 'send the student a Meet link and a suggested time via this chat.' : 'your tutor will send you a Meet link and suggested time via this chat.'}
-            </p>
-          </div>
-        )}
 
         {/* Follow-up booking — student side */}
         {!isTutor && session.status === 'completed' && session.wants_continuing && (
