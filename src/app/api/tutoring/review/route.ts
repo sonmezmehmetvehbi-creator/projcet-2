@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -9,9 +10,16 @@ export async function POST(request: Request) {
 
     const { sessionId, tutorId, rating, comment, wouldRecommend } = await request.json()
 
-    // SQL — add to tutor_reviews (run manually in Supabase):
+    // Service-role client so the insert/rating update aren't blocked by RLS.
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // SQL — tutor_reviews must have these columns (run manually in Supabase):
+    //   ALTER TABLE tutor_reviews ADD COLUMN IF NOT EXISTS session_id uuid;
     //   ALTER TABLE tutor_reviews ADD COLUMN IF NOT EXISTS would_recommend boolean;
-    await supabase.from('tutor_reviews').insert({
+    const { error: insertError } = await adminClient.from('tutor_reviews').insert({
       session_id: sessionId,
       student_id: user.id,
       tutor_id: tutorId,
@@ -20,11 +28,16 @@ export async function POST(request: Request) {
       would_recommend: wouldRecommend ?? null,
     })
 
+    if (insertError) {
+      console.error('[review] insert failed:', insertError)
+      return NextResponse.json({ error: `Could not save review: ${insertError.message}` }, { status: 500 })
+    }
+
     // Update tutor avg rating
-    const { data: reviews } = await supabase.from('tutor_reviews').select('rating').eq('tutor_id', tutorId)
+    const { data: reviews } = await adminClient.from('tutor_reviews').select('rating').eq('tutor_id', tutorId)
     if (reviews && reviews.length > 0) {
       const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      await supabase.from('tutor_profiles').update({
+      await adminClient.from('tutor_profiles').update({
         rating: parseFloat(avg.toFixed(2)),
         total_reviews: reviews.length,
       }).eq('id', tutorId)

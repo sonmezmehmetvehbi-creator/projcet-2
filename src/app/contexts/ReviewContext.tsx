@@ -52,9 +52,12 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPendingReview = useCallback(async () => {
     try {
-      const res = await fetch('/api/tutoring/pending-review')
+      // no-store so the browser doesn't serve a stale "no pending review".
+      const res = await fetch('/api/tutoring/pending-review', { cache: 'no-store' })
       if (!res.ok) return
       const data = await res.json()
+      console.log('[ReviewContext] localStorage reviewed:', loadReviewed())
+      console.log('[ReviewContext] pending-review API returned:', data)
       if (data?.pending) {
         setPending({
           sessionId: data.pending.session_id,
@@ -64,13 +67,20 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
       } else {
         setPending(null)
       }
-    } catch {}
+    } catch (e) {
+      console.error('[ReviewContext] refresh error:', e)
+    }
   }, [])
 
   // Check on first mount and whenever the student navigates to a new page.
   useEffect(() => { refreshPendingReview() }, [refreshPendingReview, pathname])
 
   const showModal = pending && !dismissed.has(pending.sessionId)
+  useEffect(() => {
+    if (pending) {
+      console.log('[ReviewContext] pending session:', pending.sessionId, 'dismissed?', dismissed.has(pending.sessionId), 'showModal:', !dismissed.has(pending.sessionId))
+    }
+  }, [pending, dismissed])
 
   return (
     <ReviewContext.Provider value={{
