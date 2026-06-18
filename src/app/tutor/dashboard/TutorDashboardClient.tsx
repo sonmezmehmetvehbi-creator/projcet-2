@@ -112,6 +112,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'declined'>('all')
 
   // Follow-up proposal form state (keyed by the completed session id)
   const [followupOpen, setFollowupOpen] = useState<string | null>(null)
@@ -555,15 +556,42 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         )}
 
         {/* SESSIONS */}
-        {tab === 'sessions' && (
+        {tab === 'sessions' && (() => {
+          const FILTERS = [
+            { id: 'all', label: 'All', count: sessions.length },
+            { id: 'pending', label: 'Pending', count: sessions.filter(s => s.status === 'pending').length },
+            { id: 'confirmed', label: 'Confirmed', count: sessions.filter(s => s.status === 'confirmed').length },
+            { id: 'completed', label: 'Completed', count: sessions.filter(s => s.status === 'completed').length },
+            { id: 'declined', label: 'Declined', count: sessions.filter(s => s.status === 'declined').length },
+          ] as const
+          const visibleSessions = sessionFilter === 'all' ? sessions : sessions.filter(s => s.status === sessionFilter)
+
+          return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {sessions.length === 0 && (
+            {/* Filter bar */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+              {FILTERS.map(f => {
+                const active = sessionFilter === f.id
+                return (
+                  <button key={f.id} onClick={() => setSessionFilter(f.id as any)}
+                    style={{ padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                      background: active ? btnGrad : cardBg3, color: active ? 'white' : text3,
+                      border: `1px solid ${active ? 'transparent' : border3}`, whiteSpace: 'nowrap' }}>
+                    {f.label}{f.count > 0 ? ` (${f.count})` : ''}
+                  </button>
+                )
+              })}
+            </div>
+
+            {visibleSessions.length === 0 && (
               <div style={{ padding: '3rem', borderRadius: '1rem', background: cardBg2, border: `1px solid ${border2}`, textAlign: 'center', color: text4 }}>
-                No sessions yet.
+                {sessionFilter === 'all' ? 'No sessions yet.' : `No ${sessionFilter} sessions.`}
               </div>
             )}
-            {sessions.map(s => (
-              <div key={s.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}` }}>
+            {visibleSessions.map(s => {
+              const isCompleted = s.status === 'completed'
+              return (
+              <div key={s.id} style={{ padding: '1.25rem', borderRadius: '1rem', background: isCompleted ? 'rgba(34,197,94,0.06)' : cardBg, border: `1px solid ${isCompleted ? 'rgba(34,197,94,0.25)' : border1}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.375rem' }}>
@@ -574,6 +602,25 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     </div>
                     <p style={{ fontSize: '0.875rem', color: text3, marginBottom: '0.25rem' }}>{s.subject} — {s.topic}</p>
                     <p style={{ fontSize: '0.875rem', color: text3 }}>📅 {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min · ${s.tutor_payout}</p>
+                    {isCompleted && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        {[
+                          { label: 'Student', value: s.profiles?.display_name ?? 'Student' },
+                          { label: 'Subject', value: s.subject },
+                          { label: 'Topic', value: s.topic },
+                          { label: 'Grade', value: s.grade },
+                          { label: 'Language', value: s.language },
+                          { label: 'Duration', value: s.session_length + ' min' },
+                          { label: 'Date', value: new Date(s.scheduled_at).toLocaleString() },
+                          { label: 'Your Payout', value: '$' + s.tutor_payout },
+                        ].filter(item => item.value).map(item => (
+                          <div key={item.label} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', background: cardBg }}>
+                            <p style={{ fontSize: '0.625rem', fontWeight: 700, color: text5, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>{item.label}</p>
+                            <p style={{ fontSize: '0.8125rem', color: text2, fontWeight: 500 }}>{item.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {s.status === 'confirmed' && s.meet_link && (
                     <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
@@ -581,15 +628,15 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       🎥 Join
                     </a>
                   )}
-                  {s.status === 'completed' && s.wants_continuing && (
+                  {isCompleted && (
                     <button onClick={() => setFollowupOpen(followupOpen === s.id ? null : s.id)}
-                      style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg2, border: `1px solid ${accentBorder}`, color: accent, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
-                      📅 Schedule Follow-up Session
+                      style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg2, border: `1px solid ${accentBorder}`, color: accent, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      📅 Propose Follow-up
                     </button>
                   )}
                 </div>
 
-                {s.status === 'completed' && s.wants_continuing && followupOpen === s.id && (
+                {isCompleted && followupOpen === s.id && (
                   <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${accentBorder2}` }}>
                     <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: text2, marginBottom: '0.75rem' }}>📅 Propose a follow-up session with {s.profiles?.display_name ?? 'this student'}</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '0.625rem', marginBottom: '0.75rem' }}>
@@ -625,9 +672,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
-        )}
+          )
+        })()}
 
         {/* REVIEWS */}
         {tab === 'reviews' && (

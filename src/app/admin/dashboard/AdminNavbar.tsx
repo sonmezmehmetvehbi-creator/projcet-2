@@ -31,6 +31,7 @@ export default function AdminNavbar({ profile }: Props) {
 
   const NAV_LINKS = [
     { href: '/admin/dashboard', label: '📊 Dashboard' },
+    { href: '/admin/sessions', label: '📋 Sessions' },
     { href: '/admin/support', label: '🎧 Support Tickets' },
     { href: '/admin/tutors', label: '🎓 Tutor Applications' },
     { href: '/admin/appeals', label: '⚖️ Appeals' },

@@ -73,6 +73,20 @@ export async function POST(request: Request) {
       hour: '2-digit', minute: '2-digit',
     })
 
+    // Work out how far away the session is so we can tell both parties when to
+    // expect a reminder. The actual reminder emails are dispatched by the cron
+    // sweep using the reminder_* due-times persisted above.
+    const hoursUntil = (scheduledAt.getTime() - Date.now()) / (60 * 60 * 1000)
+    const moreThanHour = hoursUntil > 1
+    const moreThan24hr = hoursUntil > 24
+    const reminderNote = moreThanHour
+      ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:20px 0">
+           <p style="color:#1e40af;margin:0;font-size:14px">
+             ⏰ <strong>You will receive a reminder 1 hour before your session.</strong>${moreThan24hr ? ' Since your session is more than 24 hours away, we\'ll also send you reminders as it approaches.' : ''}
+           </p>
+         </div>`
+      : ''
+
     // Email to STUDENT — confirmation with meet link
     await resend.emails.send({
       from: 'AceForge <onboarding@resend.dev>',
@@ -99,6 +113,8 @@ export async function POST(request: Request) {
             </a>
             <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:12px 0 0">Or copy this link: ${meetLink}</p>
           </div>
+
+          ${reminderNote}
 
           <div style="background:#fff8f0;border:1px solid #fde68a;border-radius:12px;padding:16px;margin:20px 0">
             <p style="color:#92400e;margin:0;font-size:14px">
@@ -159,6 +175,8 @@ export async function POST(request: Request) {
               ☐ Payout will be sent within 24hrs after completion
             </p>
           </div>
+
+          ${reminderNote}
 
           <div style="background:#fff0f0;border:1px solid #fecaca;border-radius:12px;padding:16px;margin:20px 0">
             <p style="color:#991b1b;margin:0;font-size:14px">

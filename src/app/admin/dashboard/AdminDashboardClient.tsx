@@ -52,23 +52,6 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
   const [liveTickets, setLiveTickets] = useState(tickets)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const [sendingReminders, setSendingReminders] = useState(false)
-  const [remindersMsg, setRemindersMsg] = useState('')
-
-  async function sendReminders() {
-    setSendingReminders(true)
-    setRemindersMsg('')
-    try {
-      const res = await fetch('/api/cron/reminders')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to send reminders')
-      setRemindersMsg(`✅ Sent ${data.sent} reminder${data.sent === 1 ? '' : 's'}.`)
-    } catch (e: any) {
-      setRemindersMsg(`❌ ${e.message}`)
-    }
-    setSendingReminders(false)
-  }
-
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -186,13 +169,6 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
           <div>
             <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.25rem' }}>Admin Dashboard</h1>
             <p style={{ color: 'rgb(107,107,88)' }}>Welcome back, {profile?.display_name?.split(' ')[0]}.</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <button onClick={sendReminders} disabled={sendingReminders}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(34,85,14)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', opacity: sendingReminders ? 0.6 : 1 }}>
-              ⏰ {sendingReminders ? 'Sending…' : 'Send Reminders'}
-            </button>
-            {remindersMsg && <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', marginTop: '0.5rem' }}>{remindersMsg}</p>}
           </div>
         </div>
 
