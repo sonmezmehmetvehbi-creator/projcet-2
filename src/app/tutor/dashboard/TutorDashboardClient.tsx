@@ -57,6 +57,13 @@ const safeMeetLink = (url: string) => {
   return /^https?:\/\//i.test(u) ? u : 'https://' + u
 }
 
+// Tutors sometimes paste the whole Google Calendar invite description rather
+// than just the link; pull the Meet URL out of whatever they paste.
+const extractMeetLink = (input: string): string => {
+  const match = input.match(/https:\/\/meet\.google\.com\/[a-z0-9\-]+/i)
+  return match ? match[0] : input.trim()
+}
+
 interface Props {
   profile: any
   tutorProfile: any
@@ -493,9 +500,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             </div>
                           )}
                           <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: text4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Main Session Meet Link</p>
-                          <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: extractMeetLink(e.target.value) }))}
                             placeholder="Paste Google Meet link"
                             style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none' }} />
+                          <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.25rem' }}>
+                            Paste the Meet link or the full calendar invite — we'll extract the link automatically
+                          </p>
                           <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
                             style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                             {confirmingSession === s.id ? 'Processing...' : '✅ Accept & Send Link'}
