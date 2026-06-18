@@ -19,7 +19,9 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
 
   const { data: tutor } = await supabase
     .from('tutor_profiles')
-    .select('id, display_name, bio, subjects, languages, rating, total_reviews, total_sessions, hourly_rate, avatar_url, education, institution, linkedin_url, is_active')
+    // Use * so a not-yet-migrated degrees column (or absent legacy education
+    // columns) doesn't 400 the query and bounce the page.
+    .select('*')
     .eq('id', params.tutorId)
     .eq('status', 'approved')
     .single()
@@ -31,6 +33,15 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
   const linkedinUrl = tutor.linkedin_url
     ? (tutor.linkedin_url.startsWith('http') ? tutor.linkedin_url : 'https://' + tutor.linkedin_url)
     : null
+
+  // Prefer the multi-degree array; fall back to the legacy single columns so
+  // tutors who haven't re-saved their profile still show their education.
+  const degrees: { level?: string; field?: string; institution?: string }[] =
+    tutor.degrees?.length
+      ? tutor.degrees
+      : (tutor.education || tutor.institution)
+        ? [{ level: tutor.education, field: tutor.field_of_study, institution: tutor.institution }]
+        : []
 
   const { data: availability } = await supabase
     .from('tutor_availability')
@@ -112,12 +123,14 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
             )}
 
             {/* Education */}
-            {(tutor.education || tutor.institution) && (
+            {degrees.length > 0 && (
               <div style={{ marginBottom: '1.25rem' }}>
                 <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.625rem' }}>Education</h2>
-                <p style={{ fontSize: '0.9375rem', color: 'var(--af-text)', lineHeight: 1.7 }}>
-                  🎓 {[tutor.education, tutor.institution].filter(Boolean).join(' at ')}
-                </p>
+                {degrees.map((d: any, i: number) => (
+                  <p key={i} style={{ fontSize: '0.9375rem', color: 'var(--af-text)', lineHeight: 1.7 }}>
+                    🎓 {[d.level, d.field && 'in ' + d.field, d.institution && 'at ' + d.institution].filter(Boolean).join(' ')}
+                  </p>
+                ))}
               </div>
             )}
 

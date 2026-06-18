@@ -141,8 +141,16 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [editingProfile, setEditingProfile] = useState(false)
   const [bio, setBio] = useState(tutorProfile?.bio ?? '')
-  const [education, setEducation] = useState(tutorProfile?.education ?? '')
-  const [institution, setInstitution] = useState(tutorProfile?.institution ?? '')
+  // Degrees are stored as a JSONB array on tutor_profiles.degrees. Seed from the
+  // older single education/institution columns so existing tutors aren't blanked.
+  const [degrees, setDegrees] = useState<{ level: string; field: string; institution: string }[]>(
+    tutorProfile?.degrees?.length
+      ? tutorProfile.degrees
+      : (tutorProfile?.education || tutorProfile?.institution)
+        ? [{ level: tutorProfile.education ?? '', field: tutorProfile.field_of_study ?? '', institution: tutorProfile.institution ?? '' }]
+        : []
+  )
+  const [newDegree, setNewDegree] = useState<{ level: string; field: string; institution: string }>({ level: '', field: '', institution: '' })
   const [subjects, setSubjects] = useState<string[]>(tutorProfile?.subjects ?? [])
   const [languages, setLanguages] = useState<string[]>(tutorProfile?.languages ?? ['English'])
   const [subjectSearch, setSubjectSearch] = useState('')
@@ -243,6 +251,17 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   function toggleLanguage(lang: string) {
     setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
   }
+  function addDegree() {
+    if (!newDegree.level && !newDegree.field && !newDegree.institution) return
+    setDegrees(prev => [...prev, newDegree])
+    setNewDegree({ level: '', field: '', institution: '' })
+  }
+  function removeDegree(index: number) {
+    setDegrees(prev => prev.filter((_, i) => i !== index))
+  }
+  function formatDegree(d: { level: string; field: string; institution: string }) {
+    return [d.level, d.field && 'in ' + d.field, d.institution && 'at ' + d.institution].filter(Boolean).join(' ')
+  }
   function addSlot() {
     setAvailability((prev: any) => [...prev, { id: Date.now().toString(), day_of_week: 1, start_time: '09:00', end_time: '17:00', timezone }])
   }
@@ -259,7 +278,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
       await fetch('/api/tutor/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio, subjects, languages, education, institution, hourlyRate: tutorProfile?.hourly_rate ?? 30, availability, timezone, tutorId: tutorProfile?.id, venmo, paypal, zelle }),
+        body: JSON.stringify({ bio, subjects, languages, degrees, hourlyRate: tutorProfile?.hourly_rate ?? 30, availability, timezone, tutorId: tutorProfile?.id, venmo, paypal, zelle }),
       })
       setEditingProfile(false)
     } catch {}
@@ -950,31 +969,57 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 )}
               </div>
 
-              {/* Education */}
+              {/* Education / Degrees */}
               {editingProfile ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '1rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education Level</label>
-                    <select value={education} onChange={e => setEducation(e.target.value)}
-                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }}>
-                      <option value="" style={{ background: optionBg }}>Select education level</option>
-                      {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
-                        <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Institution</label>
-                    <input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="e.g. MIT, Harvard, Community College"
-                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }} />
-                  </div>
-                </div>
-              ) : (tutorProfile?.education || tutorProfile?.institution) ? (
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
-                  <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
-                    🎓 {[tutorProfile.education, tutorProfile.institution].filter(Boolean).join(' at ')}
-                  </p>
+
+                  {/* Existing degrees */}
+                  {degrees.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      {degrees.map((d, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
+                          <span style={{ fontSize: '0.875rem', color: text2 }}>🎓 {formatDegree(d)}</span>
+                          <button type="button" onClick={() => removeDegree(i)}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text4, display: 'flex', flexShrink: 0 }}>
+                            <X style={{ width: '1rem', height: '1rem' }} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add a degree */}
+                  <div style={{ padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border3}` }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.625rem' }}>
+                      <select value={newDegree.level} onChange={e => setNewDegree(prev => ({ ...prev, level: e.target.value }))}
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}>
+                        <option value="" style={{ background: optionBg }}>Education level</option>
+                        {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
+                          <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
+                        ))}
+                      </select>
+                      <input value={newDegree.field} onChange={e => setNewDegree(prev => ({ ...prev, field: e.target.value }))} placeholder="Field of Study, e.g. Computer Science"
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                      <input value={newDegree.institution} onChange={e => setNewDegree(prev => ({ ...prev, institution: e.target.value }))} placeholder="Institution, e.g. MIT"
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <button type="button" onClick={addDegree}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                      <Plus style={{ width: '0.875rem', height: '0.875rem' }} /> Add Degree
+                    </button>
+                  </div>
+                </div>
+              ) : degrees.length > 0 ? (
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {degrees.map((d, i) => (
+                      <p key={i} style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
+                        🎓 {formatDegree(d)}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 

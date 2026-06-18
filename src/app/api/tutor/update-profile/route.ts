@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { bio, subjects, languages, hourlyRate, availability, timezone, tutorId, venmo, paypal, zelle, education, institution } = await request.json()
+    const { bio, subjects, languages, hourlyRate, availability, timezone, tutorId, venmo, paypal, zelle, degrees } = await request.json()
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,12 +33,12 @@ export async function POST(request: Request) {
       (completedCount.count ?? 0) >= 10 &&
       (tutorProfile?.rating ?? 0) >= 4.5
 
+    // Run: ALTER TABLE tutor_profiles ADD COLUMN IF NOT EXISTS degrees jsonb DEFAULT '[]'::jsonb;
     await adminClient.from('tutor_profiles').update({
       bio,
       subjects,
       languages,
-      education: education || null,
-      institution: institution || null,
+      degrees: Array.isArray(degrees) ? degrees : [],
       venmo: venmo || null,
       paypal: paypal || null,
       zelle: zelle || null,
