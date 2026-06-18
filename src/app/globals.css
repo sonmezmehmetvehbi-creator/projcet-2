@@ -58,6 +58,28 @@
 }
 .student-dark .input::placeholder { color: var(--af-text-muted); }
 
+/* Tutor dark-purple theme, scoped the same way as .student-dark. Used on tutor
+   pages that lean on the global .card/.input/.btn-* classes (apply, appeal). */
+.tutor-dark .card,
+.tutor-dark .card-hover {
+  background-color: rgba(255,255,255,0.04);
+  border-color: rgba(99,102,241,0.2);
+  color: white;
+}
+.tutor-dark .input {
+  background-color: rgba(255,255,255,0.05);
+  border-color: rgba(99,102,241,0.3);
+  color: white;
+}
+.tutor-dark .input::placeholder { color: rgba(255,255,255,0.4); }
+.tutor-dark .input:focus { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.tutor-dark .label { color: rgba(255,255,255,0.85); }
+.tutor-dark .btn-primary { background-color: rgb(99,102,241); }
+.tutor-dark .btn-primary:hover { background-color: rgb(129,132,251); box-shadow: 0 8px 24px rgba(99,102,241,0.25); }
+.tutor-dark .btn-secondary { color: rgb(165,180,252); border-color: rgba(99,102,241,0.4); }
+.tutor-dark .btn-secondary:hover { background-color: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.7); }
+.tutor-dark .alert-error { background-color: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: rgb(248,113,113); }
+
 @layer components {
   sup { font-size: 0.75em; vertical-align: super; line-height: 0; }
   sub { font-size: 0.75em; vertical-align: sub; line-height: 0; }

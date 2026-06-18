@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { AlertCircle, CheckCircle, Upload, X, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { useTutorTheme } from '@/app/tutor/dashboard/TutorThemeContext'
 
 const COMMON_SUBJECTS = [
   'SAT Math', 'SAT Reading & Writing', 'ACT Math', 'ACT English',
@@ -59,9 +60,20 @@ interface Props {
   profile: any
   existingApplication: any
   appeal?: any
+  isTutor?: boolean
 }
 
-export default function TutorApplyClient({ profile, existingApplication, appeal }: Props) {
+export default function TutorApplyClient({ profile, existingApplication, appeal, isTutor = false }: Props) {
+  // Tutors (approved / pending) get the dark-purple tutor theme; the navbar
+  // toggle drives useTutorTheme. Non-tutor applicants keep the original green.
+  const { theme } = useTutorTheme()
+  const isDark = isTutor && theme === 'dark'
+  const accent = isTutor ? (isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)') : 'rgb(34,85,14)'
+  const text1 = isDark ? 'white' : 'rgb(26,26,20)'
+  const text2 = isDark ? 'rgba(255,255,255,0.55)' : 'rgb(107,107,88)'
+  const surfaceBg = isDark ? 'rgb(30,30,46)' : 'white'
+  const rootClass = isDark ? 'tutor-dark' : ''
+
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -208,13 +220,13 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
   if (existingApplication) {
     const statusEmoji = existingApplication.status === 'approved' ? '✅' : existingApplication.status === 'rejected' ? '❌' : '⏳'
     return (
-      <div style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
+      <div className={rootClass} style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
         <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{statusEmoji}</div>
-          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.75rem' }}>
+          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: text1, marginBottom: '0.75rem' }}>
             Application {existingApplication.status === 'pending' ? 'Under Review' : existingApplication.status === 'approved' ? 'Approved!' : 'Not Approved'}
           </h1>
-          <p style={{ color: 'rgb(107,107,88)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+          <p style={{ color: text2, lineHeight: 1.7, marginBottom: '1.5rem' }}>
             {existingApplication.status === 'pending' ? "Your application is being reviewed. We'll email you within 2-3 business days."
               : existingApplication.status === 'approved' ? 'Congratulations! Your tutor account is active.'
               : 'Unfortunately your application was not approved. Please contact us for more information.'}
@@ -226,9 +238,9 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
             appeal?.status === 'rejected' ? (
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.06)', border: '1px solid rgba(163,45,45,0.2)' }}>
                 <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', marginBottom: '0.5rem' }}>⚖️ Appeal Rejected — Final Decision</p>
-                <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+                <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7 }}>
                   We have reviewed your appeal and our decision is final. You are welcome to reapply after{' '}
-                  <strong style={{ color: 'rgb(26,26,20)' }}>
+                  <strong style={{ color: text1 }}>
                     {new Date(new Date(appeal.created_at).getTime() + 6 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </strong>{' '}
                   with a stronger application. We wish you the best.
@@ -237,7 +249,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
             ) : appeal?.status === 'pending' ? (
               <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.06)', border: '1px solid rgba(232,160,32,0.2)' }}>
                 <p style={{ fontWeight: 700, color: 'rgb(180,120,10)', marginBottom: '0.5rem' }}>⏳ Appeal Under Review</p>
-                <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', lineHeight: 1.7 }}>
+                <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7 }}>
                   Your appeal has been submitted and is being reviewed by our team. We will email you within 3-5 business days.
                 </p>
               </div>
@@ -254,13 +266,13 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
   }
 
   if (success) return (
-    <div style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
+    <div className={rootClass} style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
       <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center' }}>
         <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgb(234,243,222)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
           <CheckCircle style={{ width: '2rem', height: '2rem', color: 'rgb(59,109,17)' }} />
         </div>
-        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.75rem' }}>Application Submitted! 🎉</h1>
-        <p style={{ color: 'rgb(107,107,88)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: text1, marginBottom: '0.75rem' }}>Application Submitted! 🎉</h1>
+        <p style={{ color: text2, lineHeight: 1.7, marginBottom: '1.5rem' }}>
           Thanks for applying! We'll review your application and get back to you within 2-3 business days.
         </p>
         <a href="/dashboard" className="btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>Back to Dashboard</a>
@@ -273,21 +285,21 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
   const filteredSubjects = ALL_SUBJECTS.filter(s => s.toLowerCase().includes(subjectSearch.toLowerCase()) && !subjects.includes(s) && !COMMON_SUBJECTS.includes(s))
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+    <div className={rootClass} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.5rem' }}>Become an AceForge Tutor</h1>
-          <p style={{ color: 'rgb(107,107,88)', fontSize: '1.0625rem' }}>Help students ace their exams. Earn on your schedule.</p>
+          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>Become an AceForge Tutor</h1>
+          <p style={{ color: text2, fontSize: '1.0625rem' }}>Help students ace their exams. Earn on your schedule.</p>
         </div>
 
         <div style={{ display: 'flex', gap: '0', marginBottom: '2rem' }}>
           {steps.map((s, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem' }}>
-              <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: i + 1 <= step ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.1)', color: i + 1 <= step ? 'white' : 'rgb(107,107,88)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 700, transition: 'all 0.3s' }}>
+              <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: i + 1 <= step ? accent : 'rgba(34,85,14,0.1)', color: i + 1 <= step ? 'white' : text2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 700, transition: 'all 0.3s' }}>
                 {i + 1 < step ? '✓' : i + 1}
               </div>
-              <span style={{ fontSize: '0.6875rem', color: i + 1 === step ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontWeight: i + 1 === step ? 700 : 400, textAlign: 'center' }}>{s}</span>
+              <span style={{ fontSize: '0.6875rem', color: i + 1 === step ? accent : text2, fontWeight: i + 1 === step ? 700 : 400, textAlign: 'center' }}>{s}</span>
             </div>
           ))}
         </div>
@@ -301,7 +313,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
 
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Personal Information</h2>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Personal Information</h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
@@ -331,25 +343,25 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                 <label className="label">Languages you can tutor in *</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
                   {languages.map(lang => (
-                    <span key={lang} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: 'rgb(34,85,14)', fontSize: '0.875rem', fontWeight: 600 }}>
+                    <span key={lang} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: accent, fontSize: '0.875rem', fontWeight: 600 }}>
                       {lang}
-                      <button type="button" onClick={() => toggleLanguage(lang)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(34,85,14)', padding: 0, display: 'flex' }}>
+                      <button type="button" onClick={() => toggleLanguage(lang)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: accent, padding: 0, display: 'flex' }}>
                         <X style={{ width: '0.75rem', height: '0.75rem' }} />
                       </button>
                     </span>
                   ))}
                 </div>
                 <div style={{ position: 'relative' }}>
-                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'rgb(107,107,88)' }} />
+                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
                   <input value={langSearch} onChange={e => { setLangSearch(e.target.value); setShowLangDropdown(true) }}
                     onFocus={() => setShowLangDropdown(true)}
                     onBlur={() => setTimeout(() => setShowLangDropdown(false), 200)}
                     className="input" placeholder="Search and add languages..." style={{ paddingLeft: '2.25rem' }} />
                   {showLangDropdown && filteredLangs.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: surfaceBg, border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
                       {filteredLangs.slice(0, 20).map(lang => (
                         <button key={lang} type="button" onMouseDown={() => { toggleLanguage(lang); setLangSearch('') }}
-                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'rgb(26,26,20)' }}
+                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,85,14,0.05)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                           {lang}
@@ -363,7 +375,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
            <div>
                 <label className="label">
                   LinkedIn Profile URL
-                  <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem', marginLeft: '0.375rem' }}>(strongly recommended)</span>
+                  <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem', marginLeft: '0.375rem' }}>(strongly recommended)</span>
                 </label>
                 <input value={linkedIn} onChange={e => setLinkedIn(e.target.value)} className="input" placeholder="https://linkedin.com/in/yourname" />
                 <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)' }}>
@@ -373,22 +385,22 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                 </div>
               </div>
               <div>
-                <label className="label">About You * <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(students will see this)</span></label>
+                <label className="label">About You * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(students will see this)</span></label>
                 <textarea value={bio} onChange={e => setBio(e.target.value)} className="input" rows={4} style={{ resize: 'vertical' }}
                   placeholder="Tell students about your teaching style, experience, and what makes you a great tutor..." />
               </div>
 
               <div>
-                <label className="label">Photo ID * <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(driver's license or passport — kept confidential)</span></label>
+                <label className="label">Photo ID * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(driver's license or passport — kept confidential)</span></label>
                 {idFile ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.2)' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600, flex: 1 }}>✓ {idFile.name}</span>
-                    <button type="button" onClick={() => setIdFile(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(107,107,88)' }}><X style={{ width: '1rem', height: '1rem' }} /></button>
+                    <span style={{ fontSize: '0.875rem', color: accent, fontWeight: 600, flex: 1 }}>✓ {idFile.name}</span>
+                    <button type="button" onClick={() => setIdFile(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
                   </div>
                 ) : (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: 'white' }}>
-                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'rgb(107,107,88)' }} />
-                    <span style={{ fontSize: '0.875rem', color: 'rgb(107,107,88)' }}>Upload photo ID (JPG, PNG, PDF)</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: surfaceBg }}>
+                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: text2 }} />
+                    <span style={{ fontSize: '0.875rem', color: text2 }}>Upload photo ID (JPG, PNG, PDF)</span>
                     <input type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display: 'none' }} onChange={e => setIdFile(e.target.files?.[0] ?? null)} />
                   </label>
                 )}
@@ -405,14 +417,14 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
 
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Qualifications</h2>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Qualifications</h2>
 
               <div>
-                <label className="label">Subjects you can tutor * <span style={{ fontWeight: 400, color: 'rgb(107,107,88)', fontSize: '0.8125rem' }}>(select all that apply)</span></label>
+                <label className="label">Subjects you can tutor * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(select all that apply)</span></label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                   {COMMON_SUBJECTS.map(sub => (
                     <button key={sub} type="button" onClick={() => toggleSubject(sub)}
-                      style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', border: `1.5px solid ${subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.2)'}`, background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? 'rgb(34,85,14)' : 'rgb(107,107,88)', fontSize: '0.8125rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
+                      style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', border: `1.5px solid ${subjects.includes(sub) ? accent : 'rgba(34,85,14,0.2)'}`, background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? accent : text2, fontSize: '0.8125rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
                       {sub}
                     </button>
                   ))}
@@ -421,9 +433,9 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                 {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
                     {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).map(sub => (
-                      <span key={sub} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: 'rgb(34,85,14)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                      <span key={sub} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: accent, fontSize: '0.8125rem', fontWeight: 600 }}>
                         {sub}
-                        <button type="button" onClick={() => toggleSubject(sub)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(34,85,14)', padding: 0, display: 'flex' }}>
+                        <button type="button" onClick={() => toggleSubject(sub)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: accent, padding: 0, display: 'flex' }}>
                           <X style={{ width: '0.75rem', height: '0.75rem' }} />
                         </button>
                       </span>
@@ -432,16 +444,16 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                 )}
 
                 <div style={{ position: 'relative' }}>
-                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'rgb(107,107,88)' }} />
+                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
                   <input value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); setShowSubjectDropdown(true) }}
                     onFocus={() => setShowSubjectDropdown(true)}
                     onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 200)}
                     className="input" placeholder="Search for other subjects (AP, IB, GMAT, etc.)..." style={{ paddingLeft: '2.25rem' }} />
                   {showSubjectDropdown && subjectSearch && filteredSubjects.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: surfaceBg, border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
                       {filteredSubjects.slice(0, 20).map(sub => (
                         <button key={sub} type="button" onMouseDown={() => { toggleSubject(sub); setSubjectSearch('') }}
-                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'rgb(26,26,20)' }}
+                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,85,14,0.05)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                           {sub}
@@ -492,13 +504,13 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                   <label className="label">{item.label}</label>
                   {item.file ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.2)' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600, flex: 1 }}>✓ {item.file.name}</span>
-                      <button type="button" onClick={() => item.setter(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(107,107,88)' }}><X style={{ width: '1rem', height: '1rem' }} /></button>
+                      <span style={{ fontSize: '0.875rem', color: accent, fontWeight: 600, flex: 1 }}>✓ {item.file.name}</span>
+                      <button type="button" onClick={() => item.setter(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
                     </div>
                   ) : (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: 'white' }}>
-                      <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'rgb(107,107,88)' }} />
-                      <span style={{ fontSize: '0.875rem', color: 'rgb(107,107,88)' }}>{item.hint}</span>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: surfaceBg }}>
+                      <Upload style={{ width: '1.25rem', height: '1.25rem', color: text2 }} />
+                      <span style={{ fontSize: '0.875rem', color: text2 }}>{item.hint}</span>
                       <input type="file" accept={item.accept} style={{ display: 'none' }} onChange={e => item.setter(e.target.files?.[0] ?? null)} />
                     </label>
                   )}
@@ -519,12 +531,12 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
 
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Your Availability</h2>
-              <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)' }}>Set your weekly availability. Students will book sessions during these times.</p>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Your Availability</h2>
+              <p style={{ fontSize: '0.9375rem', color: text2 }}>Set your weekly availability. Students will book sessions during these times.</p>
 
               {availability.length === 0 && (
                 <div style={{ padding: '2rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px dashed rgba(34,85,14,0.2)' }}>
-                  <p style={{ color: 'rgb(107,107,88)', marginBottom: '1rem' }}>No availability set yet</p>
+                  <p style={{ color: text2, marginBottom: '1rem' }}>No availability set yet</p>
                   <button onClick={addAvailability} className="btn-secondary" style={{ fontSize: '0.875rem' }}>+ Add Time Slot</button>
                 </div>
               )}
@@ -569,11 +581,11 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
 
           {step === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>Payment & Agreement</h2>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Payment & Agreement</h2>
 
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.1)' }}>
-                <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.5rem' }}>💰 How you get paid</p>
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.875rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>💰 How you get paid</p>
+                <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
                   You'll receive $30/hr via your preferred payment method within 24 hours after each completed session. Provide at least one payment handle below.
                 </p>
               </div>
@@ -594,8 +606,8 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
               </div>
 
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.05)', border: '1px solid rgba(232,160,32,0.2)' }}>
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
-                  🧾 <strong style={{ color: 'rgb(26,26,20)' }}>Tax note:</strong> If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We will contact you at that point to collect your tax information securely.
+                <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
+                  🧾 <strong style={{ color: text1 }}>Tax note:</strong> If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We will contact you at that point to collect your tax information securely.
                 </p>
               </div>
 
@@ -608,8 +620,8 @@ export default function TutorApplyClient({ profile, existingApplication, appeal 
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)' }}>
                     <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
-                      style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
-                    <label style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
+                      style={{ width: '1.125rem', height: '1.125rem', accentColor: accent, flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                    <label style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
                       {item.text}
                     </label>
                   </div>
