@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
@@ -51,15 +52,25 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
     .order('day_of_week', { ascending: true })
 
   // Fetch all reviews, then look up student names manually — the embedded FK
-  // join was unreliable and sometimes returned no names.
-  const { data: reviewsRaw } = await supabase
+  // join was unreliable and sometimes returned no names. Use the service-role
+  // client so RLS can't hide reviews/names from a visiting student.
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: reviewsRaw } = await adminClient
     .from('tutor_reviews')
-    .select('id, rating, comment, created_at, student_id')
+    .select('*')
     .eq('tutor_id', params.tutorId)
     .order('created_at', { ascending: false })
 
-  const reviews = await Promise.all((reviewsRaw ?? []).map(async (r) => {
-    const { data: student } = await supabase.from('profiles').select('display_name').eq('id', r.student_id).single()
+  const reviews = await Promise.all((reviewsRaw ?? []).map(async (r: any) => {
+    const { data: student } = await adminClient
+      .from('profiles')
+      .select('display_name')
+      .eq('id', r.student_id)
+      .single()
     return { ...r, profiles: student }
   }))
 
@@ -67,7 +78,12 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
   const freeRate = 49.99
   const premiumRate = 34.99
 
-  const avgRating = tutor.rating > 0 ? tutor.rating.toFixed(1) : null
+  // Prefer the stored average; fall back to computing from the fetched reviews
+  // so the summary is accurate even if tutor.rating hasn't been recomputed yet.
+  const reviewAvg = reviews.length > 0
+    ? (tutor.rating > 0 ? Number(tutor.rating) : reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length)
+    : 0
+  const avgRating = reviewAvg > 0 ? reviewAvg.toFixed(1) : null
   const sortedAvailability = (availability ?? []).sort((a: any, b: any) => a.day_of_week - b.day_of_week)
 
   return (
@@ -105,11 +121,11 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                   {tutor.display_name}
                 </h1>
                 {avgRating && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <a href="#reviews" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', textDecoration: 'none', cursor: 'pointer' }}>
                     <span style={{ color: 'rgb(180,120,10)', fontSize: '1rem' }}>{'⭐'.repeat(Math.round(Number(avgRating)))}</span>
                     <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'var(--af-text)' }}>{avgRating}</span>
-                    <span style={{ color: 'var(--af-text-muted)', fontSize: '0.875rem' }}>({tutor.total_reviews} review{tutor.total_reviews !== 1 ? 's' : ''})</span>
-                  </div>
+                    <span style={{ color: 'var(--af-text-muted)', fontSize: '0.875rem', textDecoration: 'underline' }}>({tutor.total_reviews} review{tutor.total_reviews !== 1 ? 's' : ''})</span>
+                  </a>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
@@ -237,7 +253,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
           )}
 
           {/* Reviews */}
-          <ReviewsSection reviews={reviews} />
+          <ReviewsSection reviews={reviews} avgRating={reviewAvg} />
 
           {/* Book CTA */}
           <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
