@@ -16,6 +16,23 @@ export default function AdminTutorsClient({ applications: initialApps }: Props) 
 
   const filtered = applications.filter(a => filter === 'all' ? true : a.status === filter)
 
+  async function verifyCredentials(id: string) {
+    setLoading(id)
+    try {
+      const res = await fetch('/api/admin/tutor-verify', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutorId: id }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, credential_verified: true } : a))
+    } catch (err: any) {
+      alert('Error: ' + err.message)
+    }
+    setLoading(null)
+  }
+
   async function updateStatus(id: string, status: 'approved' | 'rejected', userId: string, email: string, name: string) {
     if (!confirm(`Are you sure you want to ${status === 'approved' ? 'APPROVE' : 'REJECT'} ${name}?`)) return
     setLoading(id)
@@ -81,6 +98,11 @@ export default function AdminTutorsClient({ applications: initialApps }: Props) 
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: statusBg(app.status), color: statusColor(app.status) }}>
                       {statusEmoji(app.status)} {app.status}
                     </span>
+                    {app.credential_verified && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgb(37,99,235)', color: 'white' }}>
+                        ✓ Verified
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize: '0.875rem', color: 'rgb(107,107,88)', marginBottom: '0.5rem' }}>{app.profiles?.email}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.5rem' }}>
@@ -95,6 +117,12 @@ export default function AdminTutorsClient({ applications: initialApps }: Props) 
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {app.status === 'approved' && !app.credential_verified && (
+                    <button onClick={() => verifyCredentials(app.id)} disabled={loading === app.id}
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', borderRadius: '0.75rem', background: 'rgb(37,99,235)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
+                      {loading === app.id ? '…' : '✓ Verify Credentials'}
+                    </button>
+                  )}
                   <button onClick={() => setSelected(selected === app.id ? null : app.id)}
                     className="btn-secondary" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                     {selected === app.id ? <ChevronUp style={{ width: '0.875rem', height: '0.875rem' }} /> : <ChevronDown style={{ width: '0.875rem', height: '0.875rem' }} />}

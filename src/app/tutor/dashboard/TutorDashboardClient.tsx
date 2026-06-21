@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
 import TutorNavbar from './TutorNavbar'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -174,6 +175,63 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const [proposingFollowup, setProposingFollowup] = useState<string | null>(null)
   const [proposedFollowups, setProposedFollowups] = useState<string[]>([])
 
+  // Session notes modal
+  const [notesSession, setNotesSession] = useState<any | null>(null)
+  const [notesText, setNotesText] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
+
+  // Earnings chart + payout
+  const [earningsData, setEarningsData] = useState<{ weekly: any[]; monthly: any[] }>({ weekly: [], monthly: [] })
+  const [earningsView, setEarningsView] = useState<'weekly' | 'monthly'>('weekly')
+  const [requestingPayout, setRequestingPayout] = useState(false)
+  const [payoutRows, setPayoutRows] = useState(payouts)
+
+  // Fire-and-forget background syncs on dashboard load: 15-min reminders + top
+  // tutor recompute (hobby plan has no cron, so we trigger them on page load).
+  useEffect(() => {
+    fetch('/api/cron/session-reminders').catch(() => {})
+    fetch('/api/cron/top-tutor-sync').catch(() => {})
+    fetch('/api/tutor/earnings')
+      .then(r => r.json())
+      .then(d => { if (d?.weekly) setEarningsData({ weekly: d.weekly, monthly: d.monthly }) })
+      .catch(() => {})
+  }, [])
+
+  async function saveNotes() {
+    if (!notesSession) return
+    setSavingNotes(true)
+    try {
+      const res = await fetch('/api/tutor/session-notes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: notesSession.id, notes: notesText }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Could not save notes: ${data.error ?? res.status}`); setSavingNotes(false); return }
+      setSessions(prev => prev.map(s => s.id === notesSession.id ? { ...s, tutor_notes: notesText } : s))
+      setNotesSession(null)
+    } catch (err: any) {
+      alert(`Could not save notes: ${err?.message ?? 'network error'}`)
+    }
+    setSavingNotes(false)
+  }
+
+  async function requestPayout() {
+    if (!confirm('Request payout for your pending balance?')) return
+    setRequestingPayout(true)
+    try {
+      const res = await fetch('/api/tutor/request-payout', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Could not request payout: ${data.error ?? res.status}`); setRequestingPayout(false); return }
+      // Optimistically move pending rows to processing.
+      setPayoutRows(prev => prev.map(p => (p.request_status ?? 'pending') === 'pending' ? { ...p, request_status: 'processing', requested_at: new Date().toISOString() } : p))
+      alert('Payout requested! Admin will process within 24 hours.')
+    } catch (err: any) {
+      alert(`Could not request payout: ${err?.message ?? 'network error'}`)
+    }
+    setRequestingPayout(false)
+  }
+
   useEffect(() => {
     if (!tutorProfile?.id) return
     const supabase = createClient()
@@ -232,6 +290,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
   const weeklyEarned = payouts.filter(p => p.status === 'paid' && new Date(p.paid_at) > weekAgo).reduce((sum, p) => sum + p.amount, 0)
+
+  // Balances by payout request_status (new payout-request flow).
+  const statusOf = (p: any) => p.request_status ?? 'pending'
+  const pendingBalance = payoutRows.filter(p => statusOf(p) === 'pending').reduce((sum, p) => sum + (p.amount ?? 0), 0)
+  const availableBalance = payoutRows.filter(p => statusOf(p) === 'processing').reduce((sum, p) => sum + (p.amount ?? 0), 0)
+  const totalPaidBalance = payoutRows.filter(p => statusOf(p) === 'paid').reduce((sum, p) => sum + (p.amount ?? 0), 0)
+  const hasProcessing = payoutRows.some(p => statusOf(p) === 'processing')
 
   const statusColors: Record<string, string> = {
     completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)',
@@ -468,6 +533,16 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
               <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,197,94,0.15)', color: 'rgb(74,222,128)', border: '1px solid rgba(34,197,94,0.3)' }}>
                 ✅ Approved Tutor
               </span>
+              {tutorProfile?.is_top_tutor && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(251,191,36,0.18)', color: 'rgb(251,191,36)', border: '1px solid rgba(251,191,36,0.4)' }}>
+                  ⭐ Top Tutor
+                </span>
+              )}
+              {tutorProfile?.credential_verified && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(37,99,235,0.18)', color: 'rgb(96,165,250)', border: '1px solid rgba(37,99,235,0.4)' }}>
+                  ✓ Verified
+                </span>
+              )}
               {avgRating && (
                 <span style={{ fontSize: '0.875rem', color: 'rgb(251,191,36)' }}>⭐ {avgRating} ({reviews.length} reviews)</span>
               )}
@@ -723,6 +798,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       ✅ Follow-up proposed
                     </span>
                   )}
+                  {isCompleted && (
+                    <button onClick={() => { setNotesSession(s); setNotesText(s.tutor_notes ?? '') }}
+                      style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: cardBg3, border: `1px solid ${border4}`, color: text2, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      📝 {s.tutor_notes ? 'View Notes' : 'Add Notes'}
+                    </button>
+                  )}
                 </div>
 
                 {isCompleted && followupOpen === s.id && (
@@ -805,11 +886,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         {/* EARNINGS */}
         {tab === 'earnings' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            {/* Balance cards by payout request status */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
               {[
-                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
-                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, color: accent, bg: accentBg },
-                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Pending Balance', value: `$${pendingBalance.toFixed(2)}`, color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Available Balance', value: `$${availableBalance.toFixed(2)}`, color: accent, bg: accentBg },
+                { label: 'Total Earned', value: `$${totalPaidBalance.toFixed(2)}`, color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
               ].map(s => (
                 <div key={s.label} style={{ padding: '1.5rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{s.label}</p>
@@ -817,25 +899,68 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 </div>
               ))}
             </div>
+
+            {/* Request payout */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <button onClick={requestPayout} disabled={requestingPayout || pendingBalance <= 0 || hasProcessing}
+                style={{ padding: '0.75rem 1.5rem', borderRadius: '0.875rem', background: (pendingBalance <= 0 || hasProcessing) ? cardBg3 : btnGrad, border: (pendingBalance <= 0 || hasProcessing) ? `1px solid ${border4}` : 'none', color: (pendingBalance <= 0 || hasProcessing) ? text4 : 'white', fontWeight: 700, fontSize: '0.9375rem', cursor: (requestingPayout || pendingBalance <= 0 || hasProcessing) ? 'default' : 'pointer' }}>
+                {requestingPayout ? 'Requesting…' : hasProcessing ? 'Payout request in progress' : pendingBalance <= 0 ? 'No pending balance' : `💸 Request Payout ($${pendingBalance.toFixed(2)})`}
+              </button>
+            </div>
+
+            {/* Earnings chart */}
+            <div style={{ padding: '1.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}`, marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: text1 }}>Earnings Over Time</h2>
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                  {(['weekly', 'monthly'] as const).map(v => (
+                    <button key={v} onClick={() => setEarningsView(v)}
+                      style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                        background: earningsView === v ? btnGrad : 'transparent', color: earningsView === v ? 'white' : text3,
+                        border: `1px solid ${earningsView === v ? 'transparent' : border3}`, textTransform: 'capitalize' }}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={earningsView === 'weekly' ? earningsData.weekly : earningsData.monthly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: text3, fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: text3, fontSize: 12 }} axisLine={false} tickLine={false} width={40} />
+                    <Tooltip
+                      cursor={{ fill: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}
+                      contentStyle={{ background: modalBg, border: `1px solid ${border3}`, borderRadius: '0.625rem', color: text1, fontSize: '0.8125rem' }}
+                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Earned']} />
+                    <Bar dataKey="amount" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
             <div style={{ padding: '1.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}` }}>
               <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: text1, marginBottom: '1rem' }}>Payout History</h2>
-              {payouts.length === 0 ? (
+              {payoutRows.length === 0 ? (
                 <p style={{ color: text4, textAlign: 'center', padding: '2rem' }}>No payouts yet</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {payouts.map(p => (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', borderRadius: '0.75rem', background: p.status === 'paid' ? 'rgba(34,197,94,0.06)' : 'rgba(234,179,8,0.06)', border: `1px solid ${p.status === 'paid' ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}` }}>
+                  {payoutRows.map(p => {
+                    const rs = p.request_status ?? 'pending'
+                    const isPaid = rs === 'paid'
+                    return (
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', borderRadius: '0.75rem', background: isPaid ? 'rgba(34,197,94,0.06)' : 'rgba(234,179,8,0.06)', border: `1px solid ${isPaid ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}` }}>
                       <div>
                         <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: text1 }}>${p.amount.toFixed(2)}</p>
                         <p style={{ fontSize: '0.8125rem', color: text4 }}>
-                          {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()} via ${p.paid_via}` : 'Pending'}
+                          {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()}` : rs === 'processing' ? `Requested ${p.requested_at ? new Date(p.requested_at).toLocaleDateString() : ''}` : 'Pending'}
                         </p>
                       </div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: p.status === 'paid' ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: p.status === 'paid' ? 'rgb(74,222,128)' : 'rgb(251,191,36)' }}>
-                        {p.status}
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: isPaid ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: isPaid ? 'rgb(74,222,128)' : 'rgb(251,191,36)' }}>
+                        {rs}
                       </span>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -1198,6 +1323,38 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         )}
 
       </div>
+
+      {/* Session notes modal */}
+      {notesSession && (
+        <div onClick={() => !savingNotes && setNotesSession(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: modalBg, borderRadius: '1.25rem', maxWidth: '32rem', width: '100%', padding: '1.75rem', border: `1px solid ${border3}`, boxShadow: '0 25px 80px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: text1 }}>Session Notes</h2>
+              <button onClick={() => setNotesSession(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text3, display: 'flex' }}>
+                <X style={{ width: '1.125rem', height: '1.125rem' }} />
+              </button>
+            </div>
+            <p style={{ fontSize: '0.8125rem', color: text4, marginBottom: '1rem' }}>
+              {notesSession.subject} · {notesSession.profiles?.display_name ?? 'Student'}
+            </p>
+            <textarea value={notesText} onChange={e => setNotesText(e.target.value)} rows={6}
+              placeholder="Private session notes — only you can see this"
+              style={{ width: '100%', padding: '0.875rem 1rem', borderRadius: '0.875rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.9375rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '1rem' }} />
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setNotesSession(null)} disabled={savingNotes}
+                style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'transparent', border: `1px solid ${border4}`, color: text3, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={saveNotes} disabled={savingNotes}
+                style={{ padding: '0.625rem 1.5rem', borderRadius: '0.75rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', opacity: savingNotes ? 0.7 : 1 }}>
+                {savingNotes ? 'Saving…' : 'Save Notes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

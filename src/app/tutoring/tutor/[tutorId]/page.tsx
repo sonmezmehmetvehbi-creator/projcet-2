@@ -117,9 +117,21 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                 </div>
               )}
               <div style={{ flex: 1 }}>
-                <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '0.375rem' }}>
-                  {tutor.display_name}
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
+                  <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'var(--af-text)' }}>
+                    {tutor.display_name}
+                  </h1>
+                  {tutor.credential_verified && (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgb(37,99,235)', color: 'white' }}>
+                      ✓ Verified
+                    </span>
+                  )}
+                  {tutor.is_top_tutor && (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgb(251,191,36)', color: 'rgb(60,40,0)' }}>
+                      ⭐ Top Tutor
+                    </span>
+                  )}
+                </div>
                 {avgRating && (
                   <a href="#reviews" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', textDecoration: 'none', cursor: 'pointer' }}>
                     <span style={{ color: 'rgb(180,120,10)', fontSize: '1rem' }}>{'⭐'.repeat(Math.round(Number(avgRating)))}</span>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from '@/app/tutor/dashboard/TutorThemeContext'
 import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
+import SessionExtension from './SessionExtension'
 
 interface Props {
   session: any
@@ -276,6 +277,14 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             </div>
           )}
         </div>
+
+        {/* Session extension (billing/time logging only) */}
+        <SessionExtension
+          session={session}
+          isTutor={isTutor}
+          tutorHourlyRate={tutorProfile?.hourly_rate ?? 0}
+          theme={{ accent, cardBg, cardBorder, text1, text2, modalBg: cardBg }}
+        />
 
         {/* Follow-up booking — student side */}
         {!isTutor && session.status === 'completed' && session.wants_continuing && (
