@@ -37,6 +37,43 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Dispute state
+  const [showDisputeForm, setShowDisputeForm] = useState(false)
+  const [disputeReason, setDisputeReason] = useState('Tutor didn\'t show up')
+  const [disputeDetails, setDisputeDetails] = useState('')
+  const [submittingDispute, setSubmittingDispute] = useState(false)
+  const [disputeSubmitted, setDisputeSubmitted] = useState(false)
+
+  // 48hr dispute window: scheduled within the last 48 hours, completed/confirmed,
+  // and no dispute already filed.
+  const hoursSinceSession = (Date.now() - new Date(session.scheduled_at).getTime()) / (1000 * 60 * 60)
+  const hoursLeftToDispute = Math.max(0, Math.ceil(48 - hoursSinceSession))
+  const withinDisputeWindow = hoursSinceSession >= 0 && hoursSinceSession <= 48
+  const canDispute =
+    !isTutor &&
+    (session.status === 'completed' || session.status === 'confirmed') &&
+    withinDisputeWindow &&
+    !session.dispute_status &&
+    !disputeSubmitted
+
+  async function submitDispute() {
+    setSubmittingDispute(true)
+    try {
+      const res = await fetch('/api/tutoring/dispute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, reason: disputeReason, details: disputeDetails }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Could not submit dispute: ${data.error ?? res.status}`); setSubmittingDispute(false); return }
+      setDisputeSubmitted(true)
+      setShowDisputeForm(false)
+    } catch (err: any) {
+      alert(`Could not submit dispute: ${err?.message ?? 'network error'}`)
+    }
+    setSubmittingDispute(false)
+  }
+
   useEffect(() => {
     console.log('[SessionChatClient] isTutor:', isTutor)
   }, [])
@@ -285,6 +322,65 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
           tutorHourlyRate={tutorProfile?.hourly_rate ?? 0}
           theme={{ accent, cardBg, cardBorder, text1, text2, modalBg: cardBg }}
         />
+
+        {/* Dispute window countdown (student, completed sessions) */}
+        {!isTutor && session.status === 'completed' && !session.dispute_status && !disputeSubmitted && withinDisputeWindow && (
+          <p style={{ fontSize: '0.8125rem', color: text3, marginBottom: '0.75rem' }}>
+            ⏳ Dispute window closes in {hoursLeftToDispute} hour{hoursLeftToDispute !== 1 ? 's' : ''}
+          </p>
+        )}
+
+        {/* Dispute submitted confirmation */}
+        {(disputeSubmitted || session.dispute_status) && (
+          <div style={{ padding: '0.875rem 1.25rem', borderRadius: '0.875rem', marginBottom: '1rem', background: 'rgba(163,45,45,0.06)', border: '1.5px solid rgba(163,45,45,0.25)' }}>
+            <p style={{ fontSize: '0.875rem', color: 'rgb(200,70,70)', fontWeight: 600 }}>
+              {disputeSubmitted ? '✅ Dispute submitted. We\'ll review within 24 hours.' : '⚠️ A dispute has been filed for this session — under review.'}
+            </p>
+          </div>
+        )}
+
+        {/* Open Dispute — student */}
+        {canDispute && (
+          <div style={{ marginBottom: '1rem' }}>
+            {!showDisputeForm ? (
+              <div>
+                <button onClick={() => setShowDisputeForm(true)}
+                  style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgba(163,45,45,0.1)', border: '1.5px solid rgba(163,45,45,0.35)', color: 'rgb(200,70,70)', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+                  ⚠️ Open Dispute
+                </button>
+                <span style={{ fontSize: '0.75rem', color: text3, marginLeft: '0.625rem' }}>(available within 48hrs of session)</span>
+              </div>
+            ) : (
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.04)', border: '1.5px solid rgba(163,45,45,0.25)' }}>
+                <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1rem', fontWeight: 700, color: text1, marginBottom: '0.875rem' }}>Open a Dispute</p>
+
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.375rem' }}>What went wrong?</label>
+                <select value={disputeReason} onChange={e => setDisputeReason(e.target.value)}
+                  style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.625rem', border: `1.5px solid rgba(163,45,45,0.3)`, background: cardBg, color: text1, fontSize: '0.875rem', outline: 'none', marginBottom: '0.875rem', boxSizing: 'border-box' }}>
+                  {['Tutor didn\'t show up', 'Session quality was poor', 'Wrong subject/topic covered', 'Technical issues', 'Other'].map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.375rem' }}>Additional details</label>
+                <textarea value={disputeDetails} onChange={e => setDisputeDetails(e.target.value)} rows={4}
+                  placeholder="Tell us what happened…"
+                  style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.625rem', border: `1.5px solid rgba(163,45,45,0.3)`, background: cardBg, color: text1, fontSize: '0.875rem', outline: 'none', resize: 'vertical', marginBottom: '0.875rem', boxSizing: 'border-box' }} />
+
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button onClick={submitDispute} disabled={submittingDispute}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'rgb(163,45,45)', border: 'none', color: 'white', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', opacity: submittingDispute ? 0.7 : 1 }}>
+                    {submittingDispute ? 'Submitting…' : 'Submit Dispute'}
+                  </button>
+                  <button onClick={() => setShowDisputeForm(false)} disabled={submittingDispute}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: 'transparent', border: `1px solid ${cardBorder}`, color: text2, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Follow-up booking — student side */}
         {!isTutor && session.status === 'completed' && session.wants_continuing && (

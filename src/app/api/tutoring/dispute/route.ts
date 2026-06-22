@@ -12,14 +12,16 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { sessionId, reason } = await request.json()
+    const { sessionId, reason, details } = await request.json()
 
     const { data: profile } = await supabase.from('profiles').select('email, display_name').eq('id', user.id).single()
+
+    const fullReason = details ? `${reason} — ${details}` : reason
 
     await supabase.from('tutoring_sessions').update({
       status: 'disputed',
       dispute_filed: true,
-      dispute_reason: reason,
+      dispute_reason: fullReason,
       dispute_status: 'pending',
     }).eq('id', sessionId)
 
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
           <p><strong>Student:</strong> ${profile?.display_name} (${profile?.email})</p>
           <p><strong>Session ID:</strong> ${sessionId}</p>
           <p><strong>Reason:</strong> ${reason}</p>
+          ${details ? `<p><strong>Details:</strong> ${details}</p>` : ''}
           <p>Please review the session recording and resolve within 3-5 business days.</p>
           <a href="https://aceforge.app/admin/disputes" style="display:inline-block;background:#991b1b;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">Review Dispute →</a>
         </div>
