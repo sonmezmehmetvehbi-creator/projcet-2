@@ -48,9 +48,10 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   // session can be marked complete before or after its scheduled time), so we
   // prefer completed_at/updated_at and fall back to scheduled_at.
   const sessionEndTime = session.completed_at ?? session.updated_at ?? session.scheduled_at
-  const hoursSinceSession = (Date.now() - new Date(sessionEndTime).getTime()) / (1000 * 60 * 60)
+  const rawHours = (Date.now() - new Date(sessionEndTime).getTime()) / (1000 * 60 * 60)
+  const hoursSinceSession = Math.max(0, rawHours)
   const hoursLeftToDispute = Math.max(0, Math.ceil(48 - hoursSinceSession))
-  const withinDisputeWindow = hoursSinceSession >= 0 && hoursSinceSession <= 48
+  const withinDisputeWindow = hoursSinceSession <= 48
   const canDispute =
     !isTutor &&
     (session.status === 'completed' || session.status === 'confirmed') &&
