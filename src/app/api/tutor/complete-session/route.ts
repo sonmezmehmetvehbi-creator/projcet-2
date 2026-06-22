@@ -23,7 +23,9 @@ export async function POST(request: Request) {
     // embedded FK join was failing with "Could not find a relationship".
     const { data: session } = await adminClient
       .from('tutoring_sessions')
-      .update({ status: 'completed' })
+      // completed_at anchors the 48hr dispute window to actual completion time.
+      // -- ALTER TABLE tutoring_sessions ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('id', sessionId)
       .select('*')
       .single()
