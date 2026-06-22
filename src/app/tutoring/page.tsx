@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
 import StudentThemeShell from '@/app/contexts/StudentThemeShell'
+import TutoringListClient from './TutoringListClient'
 
 export default async function TutoringPage() {
   const supabase = await createServerSupabaseClient()
@@ -110,55 +111,7 @@ export default async function TutoringPage() {
               </Link>
             </div>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px,1fr))', gap:'1.25rem' }}>
-              {tutors.map((tutor: any) => (
-                <div key={tutor.id} className="card" style={{ padding:'1.5rem', transition:'all 0.2s' }}>
-                  <Link href={`/tutoring/tutor/${tutor.id}`} style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem', textDecoration:'none' }}>
-                    {tutor.avatar_url ? (
-                      <img src={tutor.avatar_url} alt={tutor.display_name}
-                        style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
-                    ) : (
-                      <div style={{ width:'3.5rem', height:'3.5rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'1.25rem', fontWeight:700, flexShrink:0 }}>
-                        {tutor.display_name?.[0] ?? '?'}
-                      </div>
-                    )}
-                    <div>
-                      <p style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.0625rem', color:'var(--af-text)', marginBottom:'0.125rem' }}>
-                        {tutor.display_name}
-                      </p>
-                      {tutor.rating > 0 && (
-                        <p style={{ fontSize:'0.875rem', color:'rgb(180,120,10)' }}>
-                          {'⭐'.repeat(Math.round(tutor.rating))} ({tutor.total_reviews})
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem', marginBottom:'0.875rem' }}>
-                    {tutor.subjects?.slice(0,3).map((s: string) => (
-                      <span key={s} style={{ fontSize:'0.75rem', padding:'0.2rem 0.5rem', borderRadius:'9999px', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600 }}>
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                  <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', lineHeight:1.6, marginBottom:'1rem', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
-                    {tutor.bio || 'Experienced tutor ready to help you succeed.'}
-                  </p>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
-                    <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>
-                      ${hourlyRate}/hr
-                    </span>
-                    <span style={{ fontSize:'0.75rem', color:'var(--af-text-muted)' }}>
-                      {tutor.total_sessions} sessions
-                    </span>
-                  </div>
-                  <Link href={`/tutoring/book/${tutor.id}`}
-                    className="btn-primary"
-                    style={{ width:'100%', justifyContent:'center', display:'flex', textDecoration:'none' }}>
-                    Book Session
-                  </Link>
-                </div>
-              ))}
-            </div>
+            <TutoringListClient tutors={tutors} isPremium={isPremium} />
           )}
 
           {/* Recording notice */}
