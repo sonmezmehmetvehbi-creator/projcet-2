@@ -3,7 +3,21 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-const SUBJECTS = ['All', 'SAT Math', 'SAT Reading', 'Calculus', 'Algebra', 'Biology', 'Chemistry', 'Physics', 'English', 'Computer Science', 'Spanish', 'French']
+const SUBJECTS = [
+  'All Subjects',
+  'SAT Math', 'SAT Reading & Writing', 'ACT Math', 'ACT English', 'Algebra', 'Geometry',
+  'Pre-Calculus', 'Calculus', 'Statistics', 'Biology', 'Chemistry', 'Physics',
+  'AP Chemistry', 'AP Biology', 'AP Physics', 'English Literature', 'Essay Writing', 'History',
+  'Economics', 'Computer Science', 'Python', 'Java', 'Spanish', 'French', 'Trigonometry',
+  'Linear Algebra', 'Differential Equations', 'Discrete Math', 'Organic Chemistry', 'Biochemistry',
+  'Anatomy', 'Environmental Science', 'AP Calculus AB', 'AP Calculus BC', 'AP Statistics',
+  'AP Computer Science', 'AP History', 'AP Economics', 'AP English', 'AP Spanish', 'AP French',
+  'IB Math', 'IB Physics', 'IB Chemistry', 'IB Biology', 'IB Economics', 'GMAT', 'GRE', 'LSAT',
+  'MCAT', 'TOEFL', 'IELTS', 'Music Theory', 'Art History', 'Philosophy', 'Psychology', 'Sociology',
+  'Accounting', 'Finance', 'Marketing', 'Business', 'C++', 'JavaScript', 'React', 'Data Science',
+  'Machine Learning', 'Arabic', 'Mandarin', 'German', 'Italian', 'Portuguese', 'Japanese',
+  'Korean', 'Russian', 'Turkish', 'Hindi', 'Hebrew',
+]
 const LANGUAGES = ['All Languages', 'English', 'Spanish', 'French', 'Arabic', 'Turkish', 'Mandarin', 'German', 'Hindi', 'Portuguese']
 const SORTS = [
   { value: 'rating', label: 'Top Rated' },
@@ -11,17 +25,6 @@ const SORTS = [
   { value: 'sessions', label: 'Most Sessions' },
   { value: 'newest', label: 'Newest' },
 ]
-
-const PILL_BASE: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  padding: '0.4rem 0.875rem',
-  borderRadius: '9999px',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  fontFamily: 'Syne, sans-serif',
-  transition: 'all 0.15s',
-}
 
 const SELECT_STYLE: React.CSSProperties = {
   fontSize: '0.875rem',
@@ -37,7 +40,7 @@ const SELECT_STYLE: React.CSSProperties = {
 
 export default function TutoringListClient({ tutors, isPremium }: { tutors: any[]; isPremium: boolean }) {
   const [search, setSearch] = useState('')
-  const [subject, setSubject] = useState('All')
+  const [subject, setSubject] = useState('All Subjects')
   const [language, setLanguage] = useState('All Languages')
   const [sort, setSort] = useState('rating')
 
@@ -46,17 +49,9 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let list = (tutors ?? []).filter((t) => {
-      if (q) {
-        const inName = (t.display_name ?? '').toLowerCase().includes(q)
-        const inSubjects = (t.subjects ?? []).some((s: string) => s.toLowerCase().includes(q))
-        if (!inName && !inSubjects) return false
-      }
-      if (subject !== 'All') {
-        if (!(t.subjects ?? []).some((s: string) => s.toLowerCase() === subject.toLowerCase())) return false
-      }
-      if (language !== 'All Languages') {
-        if (!(t.languages ?? []).some((l: string) => l.toLowerCase() === language.toLowerCase())) return false
-      }
+      if (q && !(t.display_name ?? '').toLowerCase().includes(q)) return false
+      if (subject !== 'All Subjects' && !(t.subjects ?? []).includes(subject)) return false
+      if (language !== 'All Languages' && !(t.languages ?? []).includes(language)) return false
       return true
     })
 
@@ -81,55 +76,40 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
     <div>
       {/* Filter bar */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        {/* Search */}
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tutors, subjects, or topics..."
-          style={{
-            width: '100%',
-            fontSize: '0.9375rem',
-            padding: '0.7rem 1rem',
-            borderRadius: '0.75rem',
-            border: '1.5px solid rgba(34,85,14,0.2)',
-            background: 'var(--af-card)',
-            color: 'var(--af-text)',
-            marginBottom: '1rem',
-            boxSizing: 'border-box',
-          }}
-        />
-
-        {/* Subject pills */}
-        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-          {SUBJECTS.map((s) => {
-            const active = subject === s
-            return (
-              <button
-                key={s}
-                onClick={() => setSubject(s)}
-                style={{
-                  ...PILL_BASE,
-                  background: active ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.06)',
-                  color: active ? 'white' : 'rgb(34,85,14)',
-                  border: `1.5px solid ${active ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`,
-                }}
-              >
-                {s}
-              </button>
-            )
-          })}
+        {/* Row 1: name search + subject dropdown */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by tutor name..."
+            style={{
+              flex: '1 1 220px',
+              fontSize: '0.9375rem',
+              padding: '0.7rem 1rem',
+              borderRadius: '0.75rem',
+              border: '1.5px solid rgba(34,85,14,0.2)',
+              background: 'var(--af-card)',
+              color: 'var(--af-text)',
+              boxSizing: 'border-box',
+            }}
+          />
+          <select value={subject} onChange={(e) => setSubject(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 220px' }}>
+            {SUBJECTS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Dropdowns + price toggle */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} style={SELECT_STYLE}>
+        {/* Row 2: language + sort */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 220px' }}>
             {LANGUAGES.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
 
-          <select value={sort} onChange={(e) => setSort(e.target.value)} style={SELECT_STYLE}>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 220px' }}>
             {SORTS.map((s) => (
               <option key={s.value} value={s.value}>Sort: {s.label}</option>
             ))}
