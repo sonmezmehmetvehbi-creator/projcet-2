@@ -44,6 +44,9 @@ export async function POST(request: Request) {
         wants_continuing: !!wantsContinuing,
         file_urls: fileUrls ?? [],
         stripe_payment_intent_id: stripePaymentIntentId || null,
+        // Auto-decline window: tutor has 24 hours to accept or the request is
+        // automatically declined and the student fully refunded.
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       })
       .select('id')
       .single()

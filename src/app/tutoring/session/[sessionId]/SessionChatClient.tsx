@@ -52,6 +52,12 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const hoursSinceSession = Math.max(0, rawHours)
   const hoursLeftToDispute = Math.max(0, Math.ceil(48 - hoursSinceSession))
   const withinDisputeWindow = hoursSinceSession <= 48
+
+  // Pending auto-decline window: tutor has 24h from booking to accept.
+  const hoursUntilExpiry = session.expires_at
+    ? Math.max(0, Math.ceil((new Date(session.expires_at).getTime() - Date.now()) / (1000 * 60 * 60)))
+    : null
+  const expiryUrgent = hoursUntilExpiry !== null && hoursUntilExpiry < 2
   const canDispute =
     !isTutor &&
     (session.status === 'completed' || session.status === 'confirmed') &&
@@ -314,6 +320,24 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
                   Your tutor will review your request and send a Google Meet link. You can message them below while you wait.
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Auto-decline countdown (student, pending sessions) */}
+          {!isTutor && session.status === 'pending' && hoursUntilExpiry !== null && (
+            <div style={{
+              marginTop: '0.75rem',
+              padding: '0.875rem 1.125rem',
+              borderRadius: '0.875rem',
+              background: expiryUrgent ? 'rgba(220,38,38,0.08)' : 'rgba(234,179,8,0.1)',
+              border: `1.5px solid ${expiryUrgent ? 'rgba(220,38,38,0.35)' : 'rgba(234,179,8,0.3)'}`,
+            }}>
+              <p style={{ fontSize: '0.875rem', fontWeight: 700, color: expiryUrgent ? 'rgb(220,38,38)' : 'rgb(180,120,10)' }}>
+                {expiryUrgent ? '⏳ Waiting for tutor to accept — expires in less than ' + Math.max(1, hoursUntilExpiry) + ' hour' + (hoursUntilExpiry === 1 ? '' : 's') : '⏳ Waiting for tutor to accept — expires in ' + hoursUntilExpiry + ' hour' + (hoursUntilExpiry === 1 ? '' : 's')}.
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: expiryUrgent ? 'rgb(185,28,28)' : 'rgb(107,107,88)', marginTop: '0.25rem' }}>
+                Full refund if not accepted.
+              </p>
             </div>
           )}
         </div>

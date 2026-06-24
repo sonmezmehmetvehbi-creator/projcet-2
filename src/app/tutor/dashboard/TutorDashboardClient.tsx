@@ -609,6 +609,17 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: 'rgb(251,191,36)' }}>⏳ Awaiting your response</span>
                           </div>
 
+                          {(() => {
+                            if (!s.expires_at) return null
+                            const hoursLeft = Math.max(0, Math.ceil((new Date(s.expires_at).getTime() - Date.now()) / (1000 * 60 * 60)))
+                            const urgent = hoursLeft < 6
+                            return (
+                              <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: urgent ? 'rgb(220,38,38)' : 'rgb(217,119,6)', marginBottom: '0.75rem' }}>
+                                ⚠️ Expires in {hoursLeft} hour{hoursLeft === 1 ? '' : 's'} — accept or decline before then
+                              </p>
+                            )
+                          })()}
+
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.875rem' }}>
                             {[
                               { label: 'Subject', value: s.subject },

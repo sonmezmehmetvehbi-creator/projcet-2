@@ -132,6 +132,26 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
     if (e.target) e.target.value = ''
   }
 
+  const [autoDeclining, setAutoDeclining] = useState(false)
+
+  async function runAutoDecline() {
+    if (autoDeclining) return
+    setAutoDeclining(true)
+    try {
+      const res = await fetch('/api/cron/auto-decline')
+      const data = await res.json()
+      if (!res.ok) {
+        alert('Auto-decline failed: ' + (data.error ?? 'Unknown error'))
+      } else {
+        alert(`✅ Auto-declined ${data.autoDeclined} expired session request${data.autoDeclined === 1 ? '' : 's'}.`)
+      }
+    } catch (e: any) {
+      alert('Auto-decline failed: ' + e.message)
+    } finally {
+      setAutoDeclining(false)
+    }
+  }
+
   async function closeTicket(ticketId: string) {
     await fetch('/api/admin/close-ticket', {
       method: 'POST',
@@ -169,6 +189,12 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
           <div>
             <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.25rem' }}>Admin Dashboard</h1>
             <p style={{ color: 'rgb(107,107,88)' }}>Welcome back, {profile?.display_name?.split(' ')[0]}.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+            <button onClick={runAutoDecline} disabled={autoDeclining}
+              style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(217,119,6,0.1)', border: '1.5px solid rgba(217,119,6,0.3)', color: 'rgb(180,99,5)', fontWeight: 600, fontSize: '0.875rem', cursor: autoDeclining ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}>
+              {autoDeclining ? 'Processing…' : '⏰ Auto-Decline Expired'}
+            </button>
           </div>
         </div>
 
