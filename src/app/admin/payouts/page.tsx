@@ -19,29 +19,112 @@ export default async function AdminPayoutsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { data: payoutsRaw } = await adminClient
-    .from('tutor_payouts')
-    .select('*')
-    .eq('request_status', 'processing')
-    .order('requested_at', { ascending: false })
+  // Pull everything in bulk, then join in memory (no RLS-friendly FK joins).
+  const [
+    { data: payoutsRaw },
+    { data: tutorsRaw },
+    { data: sessionsRaw },
+    { data: reportsRaw },
+  ] = await Promise.all([
+    adminClient.from('tutor_payouts').select('*').order('created_at', { ascending: false }),
+    adminClient.from('tutor_profiles').select('id, user_id, display_name, venmo, paypal, zelle, w9_collected'),
+    adminClient.from('tutoring_sessions').select('id, subject, scheduled_at, student_price, tutor_payout, status, created_at'),
+    adminClient.from('platform_reports').select('*').order('year', { ascending: true }),
+  ])
 
-  // Two-query lookup for tutor name + payout method (no RLS joins).
-  const payouts = await Promise.all((payoutsRaw ?? []).map(async (p) => {
-    const { data: tutor } = await adminClient
-      .from('tutor_profiles')
-      .select('display_name, venmo, paypal, zelle')
-      .eq('id', p.tutor_id)
-      .single()
-    const method = tutor?.venmo ? `Venmo: ${tutor.venmo}`
-      : tutor?.paypal ? `PayPal: ${tutor.paypal}`
-        : tutor?.zelle ? `Zelle: ${tutor.zelle}` : 'Not set'
-    return { ...p, tutor_name: tutor?.display_name ?? 'Tutor', method }
+  // Tutor user_id → email lookup
+  const tutorUserIds = (tutorsRaw ?? []).map(t => t.user_id).filter(Boolean)
+  const emailById = new Map<string, string>()
+  if (tutorUserIds.length > 0) {
+    const { data: tutorProfiles } = await adminClient
+      .from('profiles')
+      .select('id, email')
+      .in('id', tutorUserIds)
+    for (const p of (tutorProfiles ?? [])) emailById.set(p.id, p.email)
+  }
+
+  const tutorById = new Map((tutorsRaw ?? []).map(t => [t.id, t]))
+  const sessionById = new Map((sessionsRaw ?? []).map(s => [s.id, s]))
+
+  const paymentHandle = (t: any) =>
+    t?.venmo ? `Venmo: ${t.venmo}`
+      : t?.paypal ? `PayPal: ${t.paypal}`
+        : t?.zelle ? `Zelle: ${t.zelle}` : 'Not set'
+
+  // Enrich payouts with tutor + session info
+  const payouts = (payoutsRaw ?? []).map((p) => {
+    const t = tutorById.get(p.tutor_id)
+    const s = p.session_id ? sessionById.get(p.session_id) : null
+    return {
+      id: p.id,
+      tutor_id: p.tutor_id,
+      amount: Number(p.amount ?? 0),
+      status: p.status ?? 'pending',
+      request_status: p.request_status ?? 'pending',
+      requested_at: p.requested_at ?? null,
+      paid_at: p.paid_at ?? null,
+      created_at: p.created_at ?? null,
+      paid_via: p.paid_via ?? null,
+      reference_id: p.reference_id ?? null,
+      receipt_url: p.receipt_url ?? null,
+      notes: p.notes ?? null,
+      tutor_name: t?.display_name ?? 'Tutor',
+      tutor_email: (t?.user_id && emailById.get(t.user_id)) || '',
+      payment_handle: paymentHandle(t),
+      venmo: t?.venmo ?? null,
+      paypal: t?.paypal ?? null,
+      zelle: t?.zelle ?? null,
+      session_subject: s?.subject ?? '—',
+      session_date: s?.scheduled_at ?? null,
+    }
+  })
+
+  const thisYear = new Date().getFullYear()
+
+  // Per-tutor aggregates
+  const tutors = (tutorsRaw ?? []).map((t) => {
+    const tp = payouts.filter(p => p.tutor_id === t.id)
+    const totalPaid = tp.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
+    const totalPending = tp.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
+    const earnedThisYear = tp
+      .filter(p => p.status === 'paid' && p.paid_at && new Date(p.paid_at).getFullYear() === thisYear)
+      .reduce((sum, p) => sum + p.amount, 0)
+    const sessionCount = tp.length
+    return {
+      id: t.id,
+      name: t.display_name ?? 'Tutor',
+      email: (t.user_id && emailById.get(t.user_id)) || '',
+      venmo: t.venmo ?? null,
+      paypal: t.paypal ?? null,
+      zelle: t.zelle ?? null,
+      payment_handle: paymentHandle(t),
+      w9_collected: !!t.w9_collected,
+      total_paid: totalPaid,
+      total_pending: totalPending,
+      earned_this_year: earnedThisYear,
+      session_count: sessionCount,
+    }
+  })
+
+  // Revenue = student payments on sessions that were actually delivered/paid.
+  const revenueSessions = (sessionsRaw ?? []).filter(s => ['completed', 'confirmed'].includes(s.status))
+  const sessions = revenueSessions.map(s => ({
+    id: s.id,
+    student_price: Number(s.student_price ?? 0),
+    created_at: s.created_at ?? s.scheduled_at ?? null,
+    status: s.status,
   }))
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
       <AdminNavbar profile={profile} />
-      <AdminPayoutsClient payouts={payouts} />
+      <AdminPayoutsClient
+        payouts={payouts}
+        tutors={tutors}
+        sessions={sessions}
+        reports={reportsRaw ?? []}
+        thisYear={thisYear}
+      />
     </div>
   )
 }
