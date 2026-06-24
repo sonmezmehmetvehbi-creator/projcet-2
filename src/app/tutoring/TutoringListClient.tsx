@@ -39,10 +39,9 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
   const [search, setSearch] = useState('')
   const [subject, setSubject] = useState('All')
   const [language, setLanguage] = useState('All Languages')
-  const [premiumRate, setPremiumRate] = useState(isPremium)
   const [sort, setSort] = useState('rating')
 
-  const hourlyRate = premiumRate ? 34.99 : 49.99
+  const hourlyRate = isPremium ? 34.99 : 49.99
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -135,32 +134,6 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
               <option key={s.value} value={s.value}>Sort: {s.label}</option>
             ))}
           </select>
-
-          {/* Price toggle */}
-          <div style={{ display: 'flex', borderRadius: '0.625rem', overflow: 'hidden', border: '1.5px solid rgba(34,85,14,0.2)' }}>
-            <button
-              onClick={() => setPremiumRate(false)}
-              style={{
-                ...PILL_BASE,
-                borderRadius: 0,
-                background: !premiumRate ? 'rgb(34,85,14)' : 'transparent',
-                color: !premiumRate ? 'white' : 'rgb(34,85,14)',
-              }}
-            >
-              Standard $49.99
-            </button>
-            <button
-              onClick={() => setPremiumRate(true)}
-              style={{
-                ...PILL_BASE,
-                borderRadius: 0,
-                background: premiumRate ? 'rgb(34,85,14)' : 'transparent',
-                color: premiumRate ? 'white' : 'rgb(34,85,14)',
-              }}
-            >
-              ⚡ Premium $34.99
-            </button>
-          </div>
         </div>
       </div>
 
@@ -235,10 +208,21 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
                   </p>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', marginTop: 'auto' }}>
-                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.125rem', color: 'rgb(34,85,14)' }}>
-                    ${hourlyRate}/hr
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1rem', marginTop: 'auto' }}>
+                  <div>
+                    <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.125rem', color: 'rgb(34,85,14)' }}>
+                      ${hourlyRate}/hr
+                    </span>
+                    {isPremium ? (
+                      <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgb(34,85,14)', marginTop: '0.125rem' }}>
+                        ⚡ Your premium rate
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: '0.6875rem', color: 'var(--af-text-muted)', marginTop: '0.125rem' }}>
+                        Save $15/hr with Premium ⚡
+                      </p>
+                    )}
+                  </div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)' }}>
                     {tutor.total_sessions ?? 0} sessions
                   </span>
