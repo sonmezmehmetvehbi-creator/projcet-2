@@ -846,10 +846,16 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           style={{ width: '100%', padding: '0.5rem 0.625rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                     </div>
-                    <button onClick={() => proposeFollowup(s)} disabled={proposingFollowup === s.id}
-                      style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                      {proposingFollowup === s.id ? 'Proposing...' : 'Propose Follow-up'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <button onClick={() => proposeFollowup(s)} disabled={proposingFollowup === s.id}
+                        style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                        {proposingFollowup === s.id ? 'Proposing...' : 'Send Proposal'}
+                      </button>
+                      <button onClick={() => setFollowupOpen(null)} disabled={proposingFollowup === s.id}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'transparent', border: `1px solid ${border4}`, color: text2, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

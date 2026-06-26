@@ -29,6 +29,7 @@ interface Tutor {
   id: string
   name: string
   email: string
+  status: string
   venmo: string | null
   paypal: string | null
   zelle: string | null
@@ -49,6 +50,7 @@ interface SessionRow {
 
 interface Props {
   payouts: Payout[]
+  pendingPayouts: Payout[]
   tutors: Tutor[]
   sessions: SessionRow[]
   reports: any[]
@@ -83,7 +85,7 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id']
 
-export default function AdminPayoutsClient({ payouts: initialPayouts, tutors: initialTutors, sessions, reports, thisYear }: Props) {
+export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPayouts, tutors: initialTutors, sessions, reports, thisYear }: Props) {
   const [tab, setTab] = useState<TabId>('overview')
   const [payouts, setPayouts] = useState(initialPayouts)
   const [tutors, setTutors] = useState(initialTutors)
@@ -116,7 +118,7 @@ export default function AdminPayoutsClient({ payouts: initialPayouts, tutors: in
           <OverviewTab payouts={payouts} sessions={sessions} totalRevenue={totalRevenue} totalPaid={totalPaid} totalPending={totalPending} profit={profit} />
         )}
         {tab === 'pending' && (
-          <PendingTab tutors={tutors} payouts={payouts} setPayouts={setPayouts} />
+          <PendingTab pendingPayouts={pendingPayouts} />
         )}
         {tab === 'history' && (
           <HistoryTab payouts={payouts} tutors={tutors} thisYear={thisYear} />
@@ -159,8 +161,23 @@ function OverviewTab({ payouts, sessions, totalRevenue, totalPaid, totalPending,
 
   function exportAll() {
     const rows: (string | number)[][] = [
-      ['Payout ID', 'Tutor', 'Email', 'Amount', 'Status', 'Method', 'Reference ID', 'Session', 'Paid At', 'Created At'],
-      ...payouts.map(p => [p.id, p.tutor_name, p.tutor_email, p.amount.toFixed(2), p.status, p.paid_via ?? '', p.reference_id ?? '', p.session_subject, p.paid_at ?? '', p.created_at ?? '']),
+      ['Payout ID', 'Tutor Name', 'Tutor Email', 'Tutor Venmo', 'Tutor PayPal', 'Tutor Zelle', 'Amount', 'Status', 'Paid At', 'Payment Method', 'Reference ID', 'Session Subject', 'Session Date', 'Notes'],
+      ...payouts.map(p => [
+        p.id,
+        p.tutor_name,
+        p.tutor_email,
+        p.venmo ?? '',
+        p.paypal ?? '',
+        p.zelle ?? '',
+        p.amount.toFixed(2),
+        p.status,
+        p.paid_at ? new Date(p.paid_at).toLocaleString() : '',
+        p.paid_via ?? '',
+        p.reference_id ?? '',
+        p.session_subject,
+        p.session_date ? new Date(p.session_date).toLocaleString() : '',
+        p.notes ?? '',
+      ]),
     ]
     downloadCsv(`aceforge-payouts-${new Date().toISOString().slice(0, 10)}.csv`, rows)
   }
@@ -209,21 +226,47 @@ function OverviewTab({ payouts, sessions, totalRevenue, totalPaid, totalPending,
 }
 
 // ============ Tab 2: Pending Payouts ============
-function PendingTab({ tutors, payouts, setPayouts }: {
-  tutors: Tutor[]; payouts: Payout[]; setPayouts: React.Dispatch<React.SetStateAction<Payout[]>>
-}) {
+interface PendingTutor {
+  id: string
+  name: string
+  email: string
+  venmo: string | null
+  paypal: string | null
+  zelle: string | null
+  payment_handle: string
+  pendingPayouts: Payout[]
+  amount: number
+}
+
+function PendingTab({ pendingPayouts }: { pendingPayouts: Payout[] }) {
+  const [rows, setRows] = useState<Payout[]>(pendingPayouts)
   const [openForm, setOpenForm] = useState<string | null>(null)
   const [done, setDone] = useState<Record<string, boolean>>({})
 
-  // Tutors with pending balance > 0, computed live from payouts
-  const pendingByTutor = useMemo(() => {
-    return tutors
-      .map(t => {
-        const tp = payouts.filter(p => p.tutor_id === t.id && p.status === 'pending')
-        return { tutor: t, pendingPayouts: tp, amount: tp.reduce((s, p) => s + p.amount, 0) }
-      })
-      .filter(row => row.amount > 0)
-  }, [tutors, payouts])
+  // Group the pending payouts by tutor.
+  const pendingByTutor: PendingTutor[] = useMemo(() => {
+    const map = new Map<string, PendingTutor>()
+    for (const p of rows) {
+      const existing = map.get(p.tutor_id)
+      if (existing) {
+        existing.pendingPayouts.push(p)
+        existing.amount += p.amount
+      } else {
+        map.set(p.tutor_id, {
+          id: p.tutor_id,
+          name: p.tutor_name,
+          email: p.tutor_email,
+          venmo: p.venmo,
+          paypal: p.paypal,
+          zelle: p.zelle,
+          payment_handle: p.payment_handle,
+          pendingPayouts: [p],
+          amount: p.amount,
+        })
+      }
+    }
+    return Array.from(map.values())
+  }, [rows])
 
   if (pendingByTutor.length === 0) {
     return <div className="card" style={{ padding: '3rem', textAlign: 'center', color: MUTED }}>No pending payouts 🎉</div>
@@ -231,7 +274,7 @@ function PendingTab({ tutors, payouts, setPayouts }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {pendingByTutor.map(({ tutor, pendingPayouts, amount }) => (
+      {pendingByTutor.map((tutor) => (
         <div key={tutor.id} className="card" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
@@ -245,8 +288,8 @@ function PendingTab({ tutors, payouts, setPayouts }: {
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: GREEN, lineHeight: 1 }}>${amount.toFixed(2)}</p>
-              <p style={{ fontSize: '0.75rem', color: MUTED, marginTop: '0.25rem' }}>{pendingPayouts.length} session{pendingPayouts.length !== 1 ? 's' : ''}</p>
+              <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: GREEN, lineHeight: 1 }}>${tutor.amount.toFixed(2)}</p>
+              <p style={{ fontSize: '0.75rem', color: MUTED, marginTop: '0.25rem' }}>{tutor.pendingPayouts.length} session{tutor.pendingPayouts.length !== 1 ? 's' : ''}</p>
               {!done[tutor.id] && openForm !== tutor.id && (
                 <button onClick={() => setOpenForm(tutor.id)}
                   style={{ marginTop: '0.625rem', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: GREEN, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
@@ -260,10 +303,10 @@ function PendingTab({ tutors, payouts, setPayouts }: {
           {openForm === tutor.id && (
             <MarkPaidForm
               tutor={tutor}
-              pendingPayouts={pendingPayouts}
+              pendingPayouts={tutor.pendingPayouts}
               onCancel={() => setOpenForm(null)}
               onPaid={(ids) => {
-                setPayouts(prev => prev.map(p => ids.includes(p.id) ? { ...p, status: 'paid', request_status: 'paid', paid_at: new Date().toISOString() } : p))
+                setRows(prev => prev.filter(p => !ids.includes(p.id)))
                 setDone(d => ({ ...d, [tutor.id]: true }))
                 setOpenForm(null)
               }}
@@ -276,7 +319,7 @@ function PendingTab({ tutors, payouts, setPayouts }: {
 }
 
 function MarkPaidForm({ tutor, pendingPayouts, onCancel, onPaid }: {
-  tutor: Tutor; pendingPayouts: Payout[]; onCancel: () => void; onPaid: (ids: string[]) => void
+  tutor: PendingTutor; pendingPayouts: Payout[]; onCancel: () => void; onPaid: (ids: string[]) => void
 }) {
   const defaultMethod = tutor.venmo ? 'Venmo' : tutor.paypal ? 'PayPal' : tutor.zelle ? 'Zelle' : 'Venmo'
   const [method, setMethod] = useState(defaultMethod)
@@ -449,7 +492,11 @@ function TaxTab({ tutors, setTutors, thisYear }: {
 }) {
   const [busy, setBusy] = useState<string | null>(null)
 
-  const rows = useMemo(() => [...tutors].sort((a, b) => b.earned_this_year - a.earned_this_year), [tutors])
+  // All approved tutors, highest earners first (total paid earnings).
+  const rows = useMemo(
+    () => tutors.filter(t => t.status === 'approved').sort((a, b) => b.total_paid - a.total_paid),
+    [tutors]
+  )
 
   async function toggleW9(tutor: Tutor) {
     if (busy) return
@@ -471,10 +518,10 @@ function TaxTab({ tutors, setTutors, thisYear }: {
   }
 
   function export1099() {
-    const needs = rows.filter(t => t.earned_this_year >= 600)
+    const needs = rows.filter(t => t.total_paid >= 600)
     const data: (string | number)[][] = [
       ['Tutor Legal Name', 'Email', 'Address (placeholder)', `Total Earnings ${thisYear}`, 'W-9 Collected', '1099 Required'],
-      ...needs.map(t => [t.name, t.email, '— collect on W-9 —', t.earned_this_year.toFixed(2), t.w9_collected ? 'Yes' : 'No', 'Yes']),
+      ...needs.map(t => [t.name, t.email, '— collect on W-9 —', t.total_paid.toFixed(2), t.w9_collected ? 'Yes' : 'No', 'Yes']),
     ]
     downloadCsv(`aceforge-1099-${thisYear}.csv`, data)
   }
@@ -513,16 +560,16 @@ function TaxTab({ tutors, setTutors, thisYear }: {
                     <div style={{ fontSize: '0.75rem', color: MUTED, fontWeight: 400 }}>{t.email}</div>
                   </td>
                   <td style={td}>
-                    <span style={{ display: 'inline-block', padding: '0.25rem 0.625rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.875rem', color: tierColor(t.earned_this_year), background: tierBg(t.earned_this_year) }}>
-                      ${t.earned_this_year.toFixed(2)}
+                    <span style={{ display: 'inline-block', padding: '0.25rem 0.625rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.875rem', color: tierColor(t.total_paid), background: tierBg(t.total_paid) }}>
+                      ${t.total_paid.toFixed(2)}
                     </span>
                   </td>
                   <td style={td}>
-                    {t.earned_this_year >= 600
-                      ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(163,45,45,0.12)', color: 'rgb(163,45,45)' }}>1099 Required</span>
-                      : t.earned_this_year >= 400
-                        ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(217,119,6,0.12)', color: 'rgb(180,99,5)' }}>Approaching</span>
-                        : <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: GREEN }}>Under $600</span>}
+                    {t.total_paid >= 600
+                      ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(163,45,45,0.12)', color: 'rgb(163,45,45)' }}>1099 Required ⚠️</span>
+                      : t.total_paid >= 400
+                        ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(217,119,6,0.12)', color: 'rgb(180,99,5)' }}>Approaching $600</span>
+                        : <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: GREEN }}>Under threshold</span>}
                   </td>
                   <td style={td}>
                     {t.w9_collected

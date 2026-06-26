@@ -37,9 +37,23 @@ export async function POST(request: Request) {
     // with "Could not find a relationship between 'tutoring_sessions' and 'profiles'".
     const { data: student } = await adminClient
       .from('profiles')
-      .select('email, display_name')
+      .select('email, display_name, total_spent')
       .eq('id', session.student_id)
       .single()
+
+    // Withhold and zero any payout tied to this session (no-op if none exists).
+    await adminClient
+      .from('tutor_payouts')
+      .update({ status: 'withheld', amount: 0 })
+      .eq('session_id', sessionId)
+
+    // The student is being refunded, so back the charge out of their total_spent.
+    // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_spent numeric DEFAULT 0;
+    const refundedAmount = Number(session.student_price ?? 0)
+    await adminClient
+      .from('profiles')
+      .update({ total_spent: Math.max(0, Number(student?.total_spent ?? 0) - refundedAmount) })
+      .eq('id', session.student_id)
 
     // Auto refund via Stripe
     let refundId = null

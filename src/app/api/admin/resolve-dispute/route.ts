@@ -39,11 +39,56 @@ export async function POST(request: Request) {
     let stripeRefundId = null
 
     if (decision === 'refund') {
-      // Withhold tutor payout
+      // Capture the original payout amount before zeroing it out so we can
+      // back it out of the monthly platform report.
+      // ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_spent numeric DEFAULT 0;
+      const { data: existingPayout } = await adminClient
+        .from('tutor_payouts')
+        .select('amount')
+        .eq('session_id', sessionId)
+        .maybeSingle()
+      const withheldPayout = Number(existingPayout?.amount ?? 0)
+
+      // Withhold tutor payout (and zero the amount — the tutor isn't paid)
       await adminClient
         .from('tutor_payouts')
-        .update({ status: 'withheld' })
+        .update({ status: 'withheld', amount: 0 })
         .eq('session_id', sessionId)
+
+      // Subtract the refunded amount from the student's total_spent.
+      const refundedAmount = Number(session.student_price ?? 0)
+      const { data: studentProfile } = await adminClient
+        .from('profiles')
+        .select('total_spent')
+        .eq('id', session.student_id)
+        .single()
+      await adminClient
+        .from('profiles')
+        .update({ total_spent: Math.max(0, Number(studentProfile?.total_spent ?? 0) - refundedAmount) })
+        .eq('id', session.student_id)
+
+      // Back the refund out of the current month's platform report.
+      try {
+        const now = new Date()
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        const year = now.getFullYear()
+        const { data: report } = await adminClient
+          .from('platform_reports')
+          .select('id, total_revenue, total_payouts')
+          .eq('month', monthKey)
+          .eq('year', year)
+          .maybeSingle()
+        if (report) {
+          const newRevenue = Math.max(0, Number(report.total_revenue ?? 0) - refundedAmount)
+          const newPayouts = Math.max(0, Number(report.total_payouts ?? 0) - withheldPayout)
+          await adminClient
+            .from('platform_reports')
+            .update({ total_revenue: newRevenue, total_payouts: newPayouts, profit: newRevenue - newPayouts })
+            .eq('id', report.id)
+        }
+      } catch (e: any) {
+        console.error('platform_reports refund adjust error:', e.message)
+      }
 
       // Issue Stripe refund if payment intent exists
       if (session.stripe_payment_intent_id) {

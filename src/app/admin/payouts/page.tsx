@@ -27,7 +27,7 @@ export default async function AdminPayoutsPage() {
     { data: reportsRaw },
   ] = await Promise.all([
     adminClient.from('tutor_payouts').select('*').order('created_at', { ascending: false }),
-    adminClient.from('tutor_profiles').select('id, user_id, display_name, venmo, paypal, zelle, w9_collected'),
+    adminClient.from('tutor_profiles').select('id, user_id, display_name, venmo, paypal, zelle, w9_collected, status'),
     adminClient.from('tutoring_sessions').select('id, subject, scheduled_at, student_price, tutor_payout, status, created_at'),
     adminClient.from('platform_reports').select('*').order('year', { ascending: true }),
   ])
@@ -79,6 +79,45 @@ export default async function AdminPayoutsPage() {
     }
   })
 
+  // Pending payouts via explicit manual joins (status = 'pending').
+  const { data: pendingRaw } = await adminClient
+    .from('tutor_payouts')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
+  const pendingPayouts = await Promise.all((pendingRaw ?? []).map(async (p) => {
+    const { data: tutorProfile } = await adminClient.from('tutor_profiles').select('*').eq('id', p.tutor_id).single()
+    const { data: userProfile } = tutorProfile?.user_id
+      ? await adminClient.from('profiles').select('email, display_name').eq('id', tutorProfile.user_id).single()
+      : { data: null }
+    const { data: session } = p.session_id
+      ? await adminClient.from('tutoring_sessions').select('subject, scheduled_at').eq('id', p.session_id).single()
+      : { data: null }
+    return {
+      id: p.id,
+      tutor_id: p.tutor_id,
+      amount: Number(p.amount ?? 0),
+      status: p.status ?? 'pending',
+      request_status: p.request_status ?? 'pending',
+      requested_at: p.requested_at ?? null,
+      paid_at: p.paid_at ?? null,
+      created_at: p.created_at ?? null,
+      paid_via: null,
+      reference_id: null,
+      receipt_url: null,
+      notes: null,
+      tutor_name: userProfile?.display_name ?? tutorProfile?.display_name ?? 'Tutor',
+      tutor_email: userProfile?.email ?? '',
+      payment_handle: paymentHandle(tutorProfile),
+      venmo: tutorProfile?.venmo ?? null,
+      paypal: tutorProfile?.paypal ?? null,
+      zelle: tutorProfile?.zelle ?? null,
+      session_subject: session?.subject ?? '—',
+      session_date: session?.scheduled_at ?? null,
+    }
+  }))
+
   const thisYear = new Date().getFullYear()
 
   // Per-tutor aggregates
@@ -94,6 +133,7 @@ export default async function AdminPayoutsPage() {
       id: t.id,
       name: t.display_name ?? 'Tutor',
       email: (t.user_id && emailById.get(t.user_id)) || '',
+      status: t.status ?? 'approved',
       venmo: t.venmo ?? null,
       paypal: t.paypal ?? null,
       zelle: t.zelle ?? null,
@@ -120,6 +160,7 @@ export default async function AdminPayoutsPage() {
       <AdminNavbar profile={profile} />
       <AdminPayoutsClient
         payouts={payouts}
+        pendingPayouts={pendingPayouts}
         tutors={tutors}
         sessions={sessions}
         reports={reportsRaw ?? []}
