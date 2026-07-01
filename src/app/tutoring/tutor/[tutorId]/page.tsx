@@ -140,7 +140,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                   </a>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'var(--af-border)', color: 'rgb(34,85,14)' }}>
                     ✅ Verified Tutor
                   </span>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.06)', color: 'var(--af-text-muted)' }}>
@@ -215,7 +215,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                   <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)', marginBottom: '0.25rem' }}>Standard rate</p>
                   <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.375rem', color: 'var(--af-text)' }}>${freeRate}/hr</p>
                 </div>
-                <div style={{ padding: '0.875rem 1.25rem', borderRadius: '0.875rem', background: isPremium ? 'rgba(34,85,14,0.08)' : 'rgba(34,85,14,0.03)', border: `2px solid ${isPremium ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, flex: 1, minWidth: '140px' }}>
+                <div style={{ padding: '0.875rem 1.25rem', borderRadius: '0.875rem', background: isPremium ? 'var(--af-border)' : 'rgba(34,85,14,0.03)', border: `2px solid ${isPremium ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, flex: 1, minWidth: '140px' }}>
                   <p style={{ fontSize: '0.75rem', color: 'rgb(34,85,14)', marginBottom: '0.25rem', fontWeight: 600 }}>⚡ Premium rate</p>
                   <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.375rem', color: 'rgb(34,85,14)' }}>${premiumRate}/hr</p>
                   {!isPremium && <p style={{ fontSize: '0.6875rem', color: 'var(--af-text-muted)', marginTop: '0.25rem' }}>Save $15/hr with Premium</p>}
@@ -235,7 +235,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
                   <thead>
                     <tr style={{ background: 'rgba(34,85,14,0.03)' }}>
                       {['Day', 'From', 'To'].map(h => (
-                        <th key={h} style={{ padding: '0.625rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(34,85,14,0.08)' }}>{h}</th>
+                        <th key={h} style={{ padding: '0.625rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--af-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--af-border)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>

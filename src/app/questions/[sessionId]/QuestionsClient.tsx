@@ -197,7 +197,7 @@ else spawnFloatingXP(1)
     />
   )
 
-  if (!q) return <div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>No questions found.</div>
+  if (!q) return <div style={{ paddingTop:'6rem', textAlign:'center', color:'var(--af-text-muted)' }}>No questions found.</div>
 
   return (
     <div style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative' }}>
@@ -213,7 +213,7 @@ else spawnFloatingXP(1)
           fontFamily:'Syne, sans-serif',
           fontWeight:800,
           fontSize:'1.25rem',
-          color: f.amount >= 15 ? 'rgb(34,85,14)' : f.amount >= 5 ? 'rgb(74,122,40)' : 'rgb(107,107,88)',
+          color: f.amount >= 15 ? 'rgb(34,85,14)' : f.amount >= 5 ? 'rgb(74,122,40)' : 'var(--af-text-muted)',
           animation:'floatXP 1.4s ease-out forwards',
           textShadow:'0 2px 8px rgba(0,0,0,0.15)',
         }}>
@@ -240,9 +240,9 @@ else spawnFloatingXP(1)
       {/* Loading overlay */}
       {xpLoading && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', zIndex:9990, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(2px)' }}>
-          <div style={{ background:'white', borderRadius:'1rem', padding:'2rem', textAlign:'center' }}>
+          <div style={{ background:'var(--af-card)', borderRadius:'1rem', padding:'2rem', textAlign:'center' }}>
             <div style={{ width:'2rem', height:'2rem', border:'3px solid rgba(34,85,14,0.2)', borderTop:'3px solid rgb(34,85,14)', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 1rem' }} />
-            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'rgb(26,26,20)' }}>Calculating your XP...</p>
+            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'var(--af-text)' }}>Calculating your XP...</p>
           </div>
         </div>
       )}
@@ -253,10 +253,10 @@ else spawnFloatingXP(1)
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem', flexWrap:'wrap', gap:'0.5rem' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap' }}>
               <span className="badge badge-primary">{session.subject}</span>
-              <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{session.topic}</span>
+              <span style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>{session.topic}</span>
               {session.difficulty && (
                 <span className="badge" style={{
-                  background: session.difficulty === 'easy' ? 'rgba(34,85,14,0.08)' :
+                  background: session.difficulty === 'easy' ? 'var(--af-border)' :
                     session.difficulty === 'medium' ? 'rgba(59,130,246,0.1)' :
                     session.difficulty === 'hard' ? 'rgba(245,158,11,0.12)' :
                     'rgba(239,68,68,0.1)',
@@ -271,7 +271,7 @@ else spawnFloatingXP(1)
                 </span>
               )}
             </div>
-            <span style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)' }}>
+            <span style={{ fontSize:'0.875rem', fontWeight:600, color:'var(--af-text)' }}>
               {Object.keys(answers).length}/{total} answered
             </span>
           </div>
@@ -281,16 +281,16 @@ else spawnFloatingXP(1)
         </div>
 
         <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
-          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
+          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
             Question {current + 1} of {total} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
           </p>
          {(q as any).passage && (
             <div style={{ padding:'1rem 1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'1.25rem', borderLeft:'3px solid rgb(34,85,14)' }}>
               <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Passage</p>
-              <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.8 }}>{(q as any).passage}</p>
+              <p style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.8 }}>{(q as any).passage}</p>
             </div>
           )}
-          <MathText text={q.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
+          <MathText text={q.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
 
           {q.type === 'mc' ? (
             <MCOptions
@@ -366,11 +366,11 @@ function MCOptions({ question, answered, onSelect }: {
               border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`,
               display:'flex', alignItems:'center', justifyContent:'center',
               fontSize:'0.8125rem', fontWeight:700,
-              color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgb(107,107,88)') : 'rgb(34,85,14)'
+              color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'var(--af-text-muted)') : 'rgb(34,85,14)'
             }}>
               {letter}
             </div>
-            <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.5 }} />
+            <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.5 }} />
             {answered && isCorrect && <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
             {answered && isSelected && !isCorrect && <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
           </button>
@@ -406,7 +406,7 @@ function getFRColors(score: string) {
 function getFRSummaryStyle(score: string): { bg: string; color: string; label: string } {
   switch (score) {
     case '4/4': return { bg:'rgb(234,243,222)', color:'rgb(59,109,17)', label:`✓ ${score}` }
-    case '3/4': return { bg:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)', label:`✓ ${score}` }
+    case '3/4': return { bg:'var(--af-border)', color:'rgb(34,85,14)', label:`✓ ${score}` }
     case '2/4': return { bg:'rgba(232,160,32,0.12)', color:'rgb(180,120,10)', label:`~ ${score}` }
     case '1/4': return { bg:'rgba(220,80,20,0.09)', color:'rgb(200,75,20)', label:`✗ ${score}` }
     default: return { bg:'rgb(252,235,235)', color:'rgb(163,45,45)', label:'Review' }
@@ -526,10 +526,10 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
             <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>
               {retryScore === retryQuestions.length ? '🏆' : retryScore >= retryQuestions.length * 0.7 ? '🎉' : '💪'}
             </div>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.5rem' }}>
               {retryScore === retryQuestions.length ? 'Perfect on the retry! 🔥' : 'Nice work on the practice!'}
             </h2>
-            <p style={{ color:'rgb(107,107,88)', marginBottom:'1.5rem' }}>
+            <p style={{ color:'var(--af-text-muted)', marginBottom:'1.5rem' }}>
               You got {retryScore}/{retryQuestions.length} on your weak spot practice.
             </p>
             <div style={{ display:'flex', gap:'0.75rem', justifyContent:'center', flexWrap:'wrap' }}>
@@ -547,17 +547,17 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           <div style={{ marginBottom:'1.5rem' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.75rem' }}>
               <span className="badge" style={{ background:'rgba(232,160,32,0.12)', color:'rgb(180,120,10)' }}>🎯 Weak Spot Practice</span>
-              <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{Object.keys(retryAnswers).length}/{retryQuestions.length} answered</span>
+              <span style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>{Object.keys(retryAnswers).length}/{retryQuestions.length} answered</span>
             </div>
             <div style={{ width:'100%', height:'6px', background:'rgba(34,85,14,0.1)', borderRadius:'9999px', overflow:'hidden' }}>
               <div style={{ height:'100%', background:'rgb(232,160,32)', borderRadius:'9999px', width:`${(Object.keys(retryAnswers).length / retryQuestions.length) * 100}%`, transition:'width 0.3s' }} />
             </div>
           </div>
           <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
-            <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
+            <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
               Question {retryCurrent + 1} of {retryQuestions.length}
             </p>
-            <MathText text={rq.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
+            <MathText text={rq.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
             {rq.type === 'mc' && (
               <MCOptions
                 question={rq as MCQuestion}
@@ -614,15 +614,15 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'44rem' }}>
         <div className="card" style={{ padding:'2.5rem', textAlign:'center', marginBottom:'1.5rem' }}>
           <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>{msg.emoji}</div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>{msg.title}</h1>
-          <p style={{ color:'rgb(107,107,88)', marginBottom:'1.5rem', maxWidth:'28rem', margin:'0 auto 1.5rem' }}>{msg.sub}</p>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.5rem' }}>{msg.title}</h1>
+          <p style={{ color:'var(--af-text-muted)', marginBottom:'1.5rem', maxWidth:'28rem', margin:'0 auto 1.5rem' }}>{msg.sub}</p>
           <div style={{ fontSize:'3.5rem', fontWeight:700, color:msg.color, marginBottom:'0.25rem' }}>{score}/{total}</div>
-          <p style={{ color:'rgb(107,107,88)' }}>{pct}% correct</p>
+          <p style={{ color:'var(--af-text-muted)' }}>{pct}% correct</p>
         </div>
 
         {(wrongTopics.length > 0 || correctTopics.length > 0) && (
           <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1.5rem' }}>📊 Performance Breakdown</h2>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'var(--af-text)', marginBottom:'1.5rem' }}>📊 Performance Breakdown</h2>
             <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem', marginBottom:'1.5rem' }}>
               {Object.entries(
                 questions.reduce((acc: Record<string, { correct: number; total: number }>, q, i) => {
@@ -639,12 +639,12 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
                 return (
                   <div key={topic}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.375rem' }}>
-                      <span style={{ fontSize:'0.875rem', fontWeight:500, color:'rgb(26,26,20)' }}>{topic}</span>
+                      <span style={{ fontSize:'0.875rem', fontWeight:500, color:'var(--af-text)' }}>{topic}</span>
                       <span style={{ fontSize:'0.8125rem', fontWeight:600, color: topicPct >= 50 ? barColor : 'rgb(163,45,45)' }}>
                         {data.correct}/{data.total} {topicPct >= 50 ? '✓' : '✗'}
                       </span>
                     </div>
-                    <div style={{ width:'100%', height:'8px', background:'rgba(34,85,14,0.08)', borderRadius:'9999px', overflow:'hidden' }}>
+                    <div style={{ width:'100%', height:'8px', background:'var(--af-border)', borderRadius:'9999px', overflow:'hidden' }}>
                       <div style={{ height:'100%', borderRadius:'9999px', background:barColor, width:`${topicPct}%`, transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
                     </div>
                   </div>
@@ -672,10 +672,10 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           <div className="card" style={{ padding:'1.5rem', marginBottom:'1.5rem', background:'linear-gradient(135deg, rgba(34,85,14,0.03), rgba(232,160,32,0.05))', border:'1px solid rgba(34,85,14,0.12)' }}>
             <div style={{ display:'flex', alignItems:'flex-start', gap:'1rem', flexWrap:'wrap' }}>
               <div style={{ flex:1 }}>
-                <p style={{ fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem', fontSize:'1rem' }}>
+                <p style={{ fontWeight:700, color:'var(--af-text)', marginBottom:'0.25rem', fontSize:'1rem' }}>
                   {totalWrong <= 3 ? "You're almost perfect! 🎯 Let's nail those last few" : "Let's strengthen those weak spots! 💪 You've got this"}
                 </p>
-                <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>
+                <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>
                   {totalWrong <= 3 ? `Practice ${Math.min(5, totalWrong + 2)} targeted questions` : `Practice ${wrongTopics.length * 2} questions — 2 per topic`}
                 </p>
               </div>
@@ -696,7 +696,7 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
 
             if (!wasAnswered) {
               icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', border:'2px solid rgba(34,85,14,0.2)', flexShrink:0 }} />
-              badgeStyle = { bg:'rgba(34,85,14,0.05)', color:'rgb(107,107,88)', label:'Skipped' }
+              badgeStyle = { bg:'rgba(34,85,14,0.05)', color:'var(--af-text-muted)', label:'Skipped' }
             } else if (isMC) {
               if (a.correct) {
                 icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
@@ -716,9 +716,9 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
             }
 
             return (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'white', border:'1px solid rgba(34,85,14,0.08)' }}>
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'var(--af-card)', border:'1px solid var(--af-border)' }}>
                 {icon}
-                <span style={{ fontSize:'0.875rem', color:'rgb(26,26,20)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:'0.875rem', color:'var(--af-text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   Q{i + 1}: {q.question}
                 </span>
                 <span className="badge" style={{ background:badgeStyle.bg, color:badgeStyle.color, flexShrink:0 }}>

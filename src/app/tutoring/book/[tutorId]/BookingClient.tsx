@@ -42,10 +42,10 @@ function BookingForm({ profile, tutor, availability }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const { theme } = useStudentTheme()
   const isDark = theme === 'dark'
-  const bg = isDark ? 'rgb(15,15,25)' : 'rgb(250,250,247)'
+  const bg = isDark ? 'rgb(15,15,25)' : 'var(--af-bg)'
   const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'white'
-  const textPrimary = isDark ? 'white' : 'rgb(26,26,20)'
-  const textSecondary = isDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)'
+  const textPrimary = isDark ? 'white' : 'var(--af-text)'
+  const textSecondary = isDark ? 'rgba(255,255,255,0.5)' : 'var(--af-text-muted)'
 
   const [subject, setSubject] = useState(tutor.subjects?.[0] ?? '')
   const [topic, setTopic] = useState('')
@@ -225,9 +225,9 @@ function BookingForm({ profile, tutor, availability }: Props) {
         </div>
 
         {/* Step indicator */}
-        <div style={{ display: 'flex', gap: '0', marginBottom: '1.5rem', borderBottom: '2px solid rgba(34,85,14,0.08)' }}>
+        <div style={{ display: 'flex', gap: '0', marginBottom: '1.5rem', borderBottom: '2px solid var(--af-border)' }}>
           {[{ id: 'details', label: '1. Session Details' }, { id: 'payment', label: '2. Payment' }].map(s => (
-            <div key={s.id} style={{ flex: 1, padding: '0.625rem 1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: step === s.id ? 700 : 400, color: step === s.id ? 'rgb(34,85,14)' : 'rgb(107,107,88)', borderBottom: step === s.id ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom: '-2px' }}>
+            <div key={s.id} style={{ flex: 1, padding: '0.625rem 1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: step === s.id ? 700 : 400, color: step === s.id ? 'rgb(34,85,14)' : 'var(--af-text-muted)', borderBottom: step === s.id ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom: '-2px' }}>
               {s.label}
             </div>
           ))}
@@ -245,7 +245,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
               <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 700, color: textPrimary }}>Session Details</h1>
 
               {/* Continuing */}
-              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid var(--af-border)', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
                 <input type="checkbox" checked={wantsContinuing} onChange={e => setWantsContinuing(e.target.checked)}
                   style={{ width: '1.125rem', height: '1.125rem', accentColor: 'rgb(34,85,14)', flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
                 <div onClick={() => setWantsContinuing(!wantsContinuing)} style={{ cursor: 'pointer' }}>
@@ -295,7 +295,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                     return (
                       <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
                         style={{ padding: '0.875rem 0.5rem', borderRadius: '0.75rem', border: `2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : cardBg, cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
-                        <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)', marginBottom: '0.25rem' }}>{sl.label}</p>
+                        <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'var(--af-text)', marginBottom: '0.25rem' }}>{sl.label}</p>
                         <p style={{ fontSize: '0.75rem', color: textSecondary, marginBottom: '0.25rem' }}>{sl.desc}</p>
                         <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'rgb(34,85,14)' }}>${(price + expFee).toFixed(2)}</p>
                         {expFee > 0 && <p style={{ fontSize: '0.6875rem', color: tierStyle.color }}>+${expFee.toFixed(2)} express</p>}
@@ -348,7 +348,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                     <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgb(34,85,14)', marginBottom: '0.375rem' }}>Tutor availability:</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                       {availability.map((a: any, i: number) => (
-                        <span key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: 'rgb(34,85,14)' }}>
+                        <span key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'var(--af-border)', color: 'rgb(34,85,14)' }}>
                           {DAYS[a.day_of_week]} {a.start_time}–{a.end_time}
                         </span>
                       ))}
@@ -421,7 +421,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                 </div>
               </div>
 
-              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid var(--af-border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '1.25rem' }}>⭐</span>
                 <p style={{ fontSize: '0.8125rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>
                   Complete this session to earn +{sessionLength === 30 ? 50 : sessionLength === 90 ? 150 : 100} XP!
@@ -461,7 +461,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
                 <div style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(34,85,14,0.2)'}`, background: cardBg }}>
                   <CardElement options={{
                     style: {
-                      base: { fontSize: '16px', color: isDark ? '#ffffff' : 'rgb(26,26,20)', '::placeholder': { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)' } },
+                      base: { fontSize: '16px', color: isDark ? '#ffffff' : 'var(--af-text)', '::placeholder': { color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--af-text-muted)' } },
                       invalid: { color: 'rgb(163,45,45)' },
                     },
                   }} />

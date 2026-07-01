@@ -48,9 +48,9 @@ export default function Navbar({ profile }: NavbarProps) {
 
   // Theme tokens — green accents stay identical in both modes.
   const navSolidBg = isDark ? 'rgba(15,15,25,0.95)' : 'rgba(255,255,255,0.95)'
-  const navBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(34,85,14,0.08)'
-  const tText = isDark ? 'rgb(255,255,255)' : 'rgb(26,26,20)'
-  const tMuted = isDark ? 'rgba(255,255,255,0.6)' : 'rgb(107,107,88)'
+  const navBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'var(--af-border)'
+  const tText = isDark ? 'rgb(255,255,255)' : 'var(--af-text)'
+  const tMuted = isDark ? 'rgba(255,255,255,0.6)' : 'var(--af-text-muted)'
   const tHover = isDark ? 'rgba(255,255,255,0.08)' : 'rgb(249,250,251)'
   const dropBg = isDark ? 'rgb(20,20,32)' : 'white'
   const dropDivider = isDark ? 'rgba(255,255,255,0.08)' : 'rgb(243,244,246)'
@@ -144,7 +144,7 @@ export default function Navbar({ profile }: NavbarProps) {
                       fontSize:'0.9375rem', fontWeight: isActive ? 600 : 500,
                       color: isActive ? 'rgb(34,85,14)' : isTransparent ? 'rgb(34,85,14)' : tMuted,
                       textDecoration:'none', transition:'all 0.2s', whiteSpace:'nowrap',
-                      background: isActive ? 'rgba(34,85,14,0.08)' : 'transparent',
+                      background: isActive ? 'var(--af-border)' : 'transparent',
                     }}
                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(34,85,14,0.06)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.9)' : 'rgb(34,85,14)' }}}
                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isTransparent ? 'rgb(34,85,14)' : tMuted }}}>
@@ -360,7 +360,7 @@ export default function Navbar({ profile }: NavbarProps) {
                   fontSize:'1.0625rem', fontWeight: isActive ? 700 : 500,
                   color: isActive ? 'rgb(34,85,14)' : tText,
                   textDecoration:'none', transition:'all 0.2s',
-                  background: isActive ? 'rgba(34,85,14,0.08)' : 'transparent',
+                  background: isActive ? 'var(--af-border)' : 'transparent',
                   border: isActive ? '1.5px solid rgba(34,85,14,0.2)' : '1.5px solid transparent',
                 }}>
                 {link.label}

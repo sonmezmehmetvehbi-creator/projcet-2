@@ -63,7 +63,7 @@ export default function WorksheetClient({ session }: Props) {
 }
 
   if (!worksheet) return (
-    <div style={{ paddingTop:'6rem', textAlign:'center', color:'rgb(107,107,88)' }}>
+    <div style={{ paddingTop:'6rem', textAlign:'center', color:'var(--af-text-muted)' }}>
       Worksheet not found.
     </div>
   )
@@ -75,34 +75,34 @@ export default function WorksheetClient({ session }: Props) {
 
         {/* Header */}
         <div style={{ marginBottom:'2.5rem' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ display:'flex', alignItems:'center', gap:'0.375rem', background:'none', border:'none', cursor:'pointer', color:'rgb(107,107,88)', fontSize:'0.875rem', marginBottom:'1.5rem', padding:0 }}>
+          <button onClick={() => router.push('/dashboard')} style={{ display:'flex', alignItems:'center', gap:'0.375rem', background:'none', border:'none', cursor:'pointer', color:'var(--af-text-muted)', fontSize:'0.875rem', marginBottom:'1.5rem', padding:0 }}>
             <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Back to dashboard
           </button>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.75rem', flexWrap:'wrap' }}>
             <span className="badge badge-primary">{session.subject}</span>
-            <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'rgb(107,107,88)' }}>{session.grade}</span>
+            <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'var(--af-text-muted)' }}>{session.grade}</span>
           </div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.25rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.25rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.5rem' }}>
             {session.topic}
           </h1>
-          <p style={{ color:'rgb(107,107,88)' }}>Study Worksheet</p>
+          <p style={{ color:'var(--af-text-muted)' }}>Study Worksheet</p>
         </div>
 
         {/* 1. Introduction */}
         <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem', borderLeft:'4px solid rgb(34,85,14)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1rem' }}>
             <div style={{ width:'2rem', height:'2rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'0.875rem', fontWeight:700, flexShrink:0 }}>1</div>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)' }}>Introduction</h2>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'var(--af-text)' }}>Introduction</h2>
           </div>
-          <MathText text={worksheet.introduction.text} style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1.5rem', fontSize:'1.0625rem', display:'block' }} />
+          <MathText text={worksheet.introduction.text} style={{ color:'var(--af-text)', lineHeight:1.8, marginBottom:'1.5rem', fontSize:'1.0625rem', display:'block' }} />
           {worksheet.introduction.vocabulary.length > 0 && (
             <>
-              <h3 style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.75rem', fontSize:'0.9375rem' }}>Key Vocabulary</h3>
+              <h3 style={{ fontWeight:600, color:'var(--af-text)', marginBottom:'0.75rem', fontSize:'0.9375rem' }}>Key Vocabulary</h3>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                 {worksheet.introduction.vocabulary.map((v, i) => (
                   <div key={i} style={{ display:'flex', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)' }}>
                     <span style={{ fontWeight:700, color:'rgb(34,85,14)', minWidth:'8rem', fontSize:'0.9375rem' }}>{v.term}</span>
-                    <MathText text={v.definition} style={{ color:'rgb(107,107,88)', fontSize:'0.9375rem', lineHeight:1.6 }} />
+                    <MathText text={v.definition} style={{ color:'var(--af-text-muted)', fontSize:'0.9375rem', lineHeight:1.6 }} />
                   </div>
                 ))}
               </div>
@@ -114,7 +114,7 @@ export default function WorksheetClient({ session }: Props) {
         <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.5rem' }}>
             <div style={{ width:'2rem', height:'2rem', borderRadius:'50%', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'0.875rem', fontWeight:700, flexShrink:0 }}>2</div>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)' }}>Step-by-Step Explanation</h2>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'var(--af-text)' }}>Step-by-Step Explanation</h2>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'2rem' }}>
             {worksheet.steps.map((step, i) => (
@@ -123,18 +123,18 @@ export default function WorksheetClient({ session }: Props) {
                   <div style={{ width:'1.75rem', height:'1.75rem', borderRadius:'50%', background:'rgba(34,85,14,0.1)', display:'flex', alignItems:'center', justifyContent:'center', color:'rgb(34,85,14)', fontSize:'0.8125rem', fontWeight:700, flexShrink:0 }}>
                     {i + 1}
                   </div>
-                  <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'rgb(26,26,20)' }}>{step.title}</h3>
+                  <h3 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'var(--af-text)' }}>{step.title}</h3>
                 </div>
-                <MathText text={step.explanation} style={{ color:'rgb(26,26,20)', lineHeight:1.8, marginBottom:'1rem', fontSize:'1rem', paddingLeft:'2.5rem', display:'block' }} />
+                <MathText text={step.explanation} style={{ color:'var(--af-text)', lineHeight:1.8, marginBottom:'1rem', fontSize:'1rem', paddingLeft:'2.5rem', display:'block' }} />
                 {/* Visual */}
                 <div style={{ marginLeft:'2.5rem', padding:'1.25rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, rgba(34,85,14,0.04), rgba(232,160,32,0.04))', border:'1px dashed rgba(34,85,14,0.2)', marginBottom:'1rem' }}>
-                  <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>📊 Visual Aid</p>
-                 <MathText text={step.visualDescription} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7, fontStyle:'italic', display:'block' }} />
+                  <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>📊 Visual Aid</p>
+                 <MathText text={step.visualDescription} style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.7, fontStyle:'italic', display:'block' }} />
                 </div>
                 {/* Key takeaway */}
                 <div style={{ marginLeft:'2.5rem', padding:'0.875rem 1rem', borderRadius:'0.75rem', background:'rgba(232,160,32,0.08)', border:'1px solid rgba(232,160,32,0.2)', display:'flex', gap:'0.5rem', alignItems:'flex-start' }}>
                   <span style={{ fontSize:'1rem' }}>💡</span>
-                  <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.6 }}>
+                  <p style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.6 }}>
                     <strong>Key takeaway:</strong> <MathText text={step.keyTakeaway} />
                   </p>
                 </div>
@@ -150,11 +150,11 @@ export default function WorksheetClient({ session }: Props) {
         <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem', borderLeft:'4px solid rgb(232,160,32)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.25rem' }}>
             <div style={{ width:'2rem', height:'2rem', borderRadius:'50%', background:'rgb(232,160,32)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'0.875rem', fontWeight:700, flexShrink:0 }}>3</div>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)' }}>Summary</h2>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'var(--af-text)' }}>Summary</h2>
           </div>
           <ul style={{ listStyle:'none', padding:0, margin:'0 0 1.5rem', display:'flex', flexDirection:'column', gap:'0.625rem' }}>
             {worksheet.summary.bullets.map((bullet, i) => (
-              <li key={i} style={{ display:'flex', alignItems:'flex-start', gap:'0.625rem', fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7 }}>
+              <li key={i} style={{ display:'flex', alignItems:'flex-start', gap:'0.625rem', fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.7 }}>
   <span style={{ color:'rgb(34,85,14)', fontWeight:700, flexShrink:0, marginTop:'0.125rem' }}>✓</span>
   <MathText text={bullet} />
 </li>
@@ -162,10 +162,10 @@ export default function WorksheetClient({ session }: Props) {
           </ul>
           {worksheet.summary.quickCheck.length > 0 && (
             <>
-              <h3 style={{ fontWeight:600, color:'rgb(26,26,20)', marginBottom:'0.75rem', fontSize:'0.9375rem' }}>⚡ Quick Check</h3>
+              <h3 style={{ fontWeight:600, color:'var(--af-text)', marginBottom:'0.75rem', fontSize:'0.9375rem' }}>⚡ Quick Check</h3>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                 {worksheet.summary.quickCheck.map((q, i) => (
-                  <div key={i} style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)', fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>
+                  <div key={i} style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)', fontSize:'0.9375rem', color:'var(--af-text)' }}>
                     {i + 1}. {q}
                   </div>
                 ))}
@@ -179,7 +179,7 @@ export default function WorksheetClient({ session }: Props) {
           <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.5rem' }}>
               <div style={{ width:'2rem', height:'2rem', borderRadius:'50%', background:'rgb(74,122,40)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'0.875rem', fontWeight:700, flexShrink:0 }}>4</div>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'rgb(26,26,20)' }}>Practice Questions</h2>
+              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:700, color:'var(--af-text)' }}>Practice Questions</h2>
             </div>
             <PracticeQuestions questions={worksheet.practiceQuestions} session={session} />
           </div>
@@ -242,10 +242,10 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
     <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
       {questions.map((q, i) => (
         <div key={i}>
-          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>
+          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>
             Question {i + 1} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
           </p>
-          <MathText text={q.question} style={{ fontSize:'1rem', fontWeight:600, color:'rgb(26,26,20)', lineHeight:1.6, marginBottom:'1rem', display:'block' }} />
+          <MathText text={q.question} style={{ fontSize:'1rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, marginBottom:'1rem', display:'block' }} />
 
           {q.type === 'mc' ? (
             <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
@@ -263,10 +263,10 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                 return (
                   <button key={letter} onClick={() => selectMC(i, q as MCQuestion, letter)}
                     className={cls} style={{ width:'100%', background:'none', textAlign:'left' }}>
-                    <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.75rem', fontWeight:700, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgb(107,107,88)') : 'rgb(34,85,14)' }}>
+                    <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.75rem', fontWeight:700, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'var(--af-text-muted)') : 'rgb(34,85,14)' }}>
                       {letter}
                     </div>
-                   <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)' }} />
+                   <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'var(--af-text)' }} />
                     {answered && isCorrect && <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
                     {answered && isSelected && !isCorrect && <XCircle style={{ width:'1rem', height:'1rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
                   </button>
@@ -303,7 +303,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
             </div>
           )}
           {i < questions.length - 1 && (
-            <div style={{ height:'1px', background:'rgba(34,85,14,0.08)', marginTop:'1.5rem' }} />
+            <div style={{ height:'1px', background:'var(--af-border)', marginTop:'1.5rem' }} />
           )}
         </div>
       ))}

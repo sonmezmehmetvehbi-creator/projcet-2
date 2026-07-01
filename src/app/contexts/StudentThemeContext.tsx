@@ -16,13 +16,17 @@ export function StudentThemeProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     const saved = localStorage.getItem('aceforge_student_theme') as Theme | null
-    if (saved === 'light' || saved === 'dark') setTheme(saved)
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved)
+      document.documentElement.setAttribute('data-theme', saved)
+    }
   }, [])
 
   function toggle() {
     const next: Theme = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     localStorage.setItem('aceforge_student_theme', next)
+    document.documentElement.setAttribute('data-theme', next)
   }
 
   return <StudentThemeCtx.Provider value={{ theme, toggle }}>{children}</StudentThemeCtx.Provider>

@@ -29,20 +29,20 @@ export default function SupportClient({ profile, tickets: initialTickets, curren
   const isDark = isTutor && theme === 'dark'
 
   const accent = isTutor ? (isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)') : 'rgb(34,85,14)'
-  const text1 = isTutor ? (isDark ? 'white' : 'rgb(26,26,20)') : 'rgb(26,26,20)'
-  const text2 = isTutor ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.6)') : 'rgb(107,107,88)'
+  const text1 = isTutor ? (isDark ? 'white' : 'var(--af-text)') : 'var(--af-text)'
+  const text2 = isTutor ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.6)') : 'var(--af-text-muted)'
   const cardBg = isTutor ? (isDark ? 'rgba(255,255,255,0.04)' : 'white') : 'white'
-  const cardBorder = isTutor ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(234,88,12,0.12)') : 'rgba(34,85,14,0.08)'
+  const cardBorder = isTutor ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(234,88,12,0.12)') : 'var(--af-border)'
   const panelHeaderBg = isTutor ? (isDark ? 'rgba(99,102,241,0.08)' : 'rgba(234,88,12,0.03)') : 'rgba(34,85,14,0.02)'
   const rowBorder = isTutor ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(234,88,12,0.06)') : 'rgba(34,85,14,0.06)'
   const selectedBg = isTutor ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(234,88,12,0.08)') : 'rgba(34,85,14,0.06)'
   const inputBg = isTutor ? (isDark ? 'rgba(255,255,255,0.05)' : 'white') : undefined
-  const inputColor = isTutor ? (isDark ? 'white' : 'rgb(26,26,20)') : undefined
+  const inputColor = isTutor ? (isDark ? 'white' : 'var(--af-text)') : undefined
   const inputBorder = isTutor ? (isDark ? '1.5px solid rgba(99,102,241,0.3)' : '1.5px solid rgba(234,88,12,0.25)') : undefined
   const primaryBtnBg = isTutor ? (isDark ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #ea580c, #f97316)') : undefined
   const myMsgBg = isTutor ? (isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)') : 'rgb(34,85,14)'
-  const adminMsgBg = isTutor ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgb(243,244,246)') : 'rgba(34,85,14,0.08)'
-  const adminMsgColor = isTutor ? (isDark ? 'white' : 'rgb(26,26,20)') : 'rgb(26,26,20)'
+  const adminMsgBg = isTutor ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgb(243,244,246)') : 'var(--af-border)'
+  const adminMsgColor = isTutor ? (isDark ? 'white' : 'var(--af-text)') : 'var(--af-text)'
   // Inline styles for tutor theme that override the green/light global CSS classes.
   const inputStyle = isTutor ? { background: inputBg, color: inputColor, border: inputBorder } : undefined
   const primaryBtnStyle = isTutor ? { background: primaryBtnBg, border: 'none', color: 'white' } : undefined

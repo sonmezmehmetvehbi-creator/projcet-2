@@ -157,7 +157,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const pageBg = isTutor
     ? (isDark ? 'rgb(15,15,30)' : 'linear-gradient(135deg, #fff5ef, #fff8f5)')
-    : (sDark ? 'rgb(15,15,25)' : 'rgb(250,250,247)')
+    : (sDark ? 'rgb(15,15,25)' : 'var(--af-bg)')
 
   const cardBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.04)' : 'white')
@@ -165,19 +165,19 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const cardBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(234,88,12,0.1)')
-    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'var(--af-border)')
 
   const text1 = isTutor
-    ? (isDark ? 'white' : 'rgb(26,26,20)')
-    : (sDark ? 'white' : 'rgb(26,26,20)')
+    ? (isDark ? 'white' : 'var(--af-text)')
+    : (sDark ? 'white' : 'var(--af-text)')
 
   const text2 = isTutor
     ? (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(26,26,20,0.7)')
-    : (sDark ? 'rgba(255,255,255,0.7)' : 'rgb(107,107,88)')
+    : (sDark ? 'rgba(255,255,255,0.7)' : 'var(--af-text-muted)')
 
   const text3 = isTutor
     ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.5)')
-    : (sDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)')
+    : (sDark ? 'rgba(255,255,255,0.5)' : 'var(--af-text-muted)')
 
   const detailCardBg = isTutor
     ? (isDark ? 'rgba(99,102,241,0.05)' : 'rgba(234,88,12,0.03)')
@@ -185,11 +185,11 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const detailCardBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(234,88,12,0.1)')
-    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'var(--af-border)')
 
   const chatHeaderBorder = isTutor
     ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(234,88,12,0.1)')
-    : (sDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.08)')
+    : (sDark ? 'rgba(255,255,255,0.1)' : 'var(--af-border)')
 
   const avatarBg = isTutor
     ? (isDark ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #ea580c, #f97316)')
@@ -204,8 +204,8 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
     : (sDark ? 'rgba(255,255,255,0.08)' : 'rgb(243,244,246)')
 
   const otherMsgColor = isTutor
-    ? (isDark ? 'white' : 'rgb(26,26,20)')
-    : (sDark ? 'white' : 'rgb(26,26,20)')
+    ? (isDark ? 'white' : 'var(--af-text)')
+    : (sDark ? 'white' : 'var(--af-text)')
 
   const inputBg = isTutor
     ? (isDark ? 'rgba(255,255,255,0.05)' : 'white')
@@ -229,15 +229,15 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   const backLinkColor = isTutor
     ? (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,26,20,0.5)')
-    : (sDark ? 'rgba(255,255,255,0.5)' : 'rgb(107,107,88)')
+    : (sDark ? 'rgba(255,255,255,0.5)' : 'var(--af-text-muted)')
 
   const statusColors: Record<string, string> = {
     pending: 'rgb(180,120,10)', confirmed: isTutor ? accent : 'rgb(34,85,14)',
     completed: isTutor ? accent : 'rgb(34,85,14)', declined: 'rgb(163,45,45)', disputed: 'rgb(163,45,45)'
   }
   const statusBgs: Record<string, string> = {
-    pending: 'rgba(232,160,32,0.1)', confirmed: isTutor ? `${accent}18` : 'rgba(34,85,14,0.08)',
-    completed: isTutor ? `${accent}18` : 'rgba(34,85,14,0.08)', declined: 'rgba(163,45,45,0.08)', disputed: 'rgba(163,45,45,0.08)'
+    pending: 'rgba(232,160,32,0.1)', confirmed: isTutor ? `${accent}18` : 'var(--af-border)',
+    completed: isTutor ? `${accent}18` : 'var(--af-border)', declined: 'rgba(163,45,45,0.08)', disputed: 'rgba(163,45,45,0.08)'
   }
 
   // isMe: if isTutor, tutor's own messages (is_tutor=true) are "mine"; else student's own (is_tutor=false) are "mine"
@@ -316,7 +316,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
                 {isTutor ? '⏳ Awaiting your confirmation — go to dashboard to accept' : '⏳ Waiting for tutor to confirm'}
               </p>
               {!isTutor && (
-                <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>
                   Your tutor will review your request and send a Google Meet link. You can message them below while you wait.
                 </p>
               )}
@@ -335,7 +335,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
               <p style={{ fontSize: '0.875rem', fontWeight: 700, color: expiryUrgent ? 'rgb(220,38,38)' : 'rgb(180,120,10)' }}>
                 {expiryUrgent ? '⏳ Waiting for tutor to accept — expires in less than ' + Math.max(1, hoursUntilExpiry) + ' hour' + (hoursUntilExpiry === 1 ? '' : 's') : '⏳ Waiting for tutor to accept — expires in ' + hoursUntilExpiry + ' hour' + (hoursUntilExpiry === 1 ? '' : 's')}.
               </p>
-              <p style={{ fontSize: '0.8125rem', color: expiryUrgent ? 'rgb(185,28,28)' : 'rgb(107,107,88)', marginTop: '0.25rem' }}>
+              <p style={{ fontSize: '0.8125rem', color: expiryUrgent ? 'rgb(185,28,28)' : 'var(--af-text-muted)', marginTop: '0.25rem' }}>
                 Full refund if not accepted.
               </p>
             </div>

@@ -112,7 +112,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
         <div style={{ flex:1, minWidth:0, padding:'2rem 1.5rem' }}>
 
           {upgraded && (
-            <div style={{ padding:'1rem 1.5rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, rgba(34,85,14,0.08), rgba(232,160,32,0.08))', border:'1px solid rgba(34,85,14,0.2)', marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+            <div style={{ padding:'1rem 1.5rem', borderRadius:'0.875rem', background:'linear-gradient(135deg, var(--af-border), rgba(232,160,32,0.08))', border:'1px solid rgba(34,85,14,0.2)', marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
               <span style={{ fontSize:'1.5rem' }}>🎉</span>
               <div>
                 <p style={{ fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.125rem' }}>Welcome to Premium!</p>
@@ -178,7 +178,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                     <div style={{
                       position:'absolute', right:'-1px', top:'50%', transform:'translateY(-50%)',
                       width:'12px', height:'12px', borderRadius:'50%',
-                      background:'white', border:'2px solid rgb(34,85,14)',
+                      background:'var(--af-card)', border:'2px solid rgb(34,85,14)',
                     }} />
                   </div>
                 </div>
@@ -214,14 +214,14 @@ function DashboardInner({ profile, sessions, usage }: Props) {
             </div>
 
             {/* Streak card */}
-            <div className="card" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'var(--af-card)', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'rgba(34,85,14,0.08)'}` }}>
+            <div className="card" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'var(--af-card)', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'var(--af-border)'}` }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
                 <div>
                   <p style={{ fontFamily:'Syne, sans-serif', fontSize:'0.75rem', fontWeight:700, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>
                     Study Streak
                   </p>
                   <div style={{ display:'flex', alignItems:'baseline', gap:'0.375rem' }}>
-                    <span style={{ fontFamily:'Syne, sans-serif', fontSize:'2.5rem', fontWeight:800, color: streak >= 7 ? 'rgb(180,120,10)' : streak > 0 ? 'rgb(34,85,14)' : 'rgb(107,107,88)', lineHeight:1 }}>
+                    <span style={{ fontFamily:'Syne, sans-serif', fontSize:'2.5rem', fontWeight:800, color: streak >= 7 ? 'rgb(180,120,10)' : streak > 0 ? 'rgb(34,85,14)' : 'var(--af-text-muted)', lineHeight:1 }}>
                       {streak}
                     </span>
                     <span style={{ fontFamily:'Syne, sans-serif', fontSize:'0.875rem', color:'var(--af-text-muted)', fontWeight:600 }}>days</span>
@@ -313,14 +313,14 @@ function DashboardInner({ profile, sessions, usage }: Props) {
             </div>
           )}
 
-          <div style={{ display:'flex', gap:'0.25rem', marginBottom:'1.5rem', borderBottom:'2px solid rgba(34,85,14,0.08)', paddingBottom:'0' }}>
+          <div style={{ display:'flex', gap:'0.25rem', marginBottom:'1.5rem', borderBottom:'2px solid var(--af-border)', paddingBottom:'0' }}>
             {([
               { value:'all', label:'All Sessions' },
               { value:'sat', label:'📐 SAT Prep' },
               { value:'pdfs', label:'My PDFs' },
             ] as const).map(t => (
               <button key={t.value} onClick={() => setTab(t.value)}
-                style={{ padding:'0.625rem 1.25rem', fontSize:'0.9375rem', fontWeight: tab === t.value ? 600 : 400, color: tab === t.value ? 'rgb(34,85,14)' : 'rgb(107,107,88)', background:'transparent', border:'none', cursor:'pointer', borderBottom: tab === t.value ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom:'-2px', transition:'all 0.2s' }}>
+                style={{ padding:'0.625rem 1.25rem', fontSize:'0.9375rem', fontWeight: tab === t.value ? 600 : 400, color: tab === t.value ? 'rgb(34,85,14)' : 'var(--af-text-muted)', background:'transparent', border:'none', cursor:'pointer', borderBottom: tab === t.value ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom:'-2px', transition:'all 0.2s' }}>
                 {t.label}
                 {t.value === 'pdfs' && sessions.filter(s => s.pdf_downloaded).length > 0 && (
                   <span style={{ marginLeft:'0.5rem', background:'rgba(34,85,14,0.1)', color:'rgb(34,85,14)', borderRadius:'9999px', padding:'0.125rem 0.5rem', fontSize:'0.75rem', fontWeight:600 }}>
@@ -338,7 +338,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
 
           {filteredSessions.length === 0 ? (
             <div className="card" style={{ padding:'4rem 2rem', textAlign:'center' }}>
-              <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'rgba(34,85,14,0.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
+              <div style={{ width:'4rem', height:'4rem', borderRadius:'1rem', background:'var(--af-border)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
                 {tab === 'pdfs' ? <FileText style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} /> : <BookOpen style={{ width:'2rem', height:'2rem', color:'rgb(34,85,14)' }} />}
               </div>
               <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.75rem' }}>
