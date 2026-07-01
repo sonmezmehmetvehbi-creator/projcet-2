@@ -37,12 +37,16 @@ export default async function AdminPayoutsPage() {
   // Tutor user_id → email lookup
   const tutorUserIds = (tutorsRaw ?? []).map(t => t.user_id).filter(Boolean)
   const emailById = new Map<string, string>()
+  const nameById = new Map<string, string>()
   if (tutorUserIds.length > 0) {
     const { data: tutorProfiles } = await adminClient
       .from('profiles')
-      .select('id, email')
+      .select('id, email, display_name')
       .in('id', tutorUserIds)
-    for (const p of (tutorProfiles ?? [])) emailById.set(p.id, p.email)
+    for (const p of (tutorProfiles ?? [])) {
+      emailById.set(p.id, p.email)
+      if (p.display_name) nameById.set(p.id, p.display_name)
+    }
   }
 
   const tutorById = new Map((tutorsRaw ?? []).map(t => [t.id, t]))
@@ -70,7 +74,7 @@ export default async function AdminPayoutsPage() {
       reference_id: p.reference_id ?? null,
       receipt_url: p.receipt_url ?? null,
       notes: p.notes ?? null,
-      tutor_name: t?.display_name ?? 'Tutor',
+      tutor_name: t?.display_name ?? (t?.user_id && nameById.get(t.user_id)) ?? 'Tutor',
       tutor_email: (t?.user_id && emailById.get(t.user_id)) || '',
       payment_handle: paymentHandle(t),
       venmo: t?.venmo ?? null,
@@ -128,7 +132,9 @@ export default async function AdminPayoutsPage() {
     const totalPaid = tp.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
     const totalPending = tp.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
     const earnedThisYear = tp
-      .filter(p => p.status === 'paid' && p.paid_at && new Date(p.paid_at).getFullYear() === thisYear)
+      .filter(p => p.status === 'paid' && (
+        !p.paid_at || new Date(p.paid_at).getFullYear() === thisYear
+      ))
       .reduce((sum, p) => sum + p.amount, 0)
     const sessionCount = tp.length
     return {
