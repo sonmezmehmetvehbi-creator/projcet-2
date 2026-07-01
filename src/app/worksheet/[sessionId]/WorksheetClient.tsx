@@ -1,15 +1,46 @@
 'use client'
 import MathText from '@/components/ui/MathText'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, ArrowLeft, BookOpen, Download } from 'lucide-react'
 import type { Worksheet, MCQuestion, FRQuestion, Question } from '@/types'
+import XPModal from '@/components/ui/XPModal'
 
 interface Props { session: any }
 
 export default function WorksheetClient({ session }: Props) {
   const worksheet: Worksheet = session.content?.worksheet
   const router = useRouter()
+  const [xpResult, setXpResult] = useState<any>(null)
+  const awardedRef = useRef(false)
+
+  useEffect(() => {
+    if (!worksheet || awardedRef.current) return
+    awardedRef.current = true
+    ;(async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        const lastStudy = localStorage.getItem('lastStudyDate')
+        const isFirstSessionToday = lastStudy !== today
+        if (isFirstSessionToday) localStorage.setItem('lastStudyDate', today)
+
+        const res = await fetch('/api/xp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            outputType: 'worksheet',
+            isFirstSessionToday,
+            sessionId: session.id,
+            subject: session.subject,
+            topic: session.topic,
+          }),
+        })
+        const data = await res.json()
+        if (!data.error && !data.alreadyEarned && data.xpEarned > 0) setXpResult(data)
+      } catch {}
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function downloadPDF() {
   const res = await fetch('/api/export-pdf', {
@@ -39,6 +70,7 @@ export default function WorksheetClient({ session }: Props) {
 
   return (
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
+      {xpResult && <XPModal result={xpResult} onClose={() => setXpResult(null)} />}
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'52rem' }}>
 
         {/* Header */}

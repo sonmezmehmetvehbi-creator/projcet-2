@@ -133,6 +133,8 @@ else spawnFloatingXP(1)
           outputType: 'questions',
           isFirstSessionToday,
           sessionId: session.id,
+          subject: session.subject,
+          topic: session.topic,
         }),
       })
       const data = await res.json()

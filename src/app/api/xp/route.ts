@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 // XP is awarded only the first time a user completes a given subject+topic+type,
@@ -55,16 +56,23 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // Use the service-role client for all DB reads/writes to avoid RLS issues.
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const {
       correctAnswers,
       totalAnswers,
       frScores,
       outputType,
       isFirstSessionToday,
-      sessionId,
+      subject,
+      topic,
     } = await request.json()
 
-    const { data: profile } = await supabase
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('xp, level, streak_count, last_study_date, is_premium, bonus_generations')
       .eq('id', user.id)
@@ -73,32 +81,19 @@ export async function POST(request: Request) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
     // ── First-time-per-topic XP gating ────────────────────────────────────
-    // Build a unique source_key from the session's subject + topic + type.
-    let sourceType: string = outputType === 'questions' ? 'questions' : 'worksheet'
-    let sourceKey: string | null = null
-    if (sessionId) {
-      const { data: sess } = await supabase
-        .from('sessions')
-        .select('subject, topic, output_type, is_sat')
-        .eq('id', sessionId)
-        .eq('user_id', user.id)
-        .single()
-      if (sess) {
-        sourceType = sess.is_sat ? 'sat' : (sess.output_type ?? sourceType)
-        const norm = (s: any) => String(s ?? '').toLowerCase().trim().replace(/\s+/g, ' ')
-        sourceKey = `${sourceType}|${norm(sess.subject)}|${norm(sess.topic)}`
-      }
-    }
+    // Build a unique source_key from the request's subject + topic + type.
+    const sourceType: string = outputType === 'questions' ? 'questions' : 'worksheet'
+    const sourceKey = `${sourceType}:${(subject ?? '').toLowerCase().trim()}:${(topic ?? '').toLowerCase().trim()}`
 
     // If XP was already earned for this exact content, award nothing.
-    if (sourceKey) {
-      const { data: prior } = await supabase
+    {
+      const { data: existing } = await adminClient
         .from('user_xp_history')
         .select('id')
         .eq('user_id', user.id)
         .eq('source_key', sourceKey)
-        .maybeSingle()
-      if (prior) {
+        .single()
+      if (existing) {
         const currentLevel = getLevelFromXP(profile.xp ?? 0)
         return NextResponse.json({
           success: true,
@@ -250,7 +245,7 @@ export async function POST(request: Request) {
     }
 
     // ── Update profile ───────────────────────────────────────────────────
-    await supabase
+    await adminClient
       .from('profiles')
       .update({
         xp: newXP,
@@ -262,11 +257,9 @@ export async function POST(request: Request) {
       .eq('id', user.id)
 
     // Mark this subject+topic+type as completed so XP isn't awarded again.
-    if (sourceKey && xpEarned > 0) {
-      await supabase
-        .from('user_xp_history')
-        .insert({ user_id: user.id, source_type: sourceType, source_key: sourceKey, xp_earned: xpEarned })
-    }
+    await adminClient
+      .from('user_xp_history')
+      .insert({ user_id: user.id, source_type: sourceType, source_key: sourceKey, xp_earned: xpEarned })
 
     return NextResponse.json({
       success: true,
