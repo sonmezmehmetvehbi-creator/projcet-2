@@ -18,7 +18,6 @@ export function StudentThemeProvider({ children }: { children: React.ReactNode }
     const saved = localStorage.getItem('aceforge_student_theme') as Theme | null
     if (saved === 'light' || saved === 'dark') {
       setTheme(saved)
-      document.documentElement.setAttribute('data-theme', saved)
     }
   }, [])
 
@@ -26,7 +25,6 @@ export function StudentThemeProvider({ children }: { children: React.ReactNode }
     const next: Theme = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     localStorage.setItem('aceforge_student_theme', next)
-    document.documentElement.setAttribute('data-theme', next)
   }
 
   return <StudentThemeCtx.Provider value={{ theme, toggle }}>{children}</StudentThemeCtx.Provider>

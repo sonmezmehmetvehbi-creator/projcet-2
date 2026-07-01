@@ -22,7 +22,7 @@
   ::-webkit-scrollbar-thumb { background: rgba(34,85,14,0.2); border-radius: 9999px; }
 
   /* Student theme tokens — default (light). Components reference these via
-     var(); the [data-theme="dark"] / .student-dark overrides below flip them. */
+     var(); the .student-dark overrides below flip them. */
   :root {
     --af-bg: rgb(250,250,247);
     --af-bg-2: rgb(244,247,236);
@@ -48,12 +48,10 @@
   }
 }
 
-/* Dark mode is driven by [data-theme="dark"] on <html> (set by the student
-   theme context). Inline styles using var(--af-*) flip automatically. The
-   .student-dark wrapper is kept as an equivalent scoped alias so pages wrapped
-   by StudentThemeShell also get the class-based .card/.input overrides below.
+/* Dark mode is driven by the .student-dark class applied to the wrapper div by
+   StudentThemeShell. Inline styles using var(--af-*) flip automatically, as do
+   the class-based .card/.input overrides below.
    Tutor pages never consume --af-* (they use .tutor-dark), so they are safe. */
-[data-theme="dark"],
 .student-dark {
   --af-bg: rgb(13,13,20);
   --af-bg-2: rgb(18,18,28);

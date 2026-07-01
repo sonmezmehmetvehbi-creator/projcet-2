@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import WorksheetClient from './WorksheetClient'
 
 export default async function WorksheetPage({ params }: { params: { sessionId: string } }) {
@@ -14,9 +15,9 @@ export default async function WorksheetPage({ params }: { params: { sessionId: s
   if (!session) redirect('/dashboard')
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
+    <StudentThemeShell>
       <Navbar profile={profile} />
       <WorksheetClient session={session} />
-    </div>
+    </StudentThemeShell>
   )
 }

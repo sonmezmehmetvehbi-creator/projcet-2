@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import TutorNavbar from '@/app/tutor/dashboard/TutorNavbar'
 import { TutorThemeProvider } from '@/app/tutor/dashboard/TutorThemeContext'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import SupportClient from './SupportClient'
 
 export default async function SupportPage() {
@@ -37,17 +38,28 @@ export default async function SupportPage() {
     tutorProfile = data
   }
 
-  const content = (
-    <div style={{ minHeight: '100vh', background: isTutor ? 'rgb(15,15,30)' : 'rgb(250,250,247)' }}>
-      {isTutor ? (
-        <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
-      ) : (
-        <Navbar profile={profile} />
-      )}
-      <SupportClient profile={profile} tickets={tickets ?? []} currentUserId={user.id} isTutor={isTutor} />
-    </div>
+  const supportClient = (
+    <SupportClient profile={profile} tickets={tickets ?? []} currentUserId={user.id} isTutor={isTutor} />
   )
 
-  // Wrap tutors in the theme provider so the navbar toggle (useTutorTheme) works here too.
-  return isTutor ? <TutorThemeProvider>{content}</TutorThemeProvider> : content
+  // Tutors get the dark-purple tutor theme; wrap them in the theme provider so
+  // the navbar toggle (useTutorTheme) works here too.
+  if (isTutor) {
+    return (
+      <TutorThemeProvider>
+        <div style={{ minHeight: '100vh', background: 'rgb(15,15,30)' }}>
+          <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
+          {supportClient}
+        </div>
+      </TutorThemeProvider>
+    )
+  }
+
+  // Students get the scoped .student-dark theme via StudentThemeShell.
+  return (
+    <StudentThemeShell>
+      <Navbar profile={profile} />
+      {supportClient}
+    </StudentThemeShell>
+  )
 }

@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import QuestionsClient from './QuestionsClient'
 import AdSlot from '@/components/ui/AdSlot'
 
@@ -17,7 +18,7 @@ export default async function QuestionsPage({ params }: { params: { sessionId: s
   const isPremium = profile?.is_premium ?? false
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
+    <StudentThemeShell>
       <Navbar profile={profile} />
       <div style={{ display:'flex', gap:'1.5rem', maxWidth:'80rem', margin:'0 auto', padding:'5rem 1.5rem 2rem' }}>
 
@@ -52,6 +53,6 @@ export default async function QuestionsPage({ params }: { params: { sessionId: s
         .ad-sidebar { display: none; }
         @media (min-width: 1200px) { .ad-sidebar { display: block; } }
       `}</style>
-    </div>
+    </StudentThemeShell>
   )
 }

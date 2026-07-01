@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -32,13 +33,13 @@ export default async function DashboardPage() {
     .single()
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
+    <StudentThemeShell>
       <Navbar profile={profile} />
       <DashboardClient
         profile={profile}
         sessions={sessions ?? []}
         usage={{ questions: usage?.questions ?? 0, worksheets: usage?.worksheets ?? 0, sat: usage?.sat ?? 0 }}
       />
-    </div>
+    </StudentThemeShell>
   )
 }

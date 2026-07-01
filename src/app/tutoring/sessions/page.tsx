@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
+import StudentThemeShell from '@/app/contexts/StudentThemeShell'
 import SessionsListClient from './SessionsListClient'
 
 export default async function TutoringSessionsPage() {
@@ -28,9 +29,9 @@ export default async function TutoringSessionsPage() {
   }))
 
   return (
-    <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
+    <StudentThemeShell>
       <Navbar profile={profile} />
       <SessionsListClient sessions={sessions} userId={user.id} />
-    </div>
+    </StudentThemeShell>
   )
 }
