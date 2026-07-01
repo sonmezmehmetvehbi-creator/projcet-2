@@ -101,6 +101,7 @@ export async function POST(request: Request) {
       if (prior) {
         const currentLevel = getLevelFromXP(profile.xp ?? 0)
         return NextResponse.json({
+          success: true,
           alreadyEarned: true,
           message: 'XP already earned for this topic',
           xpEarned: 0,
@@ -268,6 +269,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
+      success: true,
+      alreadyEarned: false,
       xpEarned,
       breakdown,
       oldXP,
