@@ -50,6 +50,41 @@ function getNextLevel(currentLevel: number) {
   return LEVELS.find(l => l.level === currentLevel + 1) ?? null
 }
 
+// GET /api/xp?subject=...&topic=...&outputType=questions
+// Returns whether the current user has already earned XP for this topic,
+// so the client can suppress XP animations/modals up front.
+export async function GET(request: Request) {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { searchParams } = new URL(request.url)
+    const subject = searchParams.get('subject')
+    const topic = searchParams.get('topic')
+    const outputType = searchParams.get('outputType')
+    const sourceType = outputType === 'worksheet' ? 'worksheet' : 'questions'
+    const sourceKey = `${sourceType}:${(subject ?? '').toLowerCase().trim()}:${(topic ?? '').toLowerCase().trim()}`
+
+    const { data: existing } = await adminClient
+      .from('user_xp_history')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('source_key', sourceKey)
+      .single()
+
+    return NextResponse.json({ alreadyEarned: !!existing })
+  } catch (error: any) {
+    console.error('XP GET error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()

@@ -29,8 +29,18 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0)
   const [showFireBanner, setShowFireBanner] = useState(false)
   const [xpLoading, setXpLoading] = useState(false)
+  const [topicAlreadyEarned, setTopicAlreadyEarned] = useState(false)
   const floatingIdRef = useRef(0)
   const router = useRouter()
+
+  useEffect(() => {
+    if (!session.subject || !session.topic) return
+    const params = new URLSearchParams({ subject: session.subject, topic: session.topic })
+    fetch(`/api/xp?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => { if (data.alreadyEarned) setTopicAlreadyEarned(true) })
+      .catch(() => {})
+  }, [session.subject, session.topic])
 
   const q = questions[current]
   const total = questions.length
@@ -39,6 +49,8 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
   ).length
 
   function spawnFloatingXP(amount: number) {
+    // No XP is awarded for a topic already completed — skip the animation.
+    if (topicAlreadyEarned) return
     const id = floatingIdRef.current++
     const x = 40 + Math.random() * 20
     const y = 30 + Math.random() * 20
@@ -138,6 +150,12 @@ else spawnFloatingXP(1)
         }),
       })
       const data = await res.json()
+      if (data.alreadyEarned) {
+        // Already earned XP for this topic — no animation, no modal.
+        setXpLoading(false)
+        setShowSummary(true)
+        return
+      }
       if (!data.error) setXpResult(data)
     } catch {}
     setXpLoading(false)
