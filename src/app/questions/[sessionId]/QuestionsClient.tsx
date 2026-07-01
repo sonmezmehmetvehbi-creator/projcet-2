@@ -132,6 +132,7 @@ else spawnFloatingXP(1)
           frScores,
           outputType: 'questions',
           isFirstSessionToday,
+          sessionId: session.id,
         }),
       })
       const data = await res.json()

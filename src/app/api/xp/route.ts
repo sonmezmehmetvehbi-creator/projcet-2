@@ -1,6 +1,21 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
+// XP is awarded only the first time a user completes a given subject+topic+type,
+// preventing XP farming by re-running the same content. Completed combinations
+// are recorded in user_xp_history, keyed by a normalized source_key.
+//
+// -- CREATE TABLE IF NOT EXISTS user_xp_history (
+// --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+// --   user_id uuid REFERENCES profiles(id),
+// --   source_type text,
+// --   source_key text,
+// --   xp_earned int,
+// --   created_at timestamptz DEFAULT now(),
+// --   UNIQUE(user_id, source_key)
+// -- );
+// -- ALTER TABLE user_xp_history DISABLE ROW LEVEL SECURITY;
+
 const LEVELS = [
   { level: 1, name: 'Freshman', emoji: '📚', xpRequired: 0 },
   { level: 2, name: 'Apprentice', emoji: '✏️', xpRequired: 150 },
@@ -46,6 +61,7 @@ export async function POST(request: Request) {
       frScores,
       outputType,
       isFirstSessionToday,
+      sessionId,
     } = await request.json()
 
     const { data: profile } = await supabase
@@ -55,6 +71,54 @@ export async function POST(request: Request) {
       .single()
 
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+
+    // ── First-time-per-topic XP gating ────────────────────────────────────
+    // Build a unique source_key from the session's subject + topic + type.
+    let sourceType: string = outputType === 'questions' ? 'questions' : 'worksheet'
+    let sourceKey: string | null = null
+    if (sessionId) {
+      const { data: sess } = await supabase
+        .from('sessions')
+        .select('subject, topic, output_type, is_sat')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single()
+      if (sess) {
+        sourceType = sess.is_sat ? 'sat' : (sess.output_type ?? sourceType)
+        const norm = (s: any) => String(s ?? '').toLowerCase().trim().replace(/\s+/g, ' ')
+        sourceKey = `${sourceType}|${norm(sess.subject)}|${norm(sess.topic)}`
+      }
+    }
+
+    // If XP was already earned for this exact content, award nothing.
+    if (sourceKey) {
+      const { data: prior } = await supabase
+        .from('user_xp_history')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('source_key', sourceKey)
+        .maybeSingle()
+      if (prior) {
+        const currentLevel = getLevelFromXP(profile.xp ?? 0)
+        return NextResponse.json({
+          alreadyEarned: true,
+          message: 'XP already earned for this topic',
+          xpEarned: 0,
+          breakdown: [{ reason: 'XP already earned for this topic', amount: 0 }],
+          oldXP: profile.xp ?? 0,
+          newXP: profile.xp ?? 0,
+          oldLevel: currentLevel,
+          newLevel: currentLevel,
+          nextLevel: getNextLevel(currentLevel.level),
+          didLevelUp: false,
+          newStreak: profile.streak_count ?? 0,
+          streakBonus: 0,
+          streakMessage: '',
+          bonusGenerationsAdded: 0,
+          isPremium: profile.is_premium,
+        })
+      }
+    }
 
     // ── Streak multiplier ────────────────────────────────────────────────
     const streakCount = profile.streak_count ?? 0
@@ -195,6 +259,13 @@ export async function POST(request: Request) {
         bonus_generations: (profile.bonus_generations ?? 0) + bonusGenerationsAdded,
       })
       .eq('id', user.id)
+
+    // Mark this subject+topic+type as completed so XP isn't awarded again.
+    if (sourceKey && xpEarned > 0) {
+      await supabase
+        .from('user_xp_history')
+        .insert({ user_id: user.id, source_type: sourceType, source_key: sourceKey, xp_earned: xpEarned })
+    }
 
     return NextResponse.json({
       xpEarned,

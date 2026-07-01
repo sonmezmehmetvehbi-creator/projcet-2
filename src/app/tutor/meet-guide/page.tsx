@@ -41,9 +41,9 @@ function MeetGuideContent() {
         <div style={{ padding: '1.25rem 1.5rem', borderRadius: '1rem', background: quickBg, border: `1px solid ${quickBorder}`, marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <p style={{ fontWeight: 700, color: text1, marginBottom: '0.25rem' }}>🚀 Quick Start</p>
-            <p style={{ fontSize: '0.875rem', color: text3 }}>Go directly to Google Meet and create a new meeting</p>
+            <p style={{ fontSize: '0.875rem', color: text3 }}>Go to the Google Meet landing page to schedule or start a meeting</p>
           </div>
-          <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer"
+          <a href="https://meet.google.com/landing" target="_blank" rel="noopener noreferrer"
             style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', background: stepGrad, color: 'white', textDecoration: 'none', fontWeight: 700, fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
             Create Meet Now →
           </a>
@@ -62,8 +62,8 @@ function MeetGuideContent() {
             {
               step: 2,
               title: 'Create a New Meeting',
-              desc: 'Click "New Meeting" and then select "Schedule in Google Calendar" for a scheduled session, or "Start an instant meeting" if the session is about to begin.',
-              tip: 'For scheduled sessions always use "Schedule in Google Calendar" so both you and the student get a calendar invite.',
+              desc: 'For a scheduled session, click "New Meeting" and then choose "Schedule in Google Calendar" — this creates the meeting at the booked date and time instead of opening your camera right away. Only use "Start an instant meeting" if the session is starting right now.',
+              tip: 'For scheduled sessions always use "New Meeting" → "Schedule in Google Calendar" so both you and the student get a calendar invite with the link.',
             },
             {
               step: 3,

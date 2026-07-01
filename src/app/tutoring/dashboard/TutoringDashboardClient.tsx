@@ -27,9 +27,6 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
     s.status === 'completed' || s.status === 'refunded' || s.status === 'disputed'
   )
   const activeDisputes = sessions.filter(s => s.status === 'disputed')
-  const totalSpent = sessions
-    .filter(s => s.status === 'completed')
-    .reduce((sum, s) => sum + (s.student_price ?? 0), 0)
 
   const bookedTutorIds = Array.from(new Set(sessions.map(s => s.tutor_profiles?.id).filter(Boolean)))
   const favoriteTutors = allTutors.filter(t => bookedTutorIds.includes(t.id))
@@ -74,7 +71,6 @@ export default function TutoringDashboardClient({ profile, sessions, allTutors }
           {[
             { label:'Upcoming', value:upcoming.length, emoji:'📅', color:'rgb(37,99,235)' },
             { label:'Completed', value:past.filter(s => s.status === 'completed').length, emoji:'✅', color:'rgb(34,85,14)' },
-            { label:'Total Spent', value:'$' + totalSpent.toFixed(2), emoji:'💳', color:'rgb(34,85,14)' },
             { label:'Tutors Booked', value:bookedTutorIds.length, emoji:'🎓', color:'rgb(180,120,10)' },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding:'1.25rem', textAlign:'center' }}>

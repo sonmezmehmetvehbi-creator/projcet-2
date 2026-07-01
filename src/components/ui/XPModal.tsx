@@ -29,6 +29,8 @@ interface XPResult {
   streakMessage: string
   bonusGenerationsAdded: number
   isPremium: boolean
+  alreadyEarned?: boolean
+  message?: string
 }
 
 interface Props {
@@ -197,8 +199,21 @@ export default function XPModal({ result, onClose }: Props) {
             </div>
           )}
 
+          {/* Already-earned header (no XP awarded for repeated topics) */}
+          {result.alreadyEarned && (
+            <div style={{ textAlign:'center', marginBottom:'1.25rem' }}>
+              <div style={{ fontSize:'2.5rem', marginBottom:'0.5rem' }}>🔁</div>
+              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)' }}>
+                XP already earned for this topic
+              </h2>
+              <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginTop:'0.375rem' }}>
+                Try a new subject or topic to earn more XP.
+              </p>
+            </div>
+          )}
+
           {/* Normal/Done Phase header */}
-          {(phase === 'xpFill' || phase === 'done' || phase === 'enter') && !didLevelUp && (
+          {(phase === 'xpFill' || phase === 'done' || phase === 'enter') && !didLevelUp && !result.alreadyEarned && (
             <div style={{ textAlign:'center', marginBottom:'1.25rem' }}>
               <div style={{ fontSize:'2.5rem', marginBottom:'0.5rem' }}>
                 {result.xpEarned >= 50 ? '🚀' : result.xpEarned >= 30 ? '⭐' : '✨'}
