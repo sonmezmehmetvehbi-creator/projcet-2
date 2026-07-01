@@ -66,33 +66,10 @@
   --af-input-border: rgba(255,255,255,0.12);
   --af-shadow: rgba(0,0,0,0.3);
 }
-.student-dark .card,
-.student-dark .card-hover {
-  background-color: var(--af-card);
-  border-color: var(--af-border);
-  color: var(--af-text);
-}
-.student-dark .input {
-  background-color: var(--af-input-bg);
-  border-color: var(--af-input-border);
-  color: var(--af-text);
-}
-.student-dark .input::placeholder { color: var(--af-text-muted); }
-
 /* Tutor dark-purple theme, scoped the same way as .student-dark. Used on tutor
-   pages that lean on the global .card/.input/.btn-* classes (apply, appeal). */
-.tutor-dark .card,
-.tutor-dark .card-hover {
-  background-color: rgba(255,255,255,0.04);
-  border-color: rgba(99,102,241,0.2);
-  color: white;
-}
-.tutor-dark .input {
-  background-color: rgba(255,255,255,0.05);
-  border-color: rgba(99,102,241,0.3);
-  color: white;
-}
-.tutor-dark .input::placeholder { color: rgba(255,255,255,0.4); }
+   pages that lean on the global .card/.input/.btn-* classes (apply, appeal).
+   The .card/.input overrides now live inside @layer components below so they
+   win over the layered .card/.input definitions. */
 .tutor-dark .input:focus { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
 .tutor-dark .label { color: rgba(255,255,255,0.85); }
 .tutor-dark .btn-primary { background-color: rgb(99,102,241); }
@@ -158,6 +135,36 @@
     transition: all 0.2s;
   }
   .card-hover:hover { box-shadow: 0 8px 32px rgba(34,85,14,0.12); transform: translateY(-4px); }
+
+  /* Dark-mode overrides live inside @layer components (after .card) so they
+     win over the layered .card/.input definitions above. */
+  .student-dark .card,
+  .student-dark .card-hover {
+    background-color: var(--af-card);
+    border-color: var(--af-border);
+    color: var(--af-text);
+  }
+  .student-dark .input {
+    background-color: var(--af-input-bg);
+    border-color: var(--af-input-border);
+    color: var(--af-text);
+  }
+  .student-dark .input::placeholder { color: var(--af-text-muted); }
+  .student-dark .btn-primary { background-color: var(--af-accent); }
+  .student-dark .label { color: var(--af-text-muted); }
+
+  .tutor-dark .card,
+  .tutor-dark .card-hover {
+    background-color: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+    color: white;
+  }
+  .tutor-dark .input {
+    background-color: rgba(255,255,255,0.05);
+    border-color: rgba(99,102,241,0.3);
+    color: white;
+  }
+  .tutor-dark .input::placeholder { color: rgba(255,255,255,0.3); }
 
   .input {
     width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem;
