@@ -48,6 +48,24 @@ interface SessionRow {
   status: string
 }
 
+interface TaxInfo {
+  tutor_id: string
+  legal_name: string | null
+  email: string | null
+  phone: string | null
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  country: string | null
+  business_name: string | null
+  tax_entity_type: string | null
+  w9_collected: boolean
+  w9_collected_date: string | null
+  notes: string | null
+}
+
 interface Props {
   payouts: Payout[]
   pendingPayouts: Payout[]
@@ -55,7 +73,28 @@ interface Props {
   sessions: SessionRow[]
   reports: any[]
   thisYear: number
+  taxInfoMap: Record<string, TaxInfo>
+  ytdEarningsMap: Record<string, number>
 }
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
+  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
+  'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
+]
+
+const ENTITY_TYPES = [
+  { value: 'individual', label: 'Individual / Sole Proprietor' },
+  { value: 'single_llc', label: 'Single-Member LLC' },
+  { value: 'multi_llc', label: 'Multi-Member LLC' },
+  { value: 's_corp', label: 'S-Corporation' },
+  { value: 'c_corp', label: 'C-Corporation' },
+  { value: 'partnership', label: 'Partnership' },
+]
+
+const entityLabel = (v: string | null | undefined) =>
+  ENTITY_TYPES.find(e => e.value === v)?.label ?? (v || '')
 
 const GREEN = 'rgb(34,85,14)'
 const MUTED = 'rgb(107,107,88)'
@@ -80,12 +119,12 @@ const TABS = [
   { id: 'overview', label: '📊 Overview' },
   { id: 'pending', label: '⏳ Pending Payouts' },
   { id: 'history', label: '🧾 Payout History' },
-  { id: 'tax', label: '🏛️ Tax Center' },
+  { id: 'tax', label: '🧾 Tax Info' },
 ] as const
 
 type TabId = typeof TABS[number]['id']
 
-export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPayouts, tutors: initialTutors, sessions, reports, thisYear }: Props) {
+export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPayouts, tutors: initialTutors, sessions, reports, thisYear, taxInfoMap, ytdEarningsMap }: Props) {
   const [tab, setTab] = useState<TabId>('overview')
   const [payouts, setPayouts] = useState(initialPayouts)
   const [tutors, setTutors] = useState(initialTutors)
@@ -124,7 +163,7 @@ export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPay
           <HistoryTab payouts={payouts} tutors={tutors} thisYear={thisYear} />
         )}
         {tab === 'tax' && (
-          <TaxTab tutors={tutors} setTutors={setTutors} thisYear={thisYear} />
+          <TaxInfoTab tutors={tutors} thisYear={thisYear} taxInfoMap={taxInfoMap} ytdEarningsMap={ytdEarningsMap} />
         )}
       </div>
     </div>
@@ -486,30 +525,40 @@ function HistoryTab({ payouts, tutors, thisYear }: { payouts: Payout[]; tutors: 
   )
 }
 
-// ============ Tab 4: Tax Center ============
-function TaxTab({ tutors, setTutors, thisYear }: {
-  tutors: Tutor[]; setTutors: React.Dispatch<React.SetStateAction<Tutor[]>>; thisYear: number
+// ============ Tab 4: Tax Info ============
+function TaxInfoTab({ tutors, thisYear, taxInfoMap, ytdEarningsMap }: {
+  tutors: Tutor[]; thisYear: number; taxInfoMap: Record<string, TaxInfo>; ytdEarningsMap: Record<string, number>
 }) {
+  // Local, editable copy of tax info keyed by tutor_id.
+  const [taxInfo, setTaxInfo] = useState<Record<string, TaxInfo>>(taxInfoMap)
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
-  // All approved tutors, highest earners first (total paid earnings).
+  const ytd = (id: string) => ytdEarningsMap[id] ?? 0
+
+  // All approved tutors, highest YTD earners first.
   const rows = useMemo(
-    () => tutors.filter(t => t.status === 'approved').sort((a, b) => b.total_paid - a.total_paid),
-    [tutors]
+    () => tutors.filter(t => t.status === 'approved').sort((a, b) => ytd(b.id) - ytd(a.id)),
+    [tutors, ytdEarningsMap] // eslint-disable-line react-hooks/exhaustive-deps
   )
+
+  const needsCount = rows.filter(t => ytd(t.id) >= 600).length
+
+  const isCollected = (t: Tutor) => taxInfo[t.id]?.w9_collected ?? t.w9_collected
 
   async function toggleW9(tutor: Tutor) {
     if (busy) return
     setBusy(tutor.id)
+    const next = !isCollected(tutor)
     try {
-      const res = await fetch('/api/admin/toggle-w9', {
-        method: 'POST',
+      const res = await fetch('/api/admin/update-tax-info', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tutorId: tutor.id, collected: !tutor.w9_collected }),
+        body: JSON.stringify({ tutorId: tutor.id, w9_collected: next }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed')
-      setTutors(prev => prev.map(t => t.id === tutor.id ? { ...t, w9_collected: !t.w9_collected } : t))
+      setTaxInfo(prev => ({ ...prev, [tutor.id]: { ...(prev[tutor.id] ?? { tutor_id: tutor.id } as TaxInfo), ...data.taxInfo } }))
     } catch (e: any) {
       alert('Error: ' + e.message)
     } finally {
@@ -517,76 +566,280 @@ function TaxTab({ tutors, setTutors, thisYear }: {
     }
   }
 
-  function export1099() {
-    const needs = rows.filter(t => t.total_paid >= 600)
-    const data: (string | number)[][] = [
-      ['Tutor Legal Name', 'Email', 'Address (placeholder)', `Total Earnings ${thisYear}`, 'W-9 Collected', '1099 Required'],
-      ...needs.map(t => [t.name, t.email, '— collect on W-9 —', t.total_paid.toFixed(2), t.w9_collected ? 'Yes' : 'No', 'Yes']),
+  function exportTaxCsv() {
+    const rowsCsv: (string | number)[][] = [
+      ['Legal Name', 'Business Name', 'Entity Type', 'Email', 'Phone', 'Address', 'City', 'State', 'ZIP', 'Total Earned YTD', 'W9 Collected', 'W9 Date', 'Venmo', 'PayPal', 'Zelle', 'Notes'],
+      ...rows.map(t => {
+        const info = taxInfo[t.id]
+        const address = [info?.address_line1, info?.address_line2].filter(Boolean).join(', ')
+        return [
+          info?.legal_name || t.name,
+          info?.business_name ?? '',
+          entityLabel(info?.tax_entity_type),
+          info?.email || t.email,
+          info?.phone ?? '',
+          address,
+          info?.city ?? '',
+          info?.state ?? '',
+          info?.zip ?? '',
+          ytd(t.id).toFixed(2),
+          isCollected(t) ? 'Yes' : 'No',
+          info?.w9_collected_date ? new Date(info.w9_collected_date).toLocaleDateString() : '',
+          t.venmo ?? '',
+          t.paypal ?? '',
+          t.zelle ?? '',
+          info?.notes ?? '',
+        ]
+      }),
     ]
-    downloadCsv(`aceforge-1099-${thisYear}.csv`, data)
+    downloadCsv(`aceforge-tax-data-${thisYear}.csv`, rowsCsv)
   }
 
-  const tierColor = (amt: number) => amt >= 600 ? 'rgb(163,45,45)' : amt >= 400 ? 'rgb(217,119,6)' : GREEN
-  const tierBg = (amt: number) => amt >= 600 ? 'rgba(163,45,45,0.08)' : amt >= 400 ? 'rgba(217,119,6,0.08)' : 'rgba(34,85,14,0.06)'
+  // Threshold tiering by YTD earnings.
+  const tierColor = (amt: number) => amt >= 600 ? 'rgb(163,45,45)' : amt >= 400 ? 'rgb(180,99,5)' : GREEN
+  const tierBarBg = (amt: number) => amt >= 600 ? 'rgb(163,45,45)' : amt >= 400 ? 'rgb(217,119,6)' : GREEN
+  const tierLabel = (amt: number) =>
+    amt >= 600 ? '🚨 1099 Required — W-9 needed'
+      : amt >= 400 ? '⚠️ Approaching $600 — collect W-9 soon'
+        : 'Under threshold'
 
   return (
     <div>
-      <div style={{ padding: '1rem 1.25rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)', marginBottom: '1.5rem' }}>
-        <p style={{ fontSize: '0.875rem', color: 'rgb(37,99,235)', lineHeight: 1.6 }}>
-          🏛️ Tutors earning <strong>$600+</strong> will receive a 1099-NEC. Collect their W-9 before filing.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-        <button onClick={export1099}
-          style={{ padding: '0.625rem 1.25rem', borderRadius: '0.625rem', background: GREEN, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-          ⬇️ Export 1099 Data
+      {/* Summary banner */}
+      <div style={{ padding: '1.25rem 1.5rem', borderRadius: '0.875rem', background: needsCount > 0 ? 'rgba(163,45,45,0.06)' : 'rgba(34,85,14,0.05)', border: `1px solid ${needsCount > 0 ? 'rgba(163,45,45,0.18)' : 'rgba(34,85,14,0.15)'}`, marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div>
+          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: needsCount > 0 ? 'rgb(163,45,45)' : GREEN }}>
+            {needsCount} tutor{needsCount !== 1 ? 's' : ''} require 1099 filing this year
+          </p>
+          <p style={{ fontSize: '0.8125rem', color: MUTED, marginTop: '0.25rem' }}>
+            Tutors earning <strong>$600+</strong> in {thisYear} need a 1099-NEC. Collect their W-9 and tax info below.
+          </p>
+        </div>
+        <button onClick={exportTaxCsv}
+          style={{ padding: '0.625rem 1.25rem', borderRadius: '0.625rem', background: GREEN, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          ⬇️ Export Tax Data CSV
         </button>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'rgba(34,85,14,0.04)' }}>
-                {['Tutor', `Earnings ${thisYear}`, 'Status', 'W-9', ''].map(h => <th key={h} style={th}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(t => (
-                <tr key={t.id} style={{ borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
-                  <td style={{ ...td, fontWeight: 600, color: INK }}>
-                    {t.name}
-                    <div style={{ fontSize: '0.75rem', color: MUTED, fontWeight: 400 }}>{t.email}</div>
-                  </td>
-                  <td style={td}>
-                    <span style={{ display: 'inline-block', padding: '0.25rem 0.625rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.875rem', color: tierColor(t.total_paid), background: tierBg(t.total_paid) }}>
-                      ${t.total_paid.toFixed(2)}
-                    </span>
-                  </td>
-                  <td style={td}>
-                    {t.total_paid >= 600
-                      ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(163,45,45,0.12)', color: 'rgb(163,45,45)' }}>1099 Required ⚠️</span>
-                      : t.total_paid >= 400
-                        ? <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(217,119,6,0.12)', color: 'rgb(180,99,5)' }}>Approaching $600</span>
-                        : <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: GREEN }}>Under threshold</span>}
-                  </td>
-                  <td style={td}>
-                    {t.w9_collected
-                      ? <span style={{ color: GREEN, fontWeight: 600, fontSize: '0.8125rem' }}>✅ Collected</span>
-                      : <span style={{ color: MUTED, fontWeight: 600, fontSize: '0.8125rem' }}>Not collected</span>}
-                  </td>
-                  <td style={td}>
-                    <button onClick={() => toggleW9(t)} disabled={busy === t.id}
-                      style={{ padding: '0.4rem 0.75rem', borderRadius: '0.5rem', background: t.w9_collected ? 'transparent' : GREEN, border: t.w9_collected ? `1px solid ${MUTED}40` : 'none', color: t.w9_collected ? MUTED : 'white', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      {busy === t.id ? '…' : t.w9_collected ? 'Mark uncollected' : 'Mark collected'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {rows.length === 0 ? (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center', color: MUTED }}>No approved tutors yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          {rows.map(t => {
+            const amt = ytd(t.id)
+            const collected = isCollected(t)
+            const pct = Math.min(100, (amt / 600) * 100)
+            const open = expanded === t.id
+            return (
+              <div key={t.id} className="card" style={{ padding: '1.25rem 1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  {/* Avatar */}
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: tierBarBg(amt), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.125rem', fontFamily: 'Syne, sans-serif', flexShrink: 0 }}>
+                    {(t.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: '180px' }}>
+                    <p style={{ fontWeight: 700, fontSize: '1rem', color: INK }}>{t.name}</p>
+                    <p style={{ fontSize: '0.8125rem', color: MUTED }}>{t.email || 'No email'}</p>
+                  </div>
+                  <div style={{ textAlign: 'right', minWidth: '120px' }}>
+                    <p style={{ fontSize: '0.6875rem', color: MUTED, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Earned YTD {thisYear}</p>
+                    <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.375rem', fontWeight: 800, color: tierColor(amt), lineHeight: 1.1 }}>${amt.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                {/* Progress bar toward $600 */}
+                <div style={{ marginTop: '1rem' }}>
+                  <div style={{ height: '0.625rem', borderRadius: '9999px', background: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: tierBarBg(amt), borderRadius: '9999px', transition: 'width 0.3s' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: tierColor(amt) }}>{tierLabel(amt)}</span>
+                    <span style={{ fontSize: '0.75rem', color: MUTED }}>${amt.toFixed(0)} / $600</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '0.625rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button onClick={() => toggleW9(t)} disabled={busy === t.id}
+                    title={collected ? 'W-9 collected — click to unmark' : 'W-9 not collected — click to mark collected'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.875rem', borderRadius: '0.625rem', background: collected ? 'rgba(34,85,14,0.1)' : 'rgba(107,107,88,0.08)', border: `1px solid ${collected ? 'rgba(34,85,14,0.25)' : 'rgba(107,107,88,0.2)'}`, color: collected ? GREEN : MUTED, fontWeight: 600, fontSize: '0.8125rem', cursor: busy === t.id ? 'wait' : 'pointer' }}>
+                    <span style={{ fontSize: '1rem' }}>{busy === t.id ? '…' : collected ? '✅' : '✖️'}</span>
+                    W-9 {collected ? 'Collected' : 'Not Collected'}
+                  </button>
+                  <button onClick={() => setExpanded(open ? null : t.id)}
+                    style={{ padding: '0.45rem 0.875rem', borderRadius: '0.625rem', background: open ? INK : 'transparent', border: `1px solid ${open ? INK : 'rgba(34,85,14,0.25)'}`, color: open ? 'white' : INK, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                    {open ? '▲ Close' : '📝 View/Edit Tax Info'}
+                  </button>
+                </div>
+
+                {open && (
+                  <TaxInfoForm
+                    tutor={t}
+                    thisYear={thisYear}
+                    ytd={amt}
+                    info={taxInfo[t.id]}
+                    onSaved={(saved) => {
+                      setTaxInfo(prev => ({ ...prev, [t.id]: saved }))
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ---- Inline tax info form (Sub-section B) ----
+function TaxInfoForm({ tutor, thisYear, ytd, info, onSaved }: {
+  tutor: Tutor; thisYear: number; ytd: number; info: TaxInfo | undefined; onSaved: (saved: TaxInfo) => void
+}) {
+  const [form, setForm] = useState({
+    legal_name: info?.legal_name ?? tutor.name ?? '',
+    email: info?.email ?? tutor.email ?? '',
+    phone: info?.phone ?? '',
+    address_line1: info?.address_line1 ?? '',
+    address_line2: info?.address_line2 ?? '',
+    city: info?.city ?? '',
+    state: info?.state ?? '',
+    zip: info?.zip ?? '',
+    country: info?.country ?? 'US',
+    business_name: info?.business_name ?? '',
+    tax_entity_type: info?.tax_entity_type ?? 'individual',
+    w9_collected: info?.w9_collected ?? tutor.w9_collected ?? false,
+    w9_collected_date: info?.w9_collected_date ? info.w9_collected_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    notes: info?.notes ?? '',
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  const set = (k: keyof typeof form, v: any) => { setForm(f => ({ ...f, [k]: v })); setSaved(false) }
+
+  async function save() {
+    if (busy) return
+    if (!form.legal_name.trim()) { setError('Legal name is required'); return }
+    if (!form.email.trim()) { setError('Email is required'); return }
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/update-tax-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutorId: tutor.id,
+          ...form,
+          w9_collected_date: form.w9_collected ? new Date(form.w9_collected_date).toISOString() : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setSaved(true)
+      onSaved(data.taxInfo)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(34,85,14,0.12)' }}>
+      {/* Read-only cross-reference from tutor profile */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)' }}>
+        {[
+          { l: 'Venmo', v: tutor.venmo || '—' },
+          { l: 'PayPal', v: tutor.paypal || '—' },
+          { l: 'Zelle', v: tutor.zelle || '—' },
+          { l: 'Sessions', v: String(tutor.session_count) },
+          { l: 'Earned all time', v: `$${tutor.total_paid.toFixed(2)}` },
+          { l: `Earned ${thisYear}`, v: `$${ytd.toFixed(2)}` },
+        ].map(x => (
+          <div key={x.l}>
+            <div style={{ fontSize: '0.625rem', color: MUTED, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{x.l}</div>
+            <div style={{ fontSize: '0.875rem', color: INK, fontWeight: 600, marginTop: '0.15rem', wordBreak: 'break-word' }}>{x.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Editable tax form */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '0.875rem' }}>
+        <div>
+          <label style={lbl}>Legal Name (as on tax return) *</label>
+          <input value={form.legal_name} onChange={e => set('legal_name', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Email *</label>
+          <input value={form.email} onChange={e => set('email', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Phone</label>
+          <input value={form.phone} onChange={e => set('phone', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Address Line 1</label>
+          <input value={form.address_line1} onChange={e => set('address_line1', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Address Line 2</label>
+          <input value={form.address_line2} onChange={e => set('address_line2', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>City</label>
+          <input value={form.city} onChange={e => set('city', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>State</label>
+          <select value={form.state} onChange={e => set('state', e.target.value)} style={input}>
+            <option value="">Select…</option>
+            {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={lbl}>ZIP Code</label>
+          <input value={form.zip} onChange={e => set('zip', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Country</label>
+          <input value={form.country} onChange={e => set('country', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Business Name (optional)</label>
+          <input value={form.business_name} onChange={e => set('business_name', e.target.value)} style={input} />
+        </div>
+        <div>
+          <label style={lbl}>Entity Type</label>
+          <select value={form.tax_entity_type} onChange={e => set('tax_entity_type', e.target.value)} style={input}>
+            {ENTITY_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <label style={lbl}>W-9 Collected</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', height: '2.4rem' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', color: INK, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.w9_collected} onChange={e => set('w9_collected', e.target.checked)} style={{ width: '1.1rem', height: '1.1rem' }} />
+              Collected
+            </label>
+            {form.w9_collected && (
+              <input type="date" value={form.w9_collected_date} onChange={e => set('w9_collected_date', e.target.value)} style={{ ...input, width: 'auto', flex: 1 }} />
+            )}
+          </div>
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={lbl}>Notes</label>
+          <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} style={{ ...input, resize: 'vertical' }} placeholder="Any additional tax notes…" />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '1rem' }}>
+        <button onClick={save} disabled={busy}
+          style={{ padding: '0.625rem 1.25rem', borderRadius: '0.625rem', background: GREEN, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: busy ? 'wait' : 'pointer' }}>
+          {busy ? 'Saving…' : '💾 Save Tax Info'}
+        </button>
+        {saved && <span style={{ color: GREEN, fontWeight: 600, fontSize: '0.875rem' }}>✅ Saved</span>}
+        {error && <span style={{ color: 'rgb(163,45,45)', fontSize: '0.8125rem' }}>{error}</span>}
       </div>
     </div>
   )

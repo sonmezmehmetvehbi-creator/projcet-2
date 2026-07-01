@@ -25,11 +25,13 @@ export default async function AdminPayoutsPage() {
     { data: tutorsRaw },
     { data: sessionsRaw },
     { data: reportsRaw },
+    { data: taxInfoRaw },
   ] = await Promise.all([
     adminClient.from('tutor_payouts').select('*').order('created_at', { ascending: false }),
     adminClient.from('tutor_profiles').select('id, user_id, display_name, venmo, paypal, zelle, w9_collected, status'),
     adminClient.from('tutoring_sessions').select('id, subject, scheduled_at, student_price, tutor_payout, status, created_at'),
     adminClient.from('platform_reports').select('*').order('year', { ascending: true }),
+    adminClient.from('tutor_tax_info').select('*'),
   ])
 
   // Tutor user_id → email lookup
@@ -146,6 +148,13 @@ export default async function AdminPayoutsPage() {
     }
   })
 
+  // Tax info keyed by tutor_id, plus YTD paid earnings per tutor (current calendar year).
+  const taxInfoMap: Record<string, any> = {}
+  for (const row of (taxInfoRaw ?? [])) taxInfoMap[row.tutor_id] = row
+
+  const ytdEarningsMap: Record<string, number> = {}
+  for (const t of tutors) ytdEarningsMap[t.id] = t.earned_this_year
+
   // Revenue = student payments on sessions that were actually delivered/paid.
   const revenueSessions = (sessionsRaw ?? []).filter(s => ['completed', 'confirmed'].includes(s.status))
   const sessions = revenueSessions.map(s => ({
@@ -165,6 +174,8 @@ export default async function AdminPayoutsPage() {
         sessions={sessions}
         reports={reportsRaw ?? []}
         thisYear={thisYear}
+        taxInfoMap={taxInfoMap}
+        ytdEarningsMap={ytdEarningsMap}
       />
     </div>
   )
