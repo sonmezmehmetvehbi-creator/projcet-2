@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import { createClient } from '@/lib/supabase'
 import { BookOpen, FileText, ChevronDown, AlertCircle, Zap, Upload, X, FileUp } from 'lucide-react'
+import LimitReachedModal from '@/components/ui/LimitReachedModal'
 import type { Profile, Grade, OutputType, QuestionType, Difficulty } from '@/types'
 
 const GRADES: { value: Grade; label: string }[] = [
@@ -28,6 +29,7 @@ export default function GeneratePage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
+  const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
 
   const [useUpload, setUseUpload] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -53,7 +55,8 @@ export default function GeneratePage() {
     load()
   }, [])
 
-  const atLimit = !profile?.is_premium && (
+  const bonusGenerations = (profile as any)?.bonus_generations ?? 0
+  const atLimit = !profile?.is_premium && bonusGenerations <= 0 && (
     (outputType === 'questions' && usage.questions >= 2) ||
     (outputType === 'worksheet' && usage.worksheets >= 2)
   )
@@ -180,6 +183,11 @@ export default function GeneratePage() {
         new Promise(resolve => setTimeout(resolve, minWait)),
       ])
 
+      if (data.limitReached) {
+        setLimitModal({ open: true, bonus: data.bonusRemaining ?? 0 })
+        setLoading(false)
+        return
+      }
       if (data.error) throw new Error(data.error)
       if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
       else router.push(`/worksheet/${data.sessionId}`)
@@ -442,6 +450,12 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
+      <LimitReachedModal
+        open={limitModal.open}
+        onClose={() => setLimitModal({ open: false, bonus: 0 })}
+        limitLabel="2 free generations"
+        bonusRemaining={limitModal.bonus}
+      />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )

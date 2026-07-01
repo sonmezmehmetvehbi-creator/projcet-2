@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Zap } from 'lucide-react'
+import LimitReachedModal from '@/components/ui/LimitReachedModal'
 import type { Profile } from '@/types'
 
 interface Props {
@@ -65,13 +66,15 @@ export default function SATClient({ profile, satUsage }: Props) {
   const [difficulty, setDifficulty] = useState('medium')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
   const router = useRouter()
 
-  const atLimit = !profile?.is_premium && satUsage >= 1
+  const bonusGenerations = (profile as any)?.bonus_generations ?? 0
+  const atLimit = !profile?.is_premium && satUsage >= 1 && bonusGenerations <= 0
   const selectedModule = MODULES.find(m => m.id === module)!
 
   async function handleStart() {
-    if (atLimit) { setError('You have used your 1 free SAT practice set today. Upgrade to Premium for unlimited SAT prep.'); return }
+    if (atLimit) { setLimitModal({ open: true, bonus: bonusGenerations }); return }
     setError('')
     setLoading(true)
     try {
@@ -81,12 +84,15 @@ export default function SATClient({ profile, satUsage }: Props) {
         body: JSON.stringify({ module, questionCount, difficulty }),
       })
       const data = await res.json()
+      if (data.limitReached) {
+        setLimitModal({ open: true, bonus: data.bonusRemaining ?? 0 })
+        setLoading(false)
+        return
+      }
       if (data.error) throw new Error(data.error)
       router.push(`/questions/${data.sessionId}`)
     } catch (err: any) {
-      setError(err.message === 'sat_limit_reached'
-        ? 'You have used your 1 free SAT practice set today. Upgrade to Premium for unlimited.'
-        : err.message)
+      setError(err.message)
       setLoading(false)
     }
   }
@@ -271,6 +277,13 @@ export default function SATClient({ profile, satUsage }: Props) {
         </div>
 
       </div>
+
+      <LimitReachedModal
+        open={limitModal.open}
+        onClose={() => setLimitModal({ open: false, bonus: 0 })}
+        limitLabel="1 free SAT practice set"
+        bonusRemaining={limitModal.bonus}
+      />
     </div>
   )
 }

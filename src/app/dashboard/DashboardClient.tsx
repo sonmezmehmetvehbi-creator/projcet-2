@@ -1,10 +1,11 @@
 'use client'
 import TutoringModal from '@/components/ui/TutoringModal'
 import AdSlot from '@/components/ui/AdSlot'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, FileText, Plus, Zap, Download } from 'lucide-react'
+import { formatTimeUntilMidnight } from '@/lib/resetTime'
 import type { Profile } from '@/types'
 import { Suspense } from 'react'
 import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
@@ -38,8 +39,10 @@ function getLevelInfo(xp: number) {
 interface Props {
   profile: Profile | null
   sessions: any[]
-  usage: { questions: number; worksheets: number }
+  usage: { questions: number; worksheets: number; sat: number }
 }
+
+const USAGE_LIMITS = { questions: 2, worksheets: 2, sat: 1 } as const
 
 function DashboardInner({ profile, sessions, usage }: Props) {
   const searchParams = useSearchParams()
@@ -49,7 +52,15 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   const [tab, setTab] = useState<'all' | 'pdfs' | 'sat'>(initialTabValue)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [showTutoring, setShowTutoring] = useState(false)
+  const [resetIn, setResetIn] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    const tick = () => setResetIn(formatTimeUntilMidnight())
+    tick()
+    const id = setInterval(tick, 30000)
+    return () => clearInterval(id)
+  }, [])
 
   const upgraded = searchParams.get('upgraded') === 'true'
 
@@ -258,30 +269,47 @@ function DashboardInner({ profile, sessions, usage }: Props) {
             </div>
           </div>
 
-          {!profile?.is_premium && (
+          {profile?.is_premium ? (
+            <div className="card" style={{ padding:'1.25rem 1.5rem', marginBottom:'1.5rem', display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'1rem', background:'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(34,85,14,0.05))', border:'1px solid rgba(232,160,32,0.25)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+                <Zap style={{ width:'1.25rem', height:'1.25rem', color:'rgb(180,120,10)' }} />
+                <div>
+                  <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'var(--af-text)' }}>Unlimited generations ⚡</p>
+                  <p style={{ fontSize:'0.8125rem', color:'var(--af-text-muted)' }}>Questions, worksheets & SAT practice — no daily limits.</p>
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="card" style={{ padding:'1.25rem 1.5rem', marginBottom:'1.5rem', display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
               <div style={{ display:'flex', flexWrap:'wrap', gap:'2rem' }}>
-                {(['questions', 'worksheets'] as const).map(type => {
+                {(['questions', 'worksheets', 'sat'] as const).map(type => {
                   const used = usage[type]
+                  const cap = USAGE_LIMITS[type]
+                  const label = type === 'sat' ? 'SAT practice' : type
                   return (
                     <div key={type}>
-                      <p style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', marginBottom:'0.375rem', textTransform:'capitalize' }}>{type} today</p>
+                      <p style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', marginBottom:'0.375rem', textTransform:'capitalize' }}>{label} today</p>
                       <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
                         <div style={{ display:'flex', gap:'0.25rem' }}>
-                          {[0,1].map(i => (
+                          {Array.from({ length: cap }, (_, i) => (
                             <div key={i} style={{ width:'2rem', height:'0.5rem', borderRadius:'9999px', background: i < used ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)' }} />
                           ))}
                         </div>
-                        <span style={{ fontSize:'0.875rem', fontWeight:600, color:'var(--af-text)' }}>{used}/2</span>
+                        <span style={{ fontSize:'0.875rem', fontWeight:600, color:'var(--af-text)' }}>{used}/{cap}</span>
                       </div>
                     </div>
                   )
                 })}
               </div>
-              <Link href="/pricing" style={{ display:'flex', alignItems:'center', gap:'0.375rem', fontSize:'0.875rem', fontWeight:600, color:'rgb(34,85,14)', textDecoration:'none' }}>
-                <Zap style={{ width:'0.875rem', height:'0.875rem' }} />
-                Upgrade for unlimited
-              </Link>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.25rem' }}>
+                {resetIn && (
+                  <span style={{ fontSize:'0.75rem', color:'var(--af-text-muted)' }}>⏰ Resets in {resetIn}</span>
+                )}
+                <Link href="/pricing" style={{ display:'flex', alignItems:'center', gap:'0.375rem', fontSize:'0.875rem', fontWeight:600, color:'rgb(34,85,14)', textDecoration:'none' }}>
+                  <Zap style={{ width:'0.875rem', height:'0.875rem' }} />
+                  Upgrade for unlimited
+                </Link>
+              </div>
             </div>
           )}
 

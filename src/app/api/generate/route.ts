@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { checkGenerationAllowed, commitGeneration, type GenType } from '@/lib/usage'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -11,22 +12,13 @@ export async function POST(request: Request) {
 
     const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText, isRetry, difficulty } = await request.json()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.is_premium) {
-      const today = new Date().toISOString().split('T')[0]
-      const { data: usage } = await supabase
-        .from('daily_usage')
-        .select('questions, worksheets')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
-      const used = outputType === 'questions' ? (usage?.questions ?? 0) : (usage?.worksheets ?? 0)
-      if (used >= 2) return NextResponse.json({ error: 'daily_limit_reached' }, { status: 429 })
+    const genType: GenType = outputType === 'questions' ? 'questions' : 'worksheets'
+    const limit = await checkGenerationAllowed(supabase, user.id, genType)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Daily limit reached', limitReached: true, isPremium: limit.isPremium, bonusRemaining: limit.bonus },
+        { status: 429 }
+      )
     }
 
     const difficultyGuide: Record<string, string> = {
@@ -421,25 +413,9 @@ Return JSON with this exact structure:
 
     if (sessionError) throw sessionError
 
-    const today = new Date().toISOString().split('T')[0]
-    const field = outputType === 'questions' ? 'questions' : 'worksheets'
-
-    const { data: existingUsage } = await supabase
-      .from('daily_usage')
-      .select('id, questions, worksheets')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single()
-
-    if (existingUsage) {
-      await supabase
-        .from('daily_usage')
-        .update({ [field]: (existingUsage[field as keyof typeof existingUsage] as number) + 1 })
-        .eq('id', existingUsage.id)
-    } else {
-      await supabase
-        .from('daily_usage')
-        .insert({ user_id: user.id, date: today, [field]: 1 })
+    // Track usage / consume a bonus generation for free users only.
+    if (!limit.isPremium) {
+      await commitGeneration(supabase, user.id, genType, limit.usedBonus)
     }
 
     return NextResponse.json({ sessionId: session.id, outputType })

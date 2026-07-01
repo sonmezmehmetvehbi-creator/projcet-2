@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const today = new Date().toISOString().split('T')[0]
   const { data: usage } = await supabase
     .from('daily_usage')
-    .select('questions, worksheets')
+    .select('questions, worksheets, sat')
     .eq('user_id', user.id)
     .eq('date', today)
     .single()
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       <DashboardClient
         profile={profile}
         sessions={sessions ?? []}
-        usage={{ questions: usage?.questions ?? 0, worksheets: usage?.worksheets ?? 0 }}
+        usage={{ questions: usage?.questions ?? 0, worksheets: usage?.worksheets ?? 0, sat: usage?.sat ?? 0 }}
       />
     </div>
   )

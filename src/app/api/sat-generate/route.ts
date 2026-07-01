@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { checkGenerationAllowed, commitGeneration } from '@/lib/usage'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -11,24 +12,13 @@ export async function POST(request: Request) {
 
     const { module, questionCount, difficulty } = await request.json()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', user.id)
-      .single()
-
-    // Check SAT daily limit for free users
-    if (!profile?.is_premium) {
-      const today = new Date().toISOString().split('T')[0]
-      const { data: usage } = await supabase
-        .from('daily_usage')
-        .select('sat')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
-      if ((usage?.sat ?? 0) >= 1) {
-        return NextResponse.json({ error: 'sat_limit_reached' }, { status: 429 })
-      }
+    // Check SAT daily limit (1/day free), falling back to bonus generations.
+    const limit = await checkGenerationAllowed(supabase, user.id, 'sat')
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Daily limit reached', limitReached: true, isPremium: limit.isPremium, bonusRemaining: limit.bonus },
+        { status: 429 }
+      )
     }
 
     const isMath = module === 'math_no_calc' || module === 'math_calc'
@@ -175,21 +165,9 @@ Return JSON: { "questions": [...] }`
 
     if (sessionError) throw sessionError
 
-    // Update usage for free users
-    if (!profile?.is_premium) {
-      const today = new Date().toISOString().split('T')[0]
-      const { data: existingUsage } = await supabase
-        .from('daily_usage')
-        .select('id, sat')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
-
-      if (existingUsage) {
-        await supabase.from('daily_usage').update({ sat: (existingUsage.sat ?? 0) + 1 }).eq('id', existingUsage.id)
-      } else {
-        await supabase.from('daily_usage').insert({ user_id: user.id, date: today, sat: 1 })
-      }
+    // Track usage / consume a bonus generation for free users only.
+    if (!limit.isPremium) {
+      await commitGeneration(supabase, user.id, 'sat', limit.usedBonus)
     }
 
     return NextResponse.json({ sessionId: session.id })
