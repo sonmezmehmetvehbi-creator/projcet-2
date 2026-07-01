@@ -109,6 +109,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
   const [agreedToNoCriminal, setAgreedToNoCriminal] = useState(false)
   const [agreedToNoPoaching, setAgreedToNoPoaching] = useState(false)
   const [agreedToRecording, setAgreedToRecording] = useState(false)
+  const [agreedToTax, setAgreedToTax] = useState(false)
 
   function toggleLanguage(lang: string) {
     setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
@@ -141,7 +142,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
   }
 
   async function handleSubmit() {
-    if (!agreedToTerms || !agreedToNoCriminal || !agreedToNoPoaching || !agreedToRecording) {
+    if (!agreedToTerms || !agreedToNoCriminal || !agreedToNoPoaching || !agreedToRecording || !agreedToTax) {
       setError('Please agree to all terms before submitting.'); return
     }
     if (!idFile) { setError('Please upload your photo ID.'); return }
@@ -617,6 +618,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
                   { state: agreedToNoCriminal, setter: setAgreedToNoCriminal, text: 'I declare that I have no criminal history and I am legally eligible to work with students including minors. I understand that providing false information will result in immediate termination and potential legal action.' },
                   { state: agreedToNoPoaching, setter: setAgreedToNoPoaching, text: 'I agree not to solicit AceForge students to book sessions outside of the AceForge platform for 12 months. Violation of this agreement may result in legal action and a permanent ban.' },
                   { state: agreedToRecording, setter: setAgreedToRecording, text: 'I consent to all tutoring sessions being recorded for quality assurance and dispute resolution purposes. Recordings are reviewed only in case of a dispute and deleted after 30 days.' },
+                  { state: agreedToTax, setter: setAgreedToTax, text: 'I understand that AceForge is required by US law to issue a 1099-NEC to tutors earning $600 or more in a calendar year. By applying, I agree to provide my tax information (W-9) when requested. I understand that failure to provide this information may result in mandatory 24% backup withholding on my payments as required by the IRS.' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)' }}>
                     <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
