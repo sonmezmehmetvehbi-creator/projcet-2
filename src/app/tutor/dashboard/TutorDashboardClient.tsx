@@ -281,6 +281,13 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const langPillColor = isDark ? 'rgb(167,139,250)' : accent
   const langBorder = isDark ? 'rgba(139,92,246,0.3)' : accentBorder
   const optionBg = isDark ? '#1a1a2e' : 'white'
+  // Semantic status text colors — bright variants read well on the dark
+  // dashboard; darker variants keep contrast on the light background.
+  const posText = isDark ? 'rgb(74,222,128)' : 'rgb(21,128,61)'
+  const posTextSoft = isDark ? 'rgb(134,239,172)' : 'rgb(22,101,52)'
+  const warnText = isDark ? 'rgb(251,191,36)' : 'rgb(161,98,7)'
+  const dangerText = isDark ? 'rgb(248,113,113)' : 'rgb(220,38,38)'
+  const infoText = isDark ? 'rgb(96,165,250)' : 'rgb(37,99,235)'
 
   const upcoming = sessions.filter(s => s.status === 'confirmed' && new Date(s.scheduled_at) > new Date())
   const pending = sessions.filter(s => s.status === 'pending')
@@ -299,8 +306,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   const hasProcessing = payoutRows.some(p => statusOf(p) === 'processing')
 
   const statusColors: Record<string, string> = {
-    completed: 'rgb(74,222,128)', confirmed: accent, disputed: 'rgb(248,113,113)',
-    pending: 'rgb(251,191,36)', declined: 'rgb(107,107,88)', proposed: 'rgb(96,165,250)'
+    completed: posText, confirmed: accent, disputed: dangerText,
+    pending: warnText, declined: 'rgb(107,107,88)', proposed: infoText
   }
   const statusBgs: Record<string, string> = {
     completed: 'rgba(34,197,94,0.1)', confirmed: accentBg, disputed: 'rgba(239,68,68,0.1)',
@@ -462,7 +469,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   ] as const
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: pageBg }}>
+    <div className="tutor-dash" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: pageBg }}>
+      <style>{`.tutor-dash input::placeholder, .tutor-dash textarea::placeholder { color: ${text4}; opacity: 1; }`}</style>
 
       <TutorNavbar profile={profile} tutorProfile={tutorProfile} avatarUrl={avatarUrl} />
 
@@ -530,24 +538,24 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
               {tutorProfile?.display_name} 🎓
             </h1>
             <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,197,94,0.15)', color: 'rgb(74,222,128)', border: '1px solid rgba(34,197,94,0.3)' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,197,94,0.15)', color: posText, border: '1px solid rgba(34,197,94,0.3)' }}>
                 ✅ Approved Tutor
               </span>
               {tutorProfile?.is_top_tutor && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(251,191,36,0.18)', color: 'rgb(251,191,36)', border: '1px solid rgba(251,191,36,0.4)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(251,191,36,0.18)', color: warnText, border: '1px solid rgba(251,191,36,0.4)' }}>
                   ⭐ Top Tutor
                 </span>
               )}
               {tutorProfile?.credential_verified && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(37,99,235,0.18)', color: 'rgb(96,165,250)', border: '1px solid rgba(37,99,235,0.4)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: 'rgba(37,99,235,0.18)', color: infoText, border: '1px solid rgba(37,99,235,0.4)' }}>
                   ✓ Verified
                 </span>
               )}
               {avgRating && (
-                <span style={{ fontSize: '0.875rem', color: 'rgb(251,191,36)' }}>⭐ {avgRating} ({reviews.length} reviews)</span>
+                <span style={{ fontSize: '0.875rem', color: warnText }}>⭐ {avgRating} ({reviews.length} reviews)</span>
               )}
               <button onClick={toggleActive} disabled={togglingActive}
-                style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '9999px', background: isActive ? 'rgba(34,197,94,0.15)' : 'rgba(107,107,88,0.15)', color: isActive ? 'rgb(74,222,128)' : text4, border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,107,88,0.3)'}`, cursor: 'pointer' }}>
+                style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '9999px', background: isActive ? 'rgba(34,197,94,0.15)' : 'rgba(107,107,88,0.15)', color: isActive ? posText : text4, border: `1px solid ${isActive ? 'rgba(34,197,94,0.3)' : 'rgba(107,107,88,0.3)'}`, cursor: 'pointer' }}>
                 {togglingActive ? '...' : isActive ? '🟢 Active' : '⚫ Inactive — Click to activate'}
               </button>
             </div>
@@ -579,11 +587,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
-                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, emoji: '💰', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
+                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, emoji: '💰', color: posText, bg: 'rgba(34,197,94,0.1)' },
                 { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, emoji: '📈', color: accent, bg: accentBg },
-                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, emoji: '⏳', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
-                { label: 'Sessions Done', value: completed.length, emoji: '✅', color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
-                { label: 'Avg Rating', value: avgRating ? `${avgRating}⭐` : '—', emoji: '⭐', color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, emoji: '⏳', color: warnText, bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Sessions Done', value: completed.length, emoji: '✅', color: posText, bg: 'rgba(34,197,94,0.1)' },
+                { label: 'Avg Rating', value: avgRating ? `${avgRating}⭐` : '—', emoji: '⭐', color: warnText, bg: 'rgba(234,179,8,0.1)' },
                 { label: 'Upcoming', value: upcoming.length, emoji: '📅', color: accent, bg: accentBg },
               ].map(s => (
                 <div key={s.label} style={{ padding: '1.25rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
@@ -606,7 +614,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                             <p style={{ fontWeight: 700, color: text1, fontSize: '1rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: 'rgb(251,191,36)' }}>⏳ Awaiting your response</span>
+                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: warnText }}>⏳ Awaiting your response</span>
                           </div>
 
                           {(() => {
@@ -639,7 +647,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
                           {s.wants_continuing && (
                             <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: '0.5rem' }}>
-                              <p style={{ fontSize: '0.8125rem', color: 'rgb(134,239,172)', fontWeight: 600 }}>🔁 Student interested in ongoing sessions</p>
+                              <p style={{ fontSize: '0.8125rem', color: posTextSoft, fontWeight: 600 }}>🔁 Student interested in ongoing sessions</p>
                             </div>
                           )}
 
@@ -661,7 +669,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           <input value={meetLink[s.id] ?? ''} onChange={e => setMeetLink(prev => ({ ...prev, [s.id]: extractMeetLink(e.target.value) }))}
                             placeholder="Paste Google Meet link"
                             style={{ padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.8125rem', outline: 'none' }} />
-                          <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.25rem' }}>
+                          <p style={{ fontSize: '0.6875rem', color: text4, marginTop: '0.25rem' }}>
                             Paste the Meet link or the full calendar invite — we'll extract the link automatically
                           </p>
                           <button onClick={() => confirmSession(s.id)} disabled={confirmingSession === s.id}
@@ -673,7 +681,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             💬 Message Student
                           </a>
                           <button onClick={() => declineSession(s.id, s.stripe_payment_intent_id)} disabled={confirmingSession === s.id}
-                            style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: 'rgb(248,113,113)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                            style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: dangerText, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
                             ❌ Decline (Auto-refund student)
                           </button>
                         </div>
@@ -706,7 +714,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           💬 Message Student
                         </a>
                         <button onClick={() => completeSession(s.id)}
-                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: 'rgb(74,222,128)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: posText, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                           ✅ Mark Complete
                         </button>
                       </div>
@@ -805,7 +813,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     </button>
                   )}
                   {isCompleted && proposedFollowups.includes(s.id) && (
-                    <span style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: 'rgb(74,222,128)', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    <span style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: posText, fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
                       ✅ Follow-up proposed
                     </span>
                   )}
@@ -874,7 +882,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
             ) : (
               <>
                 <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', textAlign: 'center', marginBottom: '1.5rem' }}>
-                  <div style={{ fontSize: '3.5rem', fontWeight: 800, color: 'rgb(251,191,36)', fontFamily: 'Syne, sans-serif' }}>{avgRating}</div>
+                  <div style={{ fontSize: '3.5rem', fontWeight: 800, color: warnText, fontFamily: 'Syne, sans-serif' }}>{avgRating}</div>
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{'⭐'.repeat(Math.round(Number(avgRating)))}</div>
                   <p style={{ color: text3 }}>Based on {reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -906,9 +914,9 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
             {/* Balance cards by payout request status */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
               {[
-                { label: 'Pending Balance', value: `$${pendingBalance.toFixed(2)}`, color: 'rgb(251,191,36)', bg: 'rgba(234,179,8,0.1)' },
+                { label: 'Pending Balance', value: `$${pendingBalance.toFixed(2)}`, color: warnText, bg: 'rgba(234,179,8,0.1)' },
                 { label: 'Available Balance', value: `$${availableBalance.toFixed(2)}`, color: accent, bg: accentBg },
-                { label: 'Total Earned', value: `$${totalPaidBalance.toFixed(2)}`, color: 'rgb(74,222,128)', bg: 'rgba(34,197,94,0.1)' },
+                { label: 'Total Earned', value: `$${totalPaidBalance.toFixed(2)}`, color: posText, bg: 'rgba(34,197,94,0.1)' },
               ].map(s => (
                 <div key={s.label} style={{ padding: '1.5rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{s.label}</p>
@@ -972,7 +980,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()}` : rs === 'processing' ? `Requested ${p.requested_at ? new Date(p.requested_at).toLocaleDateString() : ''}` : 'Pending'}
                         </p>
                       </div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: isPaid ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: isPaid ? 'rgb(74,222,128)' : 'rgb(251,191,36)' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: isPaid ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: isPaid ? posText : warnText }}>
                         {rs}
                       </span>
                     </div>
@@ -1014,7 +1022,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                     <input type="time" value={a.end_time} onChange={e => updateSlot(a.id, 'end_time', e.target.value)}
                       style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none' }} />
                   </div>
-                  <button onClick={() => removeSlot(a.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.625rem', cursor: 'pointer', color: 'rgb(248,113,113)', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button onClick={() => removeSlot(a.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.625rem', cursor: 'pointer', color: dangerText, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <X style={{ width: '1.125rem', height: '1.125rem' }} />
                   </button>
                 </div>
@@ -1093,7 +1101,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                       </button>
                     )}
                     {avatarSuccess && (
-                      <p style={{ fontSize: '0.8125rem', color: 'rgb(74,222,128)', fontWeight: 600, marginTop: '0.5rem' }}>✓ Profile picture updated!</p>
+                      <p style={{ fontSize: '0.8125rem', color: posText, fontWeight: 600, marginTop: '0.5rem' }}>✓ Profile picture updated!</p>
                     )}
                     <p style={{ fontSize: '0.75rem', color: text4, marginTop: '0.5rem' }}>JPG or PNG, max 2MB.</p>
                   </div>
@@ -1123,7 +1131,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         <div key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
                           <span style={{ fontSize: '0.875rem', color: text2 }}>🎓 {formatDegree(d)}</span>
                           <button type="button" onClick={() => removeDegree(i)}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(248,113,113)', display: 'flex', flexShrink: 0 }}>
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: dangerText, display: 'flex', flexShrink: 0 }}>
                             <X style={{ width: '1rem', height: '1rem' }} />
                           </button>
                         </div>
@@ -1307,11 +1315,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)' }}>
                 <p style={{ fontSize: '0.875rem', color: text3, marginBottom: '0.25rem' }}>Your payout rate</p>
-                <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: 'rgb(74,222,128)' }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
+                <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: posText }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
                 {(() => {
                   const canCustomRate = completed.length >= 10 && Number(avgRating) >= 4.5
                   return canCustomRate ? (
-                    <p style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 600, marginTop: '0.5rem' }}>✅ Custom rates unlocked! Contact support to update your rate.</p>
+                    <p style={{ fontSize: '0.75rem', color: posText, fontWeight: 600, marginTop: '0.5rem' }}>✅ Custom rates unlocked! Contact support to update your rate.</p>
                   ) : (
                     <div style={{ marginTop: '0.5rem' }}>
                       <p style={{ fontSize: '0.75rem', color: text5 }}>

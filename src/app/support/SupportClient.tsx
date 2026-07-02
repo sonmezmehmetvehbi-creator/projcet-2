@@ -153,7 +153,8 @@ export default function SupportClient({ profile, tickets: initialTickets, curren
   }
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+    <div className={isDark ? 'support-tutor-dark' : ''} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+      {isDark && <style>{`.support-tutor-dark .input::placeholder { color: ${text2}; opacity: 1; }`}</style>}
       <div style={{ maxWidth: '64rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>

@@ -244,7 +244,8 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const getIsMe = (msg: any) => isTutor ? msg.is_tutor : !msg.is_tutor
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '2rem', background: pageBg }}>
+    <div className="tutor-chat" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '2rem', background: pageBg }}>
+      <style>{`.tutor-chat input::placeholder, .tutor-chat textarea::placeholder { color: ${text3}; opacity: 1; }`}</style>
       <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <Link href={isTutor ? '/tutor/dashboard' : '/tutoring/sessions'}
@@ -286,8 +287,8 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
           </div>
 
           {session.wants_continuing && (
-            <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '0.75rem' }}>
-              <p style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>🔁 {isTutor ? 'Student is interested in ongoing sessions' : 'You expressed interest in ongoing sessions'}</p>
+            <div style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', background: isTutor && isDark ? 'rgba(74,222,128,0.1)' : 'rgba(34,85,14,0.04)', border: `1px solid ${isTutor && isDark ? 'rgba(74,222,128,0.25)' : 'rgba(34,85,14,0.1)'}`, marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.875rem', color: isTutor && isDark ? 'rgb(134,239,172)' : 'rgb(34,85,14)', fontWeight: 600 }}>🔁 {isTutor ? 'Student is interested in ongoing sessions' : 'You expressed interest in ongoing sessions'}</p>
             </div>
           )}
 
