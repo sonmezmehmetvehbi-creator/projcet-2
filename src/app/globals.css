@@ -136,8 +136,18 @@
   }
   .card-hover:hover { box-shadow: 0 8px 32px rgba(34,85,14,0.12); transform: translateY(-4px); }
 
-  /* Dark-mode overrides live inside @layer components (after .card) so they
-     win over the layered .card/.input definitions above. */
+  .input {
+    width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem;
+    background-color: white; border: 1.5px solid rgba(34,85,14,0.2);
+    color: rgb(26,26,20); transition: all 0.2s; outline: none;
+    font-size: 0.95rem; font-family: inherit;
+  }
+  .input::placeholder { color: rgb(107,107,88); }
+  .input:focus { border-color: rgba(34,85,14,0.5); box-shadow: 0 0 0 3px rgba(34,85,14,0.1); }
+  .input:disabled { opacity: 0.5; background-color: #f9fafb; }
+
+  /* Dark-mode overrides live inside @layer components AFTER the base .card and
+     .input definitions so they win over them. */
   .student-dark .card,
   .student-dark .card-hover {
     background-color: var(--af-card);
@@ -166,15 +176,6 @@
   }
   .tutor-dark .input::placeholder { color: rgba(255,255,255,0.3); }
 
-  .input {
-    width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem;
-    background-color: white; border: 1.5px solid rgba(34,85,14,0.2);
-    color: rgb(26,26,20); transition: all 0.2s; outline: none;
-    font-size: 0.95rem; font-family: inherit;
-  }
-  .input::placeholder { color: rgb(107,107,88); }
-  .input:focus { border-color: rgba(34,85,14,0.5); box-shadow: 0 0 0 3px rgba(34,85,14,0.1); }
-  .input:disabled { opacity: 0.5; background-color: #f9fafb; }
   .input-error { border-color: rgba(163,45,45,0.6) !important; }
   .input-error:focus { box-shadow: 0 0 0 3px rgba(163,45,45,0.1) !important; }
 
