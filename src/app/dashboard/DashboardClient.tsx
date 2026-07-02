@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, FileText, Plus, Zap, Download } from 'lucide-react'
 import { formatTimeUntilMidnight } from '@/lib/resetTime'
+import { createClient } from '@/lib/supabase'
 import type { Profile } from '@/types'
 import { Suspense } from 'react'
 import { useStudentTheme } from '@/app/contexts/StudentThemeContext'
@@ -61,6 +62,27 @@ function DashboardInner({ profile, sessions, usage }: Props) {
     const id = setInterval(tick, 30000)
     return () => clearInterval(id)
   }, [])
+
+  // Requires the sessions table to be part of the Realtime publication:
+  // ALTER PUBLICATION supabase_realtime ADD TABLE sessions;
+  useEffect(() => {
+    if (!profile?.id) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel('dashboard-sessions-' + profile.id)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'sessions',
+        filter: `user_id=eq.${profile.id}`,
+      }, () => {
+        router.refresh()
+      })
+      .subscribe((status: string) => {
+        console.log('[Realtime] dashboard-sessions status:', status)
+      })
+    return () => { supabase.removeChannel(channel) }
+  }, [profile?.id])
 
   const upgraded = searchParams.get('upgraded') === 'true'
 

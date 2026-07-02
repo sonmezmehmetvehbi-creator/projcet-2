@@ -156,7 +156,10 @@ else spawnFloatingXP(1)
         setShowSummary(true)
         return
       }
-      if (!data.error) setXpResult(data)
+      if (!data.error) {
+        setXpResult(data)
+        router.refresh()
+      }
     } catch {}
     setXpLoading(false)
     setShowSummary(true)

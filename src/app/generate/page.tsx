@@ -189,6 +189,7 @@ export default function GeneratePage() {
         return
       }
       if (data.error) throw new Error(data.error)
+      router.refresh()
       if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
       else router.push(`/worksheet/${data.sessionId}`)
     } catch (err: any) {
