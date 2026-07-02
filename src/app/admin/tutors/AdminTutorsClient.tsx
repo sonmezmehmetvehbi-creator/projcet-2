@@ -1,18 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   applications: any[]
 }
 
 export default function AdminTutorsClient({ applications: initialApps }: Props) {
+  const router = useRouter()
   const [applications, setApplications] = useState(initialApps)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [note, setNote] = useState('')
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-tutor-profiles')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tutor_profiles',
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          router.refresh()
+        } else if (payload.eventType === 'UPDATE') {
+          setApplications(prev => prev.map(a => a.id === (payload.new as any).id ? { ...a, ...payload.new } : a))
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   const filtered = applications.filter(a => filter === 'all' ? true : a.status === filter)
 

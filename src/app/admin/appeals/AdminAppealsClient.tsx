@@ -1,16 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 
 interface Props { appeals: any[] }
 
 export default function AdminAppealsClient({ appeals: initialAppeals }: Props) {
+  const router = useRouter()
   const [appeals, setAppeals] = useState(initialAppeals)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [selected, setSelected] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-appeals')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tutor_appeals',
+      }, (payload) => {
+        setAppeals(prev => [payload.new as any, ...prev])
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   const filtered = appeals.filter(a => filter === 'all' ? true : a.status === filter)
 

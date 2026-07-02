@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 interface Payout {
   id: string
@@ -125,9 +127,25 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPayouts, tutors: initialTutors, sessions, reports, thisYear, taxInfoMap, ytdEarningsMap }: Props) {
+  const router = useRouter()
   const [tab, setTab] = useState<TabId>('overview')
   const [payouts, setPayouts] = useState(initialPayouts)
   const [tutors, setTutors] = useState(initialTutors)
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-payouts')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tutor_payouts',
+      }, () => {
+        router.refresh()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   // ---- Aggregates ----
   const totalRevenue = useMemo(() => sessions.reduce((s, x) => s + x.student_price, 0), [sessions])

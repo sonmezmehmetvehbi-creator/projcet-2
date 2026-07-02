@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase'
 
 interface Review {
   id?: string
@@ -28,8 +29,24 @@ function Stars({ rating, size = '1rem' }: { rating: number; size?: string }) {
 export default function ReviewsSection({ reviews, avgRating }: { reviews: Review[]; avgRating: number }) {
   const [filter, setFilter] = useState<number | 'all'>('all')
   const [visibleCount, setVisibleCount] = useState(5)
+  const [liveReviews, setLiveReviews] = useState(reviews)
 
-  const total = reviews?.length ?? 0
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('tutor-reviews-' + ((reviews[0] as any)?.tutor_id ?? 'unknown'))
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tutor_reviews',
+      }, (payload) => {
+        setLiveReviews(prev => [payload.new as any, ...prev])
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
+  const total = liveReviews?.length ?? 0
 
   // Empty state
   if (total === 0) {
@@ -48,15 +65,15 @@ export default function ReviewsSection({ reviews, avgRating }: { reviews: Review
 
   // Rating breakdown counts per star level
   const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-  reviews.forEach(r => { if (counts[r.rating] !== undefined) counts[r.rating]++ })
+  liveReviews.forEach(r => { if (counts[r.rating] !== undefined) counts[r.rating]++ })
 
   // Would-recommend percentage (only if the field is present on any review)
-  const recommendable = reviews.filter(r => typeof r.would_recommend === 'boolean')
+  const recommendable = liveReviews.filter(r => typeof r.would_recommend === 'boolean')
   const recommendPct = recommendable.length > 0
     ? Math.round((recommendable.filter(r => r.would_recommend).length / recommendable.length) * 100)
     : null
 
-  const filtered = filter === 'all' ? reviews : reviews.filter(r => r.rating === filter)
+  const filtered = filter === 'all' ? liveReviews : liveReviews.filter(r => r.rating === filter)
   const visible = filtered.slice(0, visibleCount)
 
   const FILTERS: (number | 'all')[] = ['all', 5, 4, 3, 2, 1]
