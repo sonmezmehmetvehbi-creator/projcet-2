@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Send, CheckCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   tickets: any[]
@@ -27,9 +28,41 @@ export default function AdminSupportClient({ tickets: initialTickets, currentUse
   useEffect(() => {
     if (!selectedTicket) return
     loadMessages(selectedTicket.id)
-    const interval = setInterval(() => loadMessages(selectedTicket.id), 3000)
-    return () => clearInterval(interval)
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-support-messages-' + selectedTicket.id)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'support_messages',
+        filter: `ticket_id=eq.${selectedTicket.id}`,
+      }, () => {
+        loadMessages(selectedTicket.id)
+      })
+      .subscribe((status: string) => {
+        console.log('[Realtime] admin-support status:', status)
+      })
+
+    return () => { supabase.removeChannel(channel) }
   }, [selectedTicket?.id])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-support-tickets')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'support_tickets',
+      }, (payload) => {
+        setTickets(prev => [payload.new as any, ...prev])
+      })
+      .subscribe((status: string) => {
+        console.log('[Realtime] admin-tickets status:', status)
+      })
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   async function loadMessages(ticketId: string) {
     try {
