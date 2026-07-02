@@ -117,7 +117,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   }
 
   return (
-    <div className={isDark ? 'student-dark' : ''} style={{ paddingTop:'5rem', minHeight:'100vh', background:'var(--af-bg)' }}>
+    <div className={`animate-fade-in ${isDark ? 'student-dark' : ''}`} style={{ paddingTop:'5rem', minHeight:'100vh', background:'var(--af-bg)' }}>
       <div style={{ display:'flex', gap:'1.5rem', maxWidth:'80rem', margin:'0 auto' }}>
 
         {/* Left sidebar ad */}
@@ -170,7 +170,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
 
             {/* Level & XP card */}
-            <div className="card" style={{ padding:'1.5rem', background:'linear-gradient(135deg, rgba(34,85,14,0.03), rgba(122,182,72,0.04))', border:'1px solid rgba(34,85,14,0.12)' }}>
+            <div className="card animate-stagger-1" style={{ padding:'1.5rem', background:'linear-gradient(135deg, rgba(34,85,14,0.03), rgba(122,182,72,0.04))', border:'1px solid rgba(34,85,14,0.12)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'0.625rem', marginBottom:'1rem' }}>
                 <span style={{ fontSize:'2rem' }}>{levelInfo.current.emoji}</span>
                 <div>
@@ -236,7 +236,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
             </div>
 
             {/* Streak card */}
-            <div className="card" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'var(--af-card)', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'var(--af-border)'}` }}>
+            <div className="card animate-stagger-2" style={{ padding:'1.5rem', background: streak >= 7 ? 'linear-gradient(135deg, rgba(232,160,32,0.06), rgba(245,158,11,0.04))' : 'var(--af-card)', border:`1px solid ${streak >= 7 ? 'rgba(232,160,32,0.25)' : 'var(--af-border)'}` }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
                 <div>
                   <p style={{ fontFamily:'Syne, sans-serif', fontSize:'0.75rem', fontWeight:700, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>

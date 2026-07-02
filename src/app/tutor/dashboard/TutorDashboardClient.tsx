@@ -534,7 +534,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         </div>
       )}
 
-      <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div className="animate-fade-in" style={{ maxWidth: '72rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '2rem', flexWrap: 'wrap' }}>

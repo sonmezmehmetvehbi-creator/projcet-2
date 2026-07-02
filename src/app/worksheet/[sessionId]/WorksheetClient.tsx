@@ -69,7 +69,7 @@ export default function WorksheetClient({ session }: Props) {
   )
 
   return (
-    <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
+    <div className="animate-fade-in" style={{ paddingTop:'5rem', minHeight:'100vh' }}>
       {xpResult && <XPModal result={xpResult} onClose={() => setXpResult(null)} />}
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'52rem' }}>
 

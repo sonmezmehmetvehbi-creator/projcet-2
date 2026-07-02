@@ -246,7 +246,7 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
   const getIsMe = (msg: any) => isTutor ? msg.is_tutor : !msg.is_tutor
 
   return (
-    <div className="tutor-chat" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '2rem', background: pageBg }}>
+    <div className="tutor-chat animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '2rem', background: pageBg }}>
       <style>{`.tutor-chat input::placeholder, .tutor-chat textarea::placeholder { color: ${text3}; opacity: 1; }`}</style>
       <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 

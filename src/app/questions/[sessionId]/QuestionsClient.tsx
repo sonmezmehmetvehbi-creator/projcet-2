@@ -203,7 +203,7 @@ else spawnFloatingXP(1)
   if (!q) return <div style={{ paddingTop:'6rem', textAlign:'center', color:'var(--af-text-muted)' }}>No questions found.</div>
 
   return (
-    <div style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative' }}>
+    <div className="animate-fade-in" style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative' }}>
 
       {/* Floating XP animations */}
       {floatingXPs.map(f => (

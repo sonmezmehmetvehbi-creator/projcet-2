@@ -73,7 +73,7 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
   }, [tutors, search, subject, language, sort])
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Filter bar */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
         {/* Row 1: name search + subject dropdown */}
@@ -132,11 +132,11 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px,1fr))', gap: '1.25rem' }}>
-          {filtered.map((tutor) => {
+          {filtered.map((tutor, i) => {
             const subjects: string[] = tutor.subjects ?? []
             const extra = subjects.length - 3
             return (
-              <div key={tutor.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+              <div key={tutor.id} className={`card${i < 6 ? ` animate-stagger-${i + 1}` : ''}`} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                   {tutor.avatar_url ? (
                     <img src={tutor.avatar_url} alt={tutor.display_name}

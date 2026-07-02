@@ -48,7 +48,7 @@ export default function SessionsListClient({ sessions, userId }: Props) {
   const past = sessions.filter(s => s.status !== 'proposed' && (s.status === 'completed' || new Date(s.scheduled_at) < new Date()))
 
   return (
-    <div className={isDark ? 'student-dark' : ''} style={{ paddingTop: '5rem', minHeight: '100vh', background: 'var(--af-bg)' }}>
+    <div className={`animate-fade-in ${isDark ? 'student-dark' : ''}`} style={{ paddingTop: '5rem', minHeight: '100vh', background: 'var(--af-bg)' }}>
       <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: 'var(--af-text)' }}>
