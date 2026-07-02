@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Edit, Save, X, Plus, Search } from 'lucide-react'
+import { Edit, Save, X, Plus, Search, ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
@@ -197,6 +197,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
   const [meetLink, setMeetLink] = useState<Record<string, string>>({})
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null)
+  const [expandedSession, setExpandedSession] = useState<string | null>(null)
   const [sessionFilter, setSessionFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'declined'>('all')
 
   // Follow-up proposal form state (keyed by the completed session id)
@@ -623,12 +624,20 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {pending.map(s => (
                     <div key={s.id} style={{ padding: '1.25rem', borderRadius: '0.875rem', background: cardBg3, border: '1px solid rgba(234,179,8,0.2)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                            <p style={{ fontWeight: 700, color: text1, fontSize: '1rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: warnText }}>⏳ Awaiting your response</span>
+                      <div onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSession === s.id ? '1rem' : '0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div>
+                            <p style={{ fontWeight: 700, color: text1 }}>{s.profiles?.display_name ?? 'Student'}</p>
+                            <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
                           </div>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: warnText }}>⏳ Pending</span>
+                        </div>
+                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      </div>
+
+                      <div style={{ overflow: 'hidden', maxHeight: expandedSession === s.id ? '1000px' : '0', transition: 'max-height 0.3s ease', marginTop: expandedSession === s.id ? '1rem' : '0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1 }}>
 
                           {(() => {
                             if (!s.expires_at) return null
@@ -698,6 +707,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             ❌ Decline (Auto-refund student)
                           </button>
                         </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -710,11 +720,15 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: text1, marginBottom: '1rem' }}>📅 Upcoming Sessions</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {upcoming.map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderRadius: '0.875rem', background: cardBg, border: `1px solid ${accentBorder2}`, flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <div>
-                        <p style={{ fontWeight: 600, color: text1, marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                        <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                    <div key={s.id} style={{ padding: '1rem', borderRadius: '0.875rem', background: cardBg, border: `1px solid ${accentBorder2}` }}>
+                      <div onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: '0.75rem' }}>
+                        <div>
+                          <p style={{ fontWeight: 600, color: text1, marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                          <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                        </div>
+                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                       </div>
+                      <div style={{ overflow: 'hidden', maxHeight: expandedSession === s.id ? '1000px' : '0', transition: 'max-height 0.3s ease', marginTop: expandedSession === s.id ? '0.75rem' : '0' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {s.meet_link && (
                           <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
@@ -730,6 +744,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: posText, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                           ✅ Mark Complete
                         </button>
+                      </div>
                       </div>
                     </div>
                   ))}
