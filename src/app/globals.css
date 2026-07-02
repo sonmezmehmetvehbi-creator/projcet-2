@@ -21,8 +21,7 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(34,85,14,0.2); border-radius: 9999px; }
 
-  /* Student theme tokens — default (light). Components reference these via
-     var(); the .student-dark overrides below flip them. */
+  /* Student theme tokens (light). Components reference these via var(). */
   :root {
     --af-bg: rgb(250,250,247);
     --af-bg-2: rgb(244,247,236);
@@ -48,25 +47,7 @@
   }
 }
 
-/* Dark mode is driven by the .student-dark class applied to the wrapper div by
-   StudentThemeShell. Inline styles using var(--af-*) flip automatically, as do
-   the class-based .card/.input overrides below.
-   Tutor pages never consume --af-* (they use .tutor-dark), so they are safe. */
-.student-dark {
-  --af-bg: rgb(13,13,20);
-  --af-bg-2: rgb(18,18,28);
-  --af-card: rgb(22,22,35);
-  --af-card-2: rgb(28,28,42);
-  --af-border: rgba(255,255,255,0.08);
-  --af-text: rgb(240,240,235);
-  --af-text-muted: rgba(240,240,235,0.5);
-  --af-accent: rgb(74,222,128);
-  --af-accent-bg: rgba(74,222,128,0.1);
-  --af-input-bg: rgb(28,28,42);
-  --af-input-border: rgba(255,255,255,0.12);
-  --af-shadow: rgba(0,0,0,0.3);
-}
-/* Tutor dark-purple theme, scoped the same way as .student-dark. Used on tutor
+/* Tutor dark-purple theme. Used on tutor
    pages that lean on the global .card/.input/.btn-* classes (apply, appeal).
    The .card/.input overrides now live inside @layer components below so they
    win over the layered .card/.input definitions. */
@@ -148,21 +129,6 @@
 
   /* Dark-mode overrides live inside @layer components AFTER the base .card and
      .input definitions so they win over them. */
-  .student-dark .card,
-  .student-dark .card-hover {
-    background-color: var(--af-card);
-    border-color: var(--af-border);
-    color: var(--af-text);
-  }
-  .student-dark .input {
-    background-color: var(--af-input-bg);
-    border-color: var(--af-input-border);
-    color: var(--af-text);
-  }
-  .student-dark .input::placeholder { color: var(--af-text-muted); }
-  .student-dark .btn-primary { background-color: var(--af-accent); }
-  .student-dark .label { color: var(--af-text-muted); }
-
   .tutor-dark .card,
   .tutor-dark .card-hover {
     background-color: rgba(255,255,255,0.04);

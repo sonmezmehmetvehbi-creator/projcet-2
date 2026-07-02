@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import './globals.css'
 import CookieBanner from '@/components/ui/CookieBanner'
 import Script from 'next/script'
-import { StudentThemeProvider } from '@/app/contexts/StudentThemeContext'
 import { ReviewProvider } from '@/app/contexts/ReviewContext'
 
 export const metadata: Metadata = {
@@ -20,11 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="google-adsense-account" content="ca-pub-8087795524838705" />
       </head>
       <body className="min-h-screen flex flex-col antialiased">
-        <StudentThemeProvider>
-          <ReviewProvider>
-            {children}
-          </ReviewProvider>
-        </StudentThemeProvider>
+        <ReviewProvider>
+          {children}
+        </ReviewProvider>
         <CookieBanner />
         <Script
           async
