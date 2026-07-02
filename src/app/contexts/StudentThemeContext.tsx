@@ -25,6 +25,7 @@ export function StudentThemeProvider({ children }: { children: React.ReactNode }
     const next: Theme = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     localStorage.setItem('aceforge_student_theme', next)
+    window.dispatchEvent(new Event('aceforge-theme-change'))
   }
 
   return <StudentThemeCtx.Provider value={{ theme, toggle }}>{children}</StudentThemeCtx.Provider>
