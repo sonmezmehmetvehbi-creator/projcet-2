@@ -97,18 +97,18 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
         schema: 'public',
         table: 'session_messages',
         filter: `session_id=eq.${session.id}`,
-      }, () => {
-        fetchMessages()
+      }, (payload) => {
+        // Append the new message live; guard against duplicates since the
+        // sender also re-fetches after posting.
+        setMessages(prev => prev.some(m => m.id === (payload.new as any).id) ? prev : [...prev, payload.new as any])
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
       })
       .subscribe()
 
-    const pollInterval = setInterval(fetchMessages, 3000)
-
     return () => {
       supabase.removeChannel(channel)
-      clearInterval(pollInterval)
     }
-  }, [])
+  }, [session.id])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

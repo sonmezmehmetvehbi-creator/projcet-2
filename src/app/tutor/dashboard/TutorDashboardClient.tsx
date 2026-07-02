@@ -84,6 +84,31 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
   // Keep local sessions in sync when the server component refreshes (e.g. realtime updates).
   useEffect(() => { setSessions(sessionsProp) }, [sessionsProp])
 
+  // Live session updates via Supabase Realtime — no manual refresh needed.
+  useEffect(() => {
+    if (!tutorProfile?.id) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel('tutor-sessions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tutoring_sessions',
+        filter: `tutor_id=eq.${tutorProfile.id}`,
+      }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setSessions(prev => prev.map(s => s.id === (payload.new as any).id ? { ...s, ...payload.new } : s))
+        } else if (payload.eventType === 'INSERT') {
+          // Pull the full joined row (student profile, etc.) from the server.
+          router.refresh()
+        } else if (payload.eventType === 'DELETE') {
+          setSessions(prev => prev.filter(s => s.id !== (payload.old as any).id))
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [tutorProfile?.id, router])
+
   const [tab, setTab] = useState<'overview' | 'sessions' | 'reviews' | 'earnings' | 'profile' | 'availability'>('overview')
   const [legalAccepted, setLegalAccepted] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('aceforge_legal_accepted') === 'true'

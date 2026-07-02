@@ -68,9 +68,22 @@ export default function SupportClient({ profile, tickets: initialTickets, curren
 
   useEffect(() => {
     if (!selectedTicket) return
-    loadMessages(selectedTicket.id)
-    const interval = setInterval(() => loadMessages(selectedTicket.id), 3000)
-    return () => clearInterval(interval)
+    const ticketId = selectedTicket.id
+    loadMessages(ticketId)
+    // Live message updates via Supabase Realtime — replaces the old 3s poll.
+    const client = createClient()
+    const channel = client
+      .channel(`support-messages-${ticketId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'support_messages',
+        filter: `ticket_id=eq.${ticketId}`,
+      }, () => {
+        loadMessages(ticketId)
+      })
+      .subscribe()
+    return () => { client.removeChannel(channel) }
   }, [selectedTicket?.id])
 
   async function loadMessages(ticketId: string) {

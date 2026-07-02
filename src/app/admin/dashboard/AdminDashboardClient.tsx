@@ -50,6 +50,8 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
   const [sending, setSending] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [liveTickets, setLiveTickets] = useState(tickets)
+  // Keep the ticket list in sync when the server refreshes (realtime updates).
+  useEffect(() => { setLiveTickets(tickets) }, [tickets])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,7 +63,6 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
         router.refresh()
-        setLiveTickets((prev: any[]) => prev)
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tutor_profiles' }, () => {
         router.refresh()
