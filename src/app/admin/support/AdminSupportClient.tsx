@@ -124,7 +124,7 @@ export default function AdminSupportClient({ tickets: initialTickets, currentUse
   }
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>

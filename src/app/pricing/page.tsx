@@ -67,7 +67,7 @@ export default async function PricingPage() {
   ]
 
   return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+    <div className="animate-fade-in" style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
       <Navbar profile={profile} />
 
       <div style={{ padding:'6rem 1.5rem 5rem' }}>

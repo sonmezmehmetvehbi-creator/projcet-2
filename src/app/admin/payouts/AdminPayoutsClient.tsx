@@ -154,7 +154,7 @@ export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPay
   const profit = totalRevenue - totalPaid
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh' }}>
       <div style={{ maxWidth: '76rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: INK, marginBottom: '0.25rem' }}>
           Payouts & Tax Center

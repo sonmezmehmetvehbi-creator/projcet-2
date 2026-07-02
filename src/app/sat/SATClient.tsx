@@ -111,7 +111,7 @@ export default function SATClient({ profile, satUsage }: Props) {
   )
 
   return (
-    <div style={{ minHeight:'100vh', paddingTop:'5rem' }}>
+    <div className="animate-fade-in" style={{ minHeight:'100vh', paddingTop:'5rem' }}>
       <div style={{ maxWidth:'44rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
 
         {/* Header */}

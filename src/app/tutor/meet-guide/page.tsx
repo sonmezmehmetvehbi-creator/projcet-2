@@ -23,7 +23,7 @@ function MeetGuideContent() {
   const tipText = isDark ? 'rgb(165,180,252)' : 'rgb(194,65,12)'
 
   return (
-    <div style={{ minHeight: '100vh', background: pageBg, paddingTop: '5rem', paddingBottom: '4rem' }}>
+    <div className="animate-fade-in" style={{ minHeight: '100vh', background: pageBg, paddingTop: '5rem', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <Link href="/tutor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', color: text2, textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1.5rem' }}>

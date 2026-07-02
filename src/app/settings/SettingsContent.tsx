@@ -121,7 +121,7 @@ export default function SettingsContent() {
   return (
     <div style={{ minHeight:'100vh', background:'rgb(250,250,247)' }}>
       <Navbar profile={profile} />
-      <div style={{ paddingTop:'5rem' }}>
+      <div className="animate-fade-in" style={{ paddingTop:'5rem' }}>
         <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'42rem' }}>
           <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'2rem' }}>Settings</h1>
 

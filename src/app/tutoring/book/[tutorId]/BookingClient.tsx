@@ -198,7 +198,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
   )
 
   return (
-    <div className={isDark ? 'student-dark' : ''} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: bg }}>
+    <div className={`animate-fade-in ${isDark ? 'student-dark' : ''}`} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: bg }}>
       <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         {/* Tutor card */}

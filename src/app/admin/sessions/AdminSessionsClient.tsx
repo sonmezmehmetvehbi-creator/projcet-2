@@ -106,7 +106,7 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
   }
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.25rem' }}>Sessions</h1>

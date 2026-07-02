@@ -80,7 +80,7 @@ export default function AdminTutorsClient({ applications: initialApps }: Props) 
   const statusEmoji = (s: string) => s === 'approved' ? '✅' : s === 'rejected' ? '❌' : '⏳'
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh' }}>
       <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>

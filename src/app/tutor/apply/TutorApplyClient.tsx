@@ -286,7 +286,7 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
   const filteredSubjects = ALL_SUBJECTS.filter(s => s.toLowerCase().includes(subjectSearch.toLowerCase()) && !subjects.includes(s) && !COMMON_SUBJECTS.includes(s))
 
   return (
-    <div className={rootClass} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+    <div className={`${rootClass} animate-fade-in`} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
       <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>

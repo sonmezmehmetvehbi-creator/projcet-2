@@ -89,7 +89,7 @@ export default async function TutorProfilePage({ params }: { params: { tutorId: 
   return (
     <StudentThemeShell lightBg="linear-gradient(135deg, #F4F7EC, #EFF5E3)">
       <Navbar profile={profile} />
-      <div style={{ paddingTop: '5rem' }}>
+      <div className="animate-fade-in" style={{ paddingTop: '5rem' }}>
         <div style={{ maxWidth: '52rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
           <Link href="/tutoring"

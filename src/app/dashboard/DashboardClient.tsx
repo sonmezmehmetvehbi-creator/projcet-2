@@ -387,8 +387,8 @@ function DashboardInner({ profile, sessions, usage }: Props) {
             </div>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'1rem' }}>
-              {filteredSessions.map((session: any) => (
-                <div key={session.id} className="card-hover" style={{ padding:'1.5rem', position:'relative' }}>
+              {filteredSessions.map((session: any, i: number) => (
+                <div key={session.id} className={`card-hover${i < 6 ? ` animate-stagger-${i + 1}` : ''}`} style={{ padding:'1.5rem', position:'relative' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem' }}>
                     <span className="badge badge-primary" style={{ fontSize:'0.75rem' }}>
                       {session.is_sat

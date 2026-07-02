@@ -54,7 +54,7 @@ export default function AdminAppealsClient({ appeals: initialAppeals }: Props) {
   }
 
   return (
-    <div style={{ paddingTop: '5rem', minHeight: '100vh' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh' }}>
       <div style={{ maxWidth: '64rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
