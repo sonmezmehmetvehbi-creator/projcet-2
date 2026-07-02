@@ -26,7 +26,9 @@ export default function SessionsListClient({ sessions, userId }: Props) {
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel('student-sessions-realtime')
+      .channel('student-sessions-realtime', {
+        config: { broadcast: { self: true } }
+      })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

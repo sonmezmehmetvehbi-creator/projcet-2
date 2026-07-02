@@ -91,7 +91,9 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
     fetchMessages()
     const supabase = createClient()
     const channel = supabase
-      .channel(`session-messages-${session.id}`)
+      .channel(`session-messages-${session.id}`, {
+        config: { broadcast: { self: true } }
+      })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

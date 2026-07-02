@@ -89,7 +89,12 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
     if (!tutorProfile?.id) return
     const supabase = createClient()
     const channel = supabase
-      .channel('tutor-sessions')
+      .channel('tutor-sessions', {
+        config: {
+          broadcast: { self: true },
+          presence: { key: tutorProfile.id },
+        }
+      })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -105,7 +110,9 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
           setSessions(prev => prev.filter(s => s.id !== (payload.old as any).id))
         }
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Realtime] tutor-sessions status:', status)
+      })
     return () => { supabase.removeChannel(channel) }
   }, [tutorProfile?.id, router])
 
@@ -256,25 +263,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
     }
     setRequestingPayout(false)
   }
-
-  useEffect(() => {
-    if (!tutorProfile?.id) return
-    const supabase = createClient()
-    const channel = supabase
-      .channel('tutor-sessions-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tutoring_sessions',
-        filter: `tutor_id=eq.${tutorProfile.id}`,
-      }, () => {
-        router.refresh()
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [tutorProfile?.id])
 
   // Theme variables
   const accent = isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)'
