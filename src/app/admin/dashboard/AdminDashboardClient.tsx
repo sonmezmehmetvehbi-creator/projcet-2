@@ -180,30 +180,54 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
     if (selectedTicket?.id === ticketId) setSelectedTicket((prev: any) => ({ ...prev, status: 'closed' }))
   }
 
+  // Time-based stat scaling.
+  const [timeRange, setTimeRange] = useState('all')
+  const [displayStats, setDisplayStats] = useState(stats)
+  const [loadingStats, setLoadingStats] = useState(false)
+
+  // Keep displayed stats in sync when the server refreshes the all-time props.
+  useEffect(() => { if (timeRange === 'all') setDisplayStats(stats) }, [stats]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function changeTimeRange(range: string) {
+    setTimeRange(range)
+    setLoadingStats(true)
+    try {
+      const res = await fetch(`/api/admin/stats?range=${range}`)
+      const data = await res.json()
+      if (res.ok && data.stats) setDisplayStats(data.stats)
+    } catch {}
+    setLoadingStats(false)
+  }
+
+  const RANGE_LABELS: Record<string, string> = {
+    all: 'All Time', today: 'Today', '7days': 'Last 7 Days',
+    '30days': 'Last 30 Days', '3months': 'Last 3 Months', year: 'This Year',
+  }
+
   // Stats grouped for the left column.
   const STAT_GROUPS = [
     {
       title: 'Users',
       cards: [
-        { label: 'Total Users', value: stats.totalUsers },
-        { label: 'Premium Users', value: stats.premiumUsers },
-        { label: 'Active Today', value: stats.activeToday },
+        { label: 'Total Users', value: displayStats.totalUsers },
+        { label: 'Premium Users', value: displayStats.premiumUsers },
+        { label: 'Active Today', value: displayStats.activeToday },
       ],
     },
     {
       title: 'Content',
       cards: [
-        { label: 'Questions Generated', value: stats.totalQuestions },
-        { label: 'Worksheets Generated', value: stats.totalWorksheets },
-        { label: 'Total Sessions', value: stats.totalSessions },
+        { label: 'Questions Generated', value: displayStats.totalQuestions },
+        { label: 'Worksheets Generated', value: displayStats.totalWorksheets },
+        { label: 'Total Sessions', value: displayStats.totalSessions },
       ],
     },
     {
       title: 'Tutoring',
       cards: [
-        { label: 'Tutoring Sessions', value: stats.totalTutoringSessions },
-        { label: 'Pending Tutor Apps', value: stats.pendingTutors },
-        { label: 'Open Tickets', value: stats.openTickets },
+        { label: 'Tutoring Sessions', value: displayStats.totalTutoringSessions },
+        { label: 'Pending Tutor Apps', value: displayStats.pendingTutors },
+        { label: 'Open Tickets', value: displayStats.openTickets },
       ],
     },
   ]
@@ -270,6 +294,24 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
 
           {/* LEFT — grouped stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+            {/* Time range selector */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem', color: MUTED, fontWeight: 600 }}>Show:</span>
+                <select value={timeRange} onChange={e => changeTimeRange(e.target.value)}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: INK, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                  {Object.entries(RANGE_LABELS).map(([id, label]) => (
+                    <option key={id} value={id}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <span style={{ fontSize: '0.8125rem', color: MUTED }}>
+                {loadingStats ? 'Updating…' : `Showing data for: ${RANGE_LABELS[timeRange]}`}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: loadingStats ? 0.5 : 1, transition: 'opacity 0.2s' }}>
             {STAT_GROUPS.map(group => (
               <div key={group.title}>
                 <p style={sectionLabel}>{group.title}</p>
@@ -287,6 +329,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
           {/* RIGHT — needs attention + recent signups */}
