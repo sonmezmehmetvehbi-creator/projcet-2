@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
   '/tutoring/legal',
   '/tutor/appeal',
   '/tutor/meet-guide',
+  '/banned',
 ]
 
 export async function middleware(request: NextRequest) {
@@ -53,6 +54,33 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Block full-account-banned users from the app (except the /banned page itself
+  // and infra routes). Wrapped in try/catch so a missing user_bans table can't
+  // break navigation for everyone.
+  if (user && pathname !== '/banned' && !pathname.startsWith('/api/') && !pathname.startsWith('/_next')) {
+    try {
+      const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      const { data: ban } = await adminClient
+        .from('user_bans')
+        .select('expires_at, is_permanent')
+        .eq('user_id', user.id)
+        .eq('ban_type', 'full_account_ban')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (ban && (ban.is_permanent || !ban.expires_at || new Date(ban.expires_at) > new Date())) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/banned'
+        return NextResponse.redirect(url)
+      }
+    } catch {}
   }
 
   if (user && (pathname === '/login' || pathname === '/signup')) {

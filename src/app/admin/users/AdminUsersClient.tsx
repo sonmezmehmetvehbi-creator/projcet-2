@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Fragment } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 interface UserRow {
@@ -30,6 +30,7 @@ interface Props {
 const INK = 'rgb(26,26,20)'
 const MUTED = 'rgb(107,107,88)'
 const GREEN = 'rgb(34,85,14)'
+const DANGER = 'rgb(163,45,45)'
 
 const PER_PAGE = 25
 
@@ -43,6 +44,21 @@ const DATE_RANGES = [
 ] as const
 
 type RangeId = typeof DATE_RANGES[number]['id']
+
+const BAN_TYPES = [
+  { id: 'tutoring_ban', label: 'Tutoring Ban' },
+  { id: 'generation_ban', label: 'Generation Ban' },
+  { id: 'support_ban', label: 'Support Ban' },
+  { id: 'full_account_ban', label: 'Full Account Ban' },
+]
+const BAN_DURATIONS = [
+  { id: '1', label: '1 Day' },
+  { id: '3', label: '3 Days' },
+  { id: '7', label: '7 Days' },
+  { id: '30', label: '30 Days' },
+  { id: 'permanent', label: 'Permanent' },
+]
+const banLabel = (id: string) => BAN_TYPES.find(b => b.id === id)?.label ?? id
 
 function cutoffFor(range: RangeId): number | null {
   const now = new Date()
@@ -70,8 +86,22 @@ const selectStyle: React.CSSProperties = {
   padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)',
   background: 'white', color: INK, fontSize: '0.875rem', cursor: 'pointer',
 }
+const inputStyle: React.CSSProperties = {
+  padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)',
+  background: 'white', color: INK, fontSize: '0.875rem', boxSizing: 'border-box',
+}
 const th: React.CSSProperties = { padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '0.75rem 1rem', fontSize: '0.875rem', color: INK, verticalAlign: 'middle' }
+const actionCard: React.CSSProperties = { padding: '1rem 1.125rem', borderRadius: '0.875rem', background: 'white', border: '1px solid rgba(34,85,14,0.1)' }
+const cardTitle: React.CSSProperties = { fontSize: '0.75rem', fontWeight: 800, color: INK, fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }
+const smallLabel: React.CSSProperties = { fontSize: '0.625rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }
+
+function btnStyle(kind: 'primary' | 'neutral' | 'danger', disabled?: boolean): React.CSSProperties {
+  const base: React.CSSProperties = { padding: '0.5rem 1rem', borderRadius: '0.625rem', fontWeight: 600, fontSize: '0.8125rem', cursor: disabled ? 'wait' : 'pointer', whiteSpace: 'nowrap' }
+  if (kind === 'primary') return { ...base, background: GREEN, border: 'none', color: 'white' }
+  if (kind === 'danger') return { ...base, background: 'rgba(163,45,45,0.08)', border: '1.5px solid rgba(163,45,45,0.3)', color: DANGER }
+  return { ...base, background: 'white', border: '1.5px solid rgba(34,85,14,0.2)', color: INK }
+}
 
 export default function AdminUsersClient({ users: initialUsers, currentUserId }: Props) {
   const [users, setUsers] = useState<UserRow[]>(initialUsers)
@@ -81,7 +111,9 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
   const [rangeFilter, setRangeFilter] = useState<RangeId>('all')
   const [page, setPage] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
+
+  const patchUser = (id: string, partial: Partial<UserRow>) =>
+    setUsers(prev => prev.map(u => (u.id === id ? { ...u, ...partial } : u)))
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -99,7 +131,6 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
     })
   }, [users, search, typeFilter, planFilter, rangeFilter])
 
-  // Reset to first page whenever the filters change the result set.
   const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const safePage = Math.min(page, pageCount - 1)
   const pageUsers = filtered.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE)
@@ -113,29 +144,6 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
 
   function resetPage<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setPage(0) }
-  }
-
-  async function updateUser(userId: string, action: 'make_admin' | 'remove_premium') {
-    if (busy) return
-    setBusy(userId)
-    try {
-      const res = await fetch('/api/admin/update-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed')
-      setUsers(prev => prev.map(u => {
-        if (u.id !== userId) return u
-        if (action === 'make_admin') return { ...u, is_admin: true, accountType: 'Admin' }
-        return { ...u, is_premium: false }
-      }))
-    } catch (e: any) {
-      alert('Error: ' + e.message)
-    } finally {
-      setBusy(null)
-    }
   }
 
   function exportCsv() {
@@ -255,39 +263,8 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
                       </tr>
                       {open && (
                         <tr style={{ borderBottom: '1px solid rgba(34,85,14,0.06)', background: 'rgba(34,85,14,0.02)' }}>
-                          <td colSpan={8} style={{ padding: '0 1rem 1.25rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-                              {[
-                                { label: 'Account created', value: new Date(u.created_at).toLocaleString() },
-                                { label: 'Last active', value: u.lastActive ? new Date(u.lastActive).toLocaleDateString() : '—' },
-                                { label: 'Questions generated', value: u.totalQuestions.toLocaleString() },
-                                { label: 'Worksheets generated', value: u.totalWorksheets.toLocaleString() },
-                                { label: 'Total sessions', value: u.totalSessions.toLocaleString() },
-                                { label: 'Tutoring (as student)', value: u.totalTutoringSessions.toLocaleString() },
-                                { label: 'XP', value: (u.xp ?? 0).toLocaleString() },
-                                { label: 'Level', value: String(u.level ?? 1) },
-                                ...(u.tutor_status ? [{ label: 'Tutor status', value: u.tutor_status }] : []),
-                              ].map(item => (
-                                <div key={item.label} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'white', border: '1px solid rgba(34,85,14,0.08)' }}>
-                                  <p style={{ fontSize: '0.625rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{item.label}</p>
-                                  <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600 }}>{item.value}</p>
-                                </div>
-                              ))}
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-                              {!u.is_admin && (
-                                <button onClick={() => updateUser(u.id, 'make_admin')} disabled={busy === u.id}
-                                  style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(147,51,234,0.1)', border: '1.5px solid rgba(147,51,234,0.3)', color: 'rgb(126,34,206)', fontWeight: 600, fontSize: '0.8125rem', cursor: busy === u.id ? 'wait' : 'pointer' }}>
-                                  {busy === u.id ? '…' : '🛡️ Make Admin'}
-                                </button>
-                              )}
-                              {u.is_premium && (
-                                <button onClick={() => updateUser(u.id, 'remove_premium')} disabled={busy === u.id}
-                                  style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.08)', border: '1.5px solid rgba(163,45,45,0.3)', color: 'rgb(163,45,45)', fontWeight: 600, fontSize: '0.8125rem', cursor: busy === u.id ? 'wait' : 'pointer' }}>
-                                  {busy === u.id ? '…' : '✕ Remove Premium'}
-                                </button>
-                              )}
-                            </div>
+                          <td colSpan={8} style={{ padding: '0 1rem 1.5rem' }}>
+                            <UserDetailPanel user={u} onPatch={patchUser} />
                           </td>
                         </tr>
                       )}
@@ -318,6 +295,359 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
         </div>
 
       </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Expandable per-user detail panel with Account Info / Actions / History tabs.
+// ──────────────────────────────────────────────────────────────────────────
+function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: string, p: Partial<UserRow>) => void }) {
+  const [tab, setTab] = useState<'account' | 'actions' | 'history'>('account')
+  const [stripe, setStripe] = useState<any>(null)
+  const [stripeLoading, setStripeLoading] = useState(true)
+  const [details, setDetails] = useState<any>(null)
+  const [detailsLoading, setDetailsLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [isPremium, setIsPremium] = useState(user.is_premium)
+
+  // Action form state
+  const [genAmount, setGenAmount] = useState(5)
+  const [xpAmount, setXpAmount] = useState(50)
+  const [xpSign, setXpSign] = useState<'+' | '-'>('+')
+  const [xpReason, setXpReason] = useState('')
+  const [banType, setBanType] = useState('tutoring_ban')
+  const [banDuration, setBanDuration] = useState('7')
+  const [banReason, setBanReason] = useState('')
+  const [note, setNote] = useState('')
+
+  useEffect(() => { loadStripe(); loadDetails() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadStripe() {
+    setStripeLoading(true)
+    try {
+      const res = await fetch(`/api/admin/user-stripe?userId=${user.id}`)
+      setStripe(await res.json())
+    } catch { setStripe({ error: true }) }
+    setStripeLoading(false)
+  }
+  async function loadDetails() {
+    setDetailsLoading(true)
+    try {
+      const res = await fetch(`/api/admin/user-details?userId=${user.id}`)
+      setDetails(await res.json())
+    } catch { setDetails({ bans: [], notes: [], tickets: [], disputes: [], generations: [] }) }
+    setDetailsLoading(false)
+  }
+
+  async function runAction(action: string, extra: any = {}, key = action): Promise<any | null> {
+    if (busy) return null
+    setBusy(key)
+    try {
+      const res = await fetch('/api/admin/user-actions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, action, ...extra }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      return data
+    } catch (e: any) {
+      alert('Error: ' + e.message)
+      return null
+    } finally { setBusy(null) }
+  }
+
+  const profile = details?.profile
+  const bans: any[] = details?.bans ?? []
+  const notes: any[] = details?.notes ?? []
+  const tickets: any[] = details?.tickets ?? []
+  const disputes: any[] = details?.disputes ?? []
+  const generations: any[] = details?.generations ?? []
+
+  const TABS = [
+    { id: 'account', label: 'Account Info' },
+    { id: 'actions', label: 'Actions' },
+    { id: 'history', label: 'History' },
+  ] as const
+
+  return (
+    <div style={{ borderRadius: '0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(34,85,14,0.1)', overflow: 'hidden' }}>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(34,85,14,0.1)', background: 'white' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ padding: '0.75rem 1.25rem', fontSize: '0.875rem', fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? INK : MUTED, background: 'transparent', border: 'none', borderBottom: tab === t.id ? `2px solid ${GREEN}` : '2px solid transparent', marginBottom: '-1px', cursor: 'pointer' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding: '1.25rem' }}>
+
+        {/* ── TAB 1: ACCOUNT INFO ── */}
+        {tab === 'account' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '0.75rem' }}>
+              {[
+                { label: 'Full name', value: user.display_name ?? '—' },
+                { label: 'Email', value: user.email ?? '—' },
+                { label: 'Role', value: user.accountType },
+                { label: 'Plan', value: isPremium ? 'Premium' : 'Free' },
+                { label: 'XP', value: (user.xp ?? 0).toLocaleString() },
+                { label: 'Level', value: String(user.level ?? 1) },
+                { label: 'Streak', value: profile ? `${profile.streak_count ?? 0} days` : '…' },
+                { label: 'Joined', value: new Date(user.created_at).toLocaleDateString() },
+                { label: 'Last active', value: user.lastActive ? new Date(user.lastActive).toLocaleDateString() : '—' },
+              ].map(item => (
+                <div key={item.label} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'white', border: '1px solid rgba(34,85,14,0.08)' }}>
+                  <p style={smallLabel}>{item.label}</p>
+                  <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600, wordBreak: 'break-word' }}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Stripe subscription */}
+            <div style={actionCard}>
+              <p style={cardTitle}>Stripe Subscription</p>
+              {stripeLoading ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>Loading subscription…</p>
+              ) : !stripe || stripe.noSubscription || stripe.error ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>
+                  No active subscription
+                  {stripe?.stripeCustomerUrl && (
+                    <> · <a href={stripe.stripeCustomerUrl} target="_blank" rel="noopener noreferrer" style={{ color: GREEN, fontWeight: 600 }}>View in Stripe →</a></>
+                  )}
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '0.75rem' }}>
+                  {[
+                    { label: 'Status', value: stripe.subscriptionStatus ?? '—' },
+                    { label: 'Next billing', value: stripe.currentPeriodEnd ? new Date(stripe.currentPeriodEnd).toLocaleDateString() : '—' },
+                    { label: 'Amount', value: stripe.amount != null ? `$${stripe.amount.toFixed(2)}` : '—' },
+                    { label: 'Cancels at period end', value: stripe.cancelAtPeriodEnd ? 'Yes' : 'No' },
+                  ].map(item => (
+                    <div key={item.label}>
+                      <p style={smallLabel}>{item.label}</p>
+                      <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600 }}>{item.value}</p>
+                    </div>
+                  ))}
+                  {stripe.stripeCustomerUrl && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <a href={stripe.stripeCustomerUrl} target="_blank" rel="noopener noreferrer" style={{ color: GREEN, fontWeight: 600, fontSize: '0.8125rem' }}>View customer in Stripe →</a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Active bans */}
+            <div style={actionCard}>
+              <p style={cardTitle}>Active Bans</p>
+              {detailsLoading ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>Loading…</p>
+              ) : bans.length === 0 ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>No active bans.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {bans.map(b => (
+                    <BanRow key={b.id} ban={b} busy={busy === 'unban-' + b.id}
+                      onUnban={async () => { const d = await runAction('unban_user', { banId: b.id }, 'unban-' + b.id); if (d) loadDetails() }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 2: ACTIONS ── */}
+        {tab === 'actions' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: '1rem' }}>
+
+            {/* Premium */}
+            <div style={actionCard}>
+              <p style={cardTitle}>Premium</p>
+              {isPremium ? (
+                <button disabled={busy === 'remove_premium'} style={btnStyle('danger', busy === 'remove_premium')}
+                  onClick={async () => { const d = await runAction('remove_premium'); if (d) { setIsPremium(false); onPatch(user.id, { is_premium: false }) } }}>
+                  ✕ Remove Premium
+                </button>
+              ) : (
+                <button disabled={busy === 'grant_premium'} style={btnStyle('primary', busy === 'grant_premium')}
+                  onClick={async () => { const d = await runAction('grant_premium'); if (d) { setIsPremium(true); onPatch(user.id, { is_premium: true }) } }}>
+                  ⚡ Grant Premium
+                </button>
+              )}
+            </div>
+
+            {/* Generations */}
+            <div style={actionCard}>
+              <p style={cardTitle}>Generations</p>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                <input type="number" min={1} max={50} value={genAmount}
+                  onChange={e => setGenAmount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                  style={{ ...inputStyle, width: '5rem' }} />
+                <button disabled={busy === 'add_generations'} style={btnStyle('primary', busy === 'add_generations')}
+                  onClick={async () => { const d = await runAction('add_generations', { amount: genAmount }); if (d) { loadDetails() } }}>
+                  Add Bonus
+                </button>
+              </div>
+              <button disabled={busy === 'reset_daily_usage'} style={btnStyle('neutral', busy === 'reset_daily_usage')}
+                onClick={async () => { if (!confirm("Reset today's usage for this user?")) return; await runAction('reset_daily_usage') }}>
+                Reset Daily Usage
+              </button>
+            </div>
+
+            {/* XP & Streak */}
+            <div style={actionCard}>
+              <p style={cardTitle}>XP &amp; Streak</p>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <button onClick={() => setXpSign(s => (s === '+' ? '-' : '+'))}
+                  style={{ ...btnStyle('neutral'), width: '2.5rem', textAlign: 'center', padding: '0.5rem 0' }}>{xpSign}</button>
+                <input type="number" min={0} value={xpAmount}
+                  onChange={e => setXpAmount(Math.max(0, Number(e.target.value) || 0))}
+                  style={{ ...inputStyle, width: '5rem' }} />
+                <button disabled={busy === 'adjust_xp'} style={btnStyle('primary', busy === 'adjust_xp')}
+                  onClick={async () => {
+                    const amount = xpSign === '-' ? -Math.abs(xpAmount) : Math.abs(xpAmount)
+                    const d = await runAction('adjust_xp', { amount, reason: xpReason })
+                    if (d) { onPatch(user.id, { xp: d.xp, level: d.level }); setXpReason('') }
+                  }}>
+                  Adjust XP
+                </button>
+              </div>
+              <input value={xpReason} onChange={e => setXpReason(e.target.value)} placeholder="Reason (optional)"
+                style={{ ...inputStyle, width: '100%', marginBottom: '0.625rem' }} />
+              <button disabled={busy === 'reset_streak'} style={btnStyle('neutral', busy === 'reset_streak')}
+                onClick={async () => { if (!confirm('Reset streak to 0?')) return; await runAction('reset_streak') }}>
+                Reset Streak
+              </button>
+            </div>
+
+            {/* Email */}
+            <div style={actionCard}>
+              <p style={cardTitle}>Email</p>
+              <button disabled={busy === 'send_password_reset'} style={btnStyle('neutral', busy === 'send_password_reset')}
+                onClick={async () => { const d = await runAction('send_password_reset'); if (d) alert('Password reset email sent.') }}>
+                ✉️ Send Password Reset Email
+              </button>
+            </div>
+
+            {/* Ban system */}
+            <div style={{ ...actionCard, gridColumn: '1 / -1' }}>
+              <p style={cardTitle}>Ban System</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.625rem' }}>
+                <select value={banType} onChange={e => setBanType(e.target.value)} style={selectStyle}>
+                  {BAN_TYPES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                </select>
+                <select value={banDuration} onChange={e => setBanDuration(e.target.value)} style={selectStyle}>
+                  {BAN_DURATIONS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                </select>
+                <input value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Reason (required)"
+                  style={{ ...inputStyle, flex: '1 1 200px' }} />
+                <button disabled={busy === 'ban_user'} style={btnStyle('danger', busy === 'ban_user')}
+                  onClick={async () => {
+                    if (!banReason.trim()) { alert('A reason is required.'); return }
+                    const d = await runAction('ban_user', { banType, duration: banDuration, reason: banReason })
+                    if (d) { setBanReason(''); loadDetails(); if (banType === 'full_account_ban') onPatch(user.id, {}) }
+                  }}>
+                  🚫 Ban User
+                </button>
+              </div>
+              {bans.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  {bans.map(b => (
+                    <BanRow key={b.id} ban={b} busy={busy === 'unban-' + b.id}
+                      onUnban={async () => { const d = await runAction('unban_user', { banId: b.id }, 'unban-' + b.id); if (d) loadDetails() }} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Admin notes */}
+            <div style={{ ...actionCard, gridColumn: '1 / -1' }}>
+              <p style={cardTitle}>Admin Notes</p>
+              <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Internal note about this user…"
+                style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: '0.625rem' }} />
+              <button disabled={busy === 'save_note'} style={btnStyle('primary', busy === 'save_note')}
+                onClick={async () => { if (!note.trim()) return; const d = await runAction('save_note', { note }); if (d) { setNote(''); loadDetails() } }}>
+                Save Note
+              </button>
+              {notes.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.875rem' }}>
+                  {notes.map(n => (
+                    <div key={n.id} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)' }}>
+                      <p style={{ fontSize: '0.875rem', color: INK, lineHeight: 1.5 }}>{n.note}</p>
+                      <p style={{ fontSize: '0.6875rem', color: MUTED, marginTop: '0.25rem' }}>{new Date(n.created_at).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 3: HISTORY ── */}
+        {tab === 'history' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {detailsLoading && <p style={{ fontSize: '0.875rem', color: MUTED }}>Loading history…</p>}
+
+            <div style={actionCard}>
+              <p style={cardTitle}>Support Tickets</p>
+              {tickets.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No support tickets.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {tickets.map(t => (
+                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                      <span style={{ fontSize: '0.875rem', color: INK }}>{t.subject}</span>
+                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{t.status} · {new Date(t.created_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={actionCard}>
+              <p style={cardTitle}>Disputes</p>
+              {disputes.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No disputes.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {disputes.map(d => (
+                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                      <span style={{ fontSize: '0.875rem', color: INK }}>{d.subject ?? 'Tutoring session'}</span>
+                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{d.dispute_status} · {new Date(d.created_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={actionCard}>
+              <p style={cardTitle}>Recent Generations (last 7 days)</p>
+              {generations.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No activity in the last 7 days.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {generations.map((g, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                      <span style={{ fontSize: '0.875rem', color: INK }}>{new Date(g.date).toLocaleDateString()}</span>
+                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{g.questions ?? 0} questions · {g.worksheets ?? 0} worksheets</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function BanRow({ ban, busy, onUnban }: { ban: any; busy: boolean; onUnban: () => void }) {
+  const expiry = ban.is_permanent || !ban.expires_at ? 'Permanent' : `Until ${new Date(ban.expires_at).toLocaleDateString()}`
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.05)', border: '1px solid rgba(163,45,45,0.15)', flexWrap: 'wrap' }}>
+      <div>
+        <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: DANGER }}>{banLabel(ban.ban_type)} · {expiry}</p>
+        <p style={{ fontSize: '0.8125rem', color: MUTED }}>{ban.reason}</p>
+      </div>
+      <button disabled={busy} onClick={onUnban} style={btnStyle('neutral', busy)}>{busy ? '…' : 'Unban'}</button>
     </div>
   )
 }
