@@ -1,5 +1,6 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getUserBans } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import StudentThemeShell from '@/app/contexts/StudentThemeShell'
@@ -28,9 +29,11 @@ export default async function TutoringSessionsPage() {
     return { ...s, tutor_profiles: tp }
   }))
 
+  const bans = user ? await getUserBans(user.id, adminClient) : { generation: false, tutoring: false, support: false }
+
   return (
     <StudentThemeShell>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       <SessionsListClient sessions={sessions} userId={user.id} />
     </StudentThemeShell>
   )

@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
-import { getActiveBan } from '@/lib/bans'
+import { getActiveBan, getUserBans } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
@@ -17,6 +17,7 @@ export default async function TutoringPage() {
   // Active tutoring ban → show a banner and hide booking CTAs.
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
   const tutoringBan = await getActiveBan(adminClient, user.id, 'tutoring')
+  const bans = user ? await getUserBans(user.id, adminClient) : { generation: false, tutoring: false, support: false }
 
  const { data: tutors } = await supabase
     .from('tutor_profiles')
@@ -30,7 +31,7 @@ export default async function TutoringPage() {
 
   return (
     <StudentThemeShell lightBg="linear-gradient(135deg, #F4F7EC, #EFF5E3)">
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       <div style={{ paddingTop:'5rem' }}>
         <div style={{ maxWidth:'64rem', margin:'0 auto', padding:'3rem 1.5rem' }}>
 

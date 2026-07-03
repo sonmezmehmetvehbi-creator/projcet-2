@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
+import { getUserBans } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import TutorNavbar from '@/app/tutor/dashboard/TutorNavbar'
@@ -38,6 +39,8 @@ export default async function SessionPage({ params }: { params: { sessionId: str
   // The viewer is the tutor if the tutor profile's user_id matches the logged-in user.
   const isTutor = !!tutorProfile && tutorProfile.user_id === user.id
 
+  const bans = user ? await getUserBans(user.id, adminClient) : { generation: false, tutoring: false, support: false }
+
   console.log('[session page] user.id:', user.id)
   console.log('[session page] session.tutor_id:', session.tutor_id)
   console.log('[session page] tutorProfile is null:', tutorProfile === null, 'error:', tutorProfileError?.message)
@@ -49,7 +52,7 @@ export default async function SessionPage({ params }: { params: { sessionId: str
       {isTutor ? (
         <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
       ) : (
-        <Navbar profile={profile} />
+        <Navbar profile={profile} bans={bans} />
       )}
       <SessionChatClient
         session={session}

@@ -31,6 +31,7 @@ export default function GeneratePage() {
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
   const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
   const [genBan, setGenBan] = useState<{ reason?: string } | null>(null)
+  const [bans, setBans] = useState({ generation: false, tutoring: false, support: false })
 
   const [useUpload, setUseUpload] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -49,6 +50,7 @@ export default function GeneratePage() {
       if (!user) { router.push('/login'); return }
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(profileData)
+      fetch('/api/user/bans').then(r => r.json()).then(setBans).catch(() => {})
       const today = new Date().toISOString().split('T')[0]
       const { data: usageData } = await supabase.from('daily_usage').select('questions, worksheets').eq('user_id', user.id).eq('date', today).single()
       if (usageData) setUsage(usageData)
@@ -208,7 +210,7 @@ export default function GeneratePage() {
 
   if (genBan) return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       <div style={{ paddingTop:'5rem' }}>
         <div style={{ maxWidth:'42rem', margin:'0 auto', padding:'3rem 1.5rem' }}>
           <div className="card" style={{ padding:'2.5rem', textAlign:'center', border:'1px solid rgba(163,45,45,0.25)' }}>
@@ -227,7 +229,7 @@ export default function GeneratePage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       <div style={{ paddingTop:'5rem' }}>
         <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'42rem' }}>
           <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>

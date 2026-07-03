@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
+import { getUserBans } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import TutorNavbar from '@/app/tutor/dashboard/TutorNavbar'
@@ -38,6 +39,12 @@ export default async function SupportPage() {
     tutorProfile = data
   }
 
+  const bansAdminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const bans = user ? await getUserBans(user.id, bansAdminClient) : { generation: false, tutoring: false, support: false }
+
   const supportClient = (
     <SupportClient profile={profile} tickets={tickets ?? []} currentUserId={user.id} isTutor={isTutor} />
   )
@@ -58,7 +65,7 @@ export default async function SupportPage() {
   // Students get the scoped .student-dark theme via StudentThemeShell.
   return (
     <StudentThemeShell>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       {supportClient}
     </StudentThemeShell>
   )

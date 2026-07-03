@@ -33,9 +33,12 @@ function getLevelInfo(xp: number) {
   return { current, next, pct, xpIntoLevel, xpNeeded }
 }
 
-interface NavbarProps { profile?: Profile | null }
+interface NavbarProps {
+  profile?: Profile | null
+  bans?: { generation: boolean; tutoring: boolean; support: boolean }
+}
 
-export default function Navbar({ profile }: NavbarProps) {
+export default function Navbar({ profile, bans }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -103,13 +106,32 @@ export default function Navbar({ profile }: NavbarProps) {
 
   const NAV_LINKS = [
     { href:'/dashboard', label:'Dashboard' },
-    { href:'/generate', label:'Generate' },
-    { href:'/sat', label:'SAT Prep' },
-    { href:'/tutoring/dashboard', label:'Tutoring 🎓' },
+    ...(!bans?.generation ? [{ href:'/generate', label:'Generate' }, { href:'/sat', label:'SAT Prep' }] : []),
+    ...(!bans?.tutoring ? [{ href:'/tutoring/dashboard', label:'Tutoring 🎓' }] : []),
   ]
+
+  // Banner shown when a user lands directly on a page they're banned from.
+  let banBanner: string | null = null
+  if (bans?.generation && (pathname.startsWith('/generate') || pathname.startsWith('/sat') || pathname.startsWith('/questions') || pathname.startsWith('/worksheet'))) {
+    banBanner = 'Your access to AI generation has been suspended. Contact support to appeal.'
+  } else if (bans?.tutoring && pathname.startsWith('/tutoring')) {
+    banBanner = 'Your tutoring access has been suspended. Contact support to appeal.'
+  } else if (bans?.support && pathname.startsWith('/support')) {
+    banBanner = 'Your support access has been suspended. Email contactinfo21342@gmail.com directly.'
+  }
 
   return (
     <>
+      {banBanner && (
+        <div style={{
+          position:'fixed', top:'4rem', left:0, right:0, zIndex:49,
+          background:'rgb(163,45,45)', color:'white',
+          padding:'0.625rem 1.5rem', textAlign:'center',
+          fontSize:'0.875rem', fontWeight:600,
+        }}>
+          🚫 {banBanner}
+        </div>
+      )}
       <nav style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50,
         background: isTransparent ? 'transparent' : navSolidBg,
@@ -279,7 +301,7 @@ export default function Navbar({ profile }: NavbarProps) {
                       {[
                       { href:'/settings', icon:<Settings style={{width:'1rem',height:'1rem'}} />, label:'Settings' },
                       { href:'/dashboard?tab=pdfs', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'My PDFs' },
-                      { href:'/support', icon:<Headphones style={{width:'1rem',height:'1rem'}} />, label:'Support' },
+                      ...(!bans?.support ? [{ href:'/support', icon:<Headphones style={{width:'1rem',height:'1rem'}} />, label:'Support' }] : []),
                       { href:'/terms', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Terms of Service' },
                       { href:'/privacy', icon:<FileText style={{width:'1rem',height:'1rem'}} />, label:'Privacy Policy' },
                     ].map(item => (

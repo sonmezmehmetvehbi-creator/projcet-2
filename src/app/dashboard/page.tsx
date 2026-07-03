@@ -1,4 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+import { getUserBans } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import StudentThemeShell from '@/app/contexts/StudentThemeShell'
@@ -32,9 +34,12 @@ export default async function DashboardPage() {
     .eq('date', today)
     .single()
 
+  const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const bans = user ? await getUserBans(user.id, adminClient) : { generation: false, tutoring: false, support: false }
+
   return (
     <StudentThemeShell>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} bans={bans} />
       <DashboardClient
         profile={profile}
         sessions={sessions ?? []}

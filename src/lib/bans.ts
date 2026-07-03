@@ -53,3 +53,31 @@ export async function getActiveBan(
     return null
   }
 }
+
+// Returns a simple { generation, tutoring, support } flag map for a user,
+// used to hide navbar items and gate page access. Matches both the stored
+// key form ('generation_ban') and the label form ('Generation Ban').
+export async function getUserBans(userId: string, adminClient: AnyClient) {
+  try {
+    const { data: bans } = await adminClient
+      .from('user_bans')
+      .select('ban_type, is_permanent, expires_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+
+    const now = Date.now()
+    const isActive = (ban: any) =>
+      ban.is_permanent || (ban.expires_at != null && new Date(ban.expires_at).getTime() > now)
+    const activeBans = (bans ?? []).filter(isActive)
+    const has = (feature: BanFeature) =>
+      activeBans.some((b: any) => BAN_TYPE_ALIASES[feature].includes(b.ban_type))
+
+    return {
+      generation: has('generation'),
+      tutoring: has('tutoring'),
+      support: has('support'),
+    }
+  } catch {
+    return { generation: false, tutoring: false, support: false }
+  }
+}
