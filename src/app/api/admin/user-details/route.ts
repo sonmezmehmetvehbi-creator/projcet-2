@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
-    const [profileRes, bans, notes, tickets, disputes, generations] = await Promise.all([
+    const [profileRes, bans, notes, tickets, disputes, sessions, generations] = await Promise.all([
       (async () => {
         try {
           const { data } = await adminClient.from('profiles').select('streak_count, bonus_generations, is_banned, xp, level, is_premium').eq('id', userId).single()
@@ -43,7 +43,8 @@ export async function GET(request: Request) {
       safe(adminClient.from('user_bans').select('*').eq('user_id', userId).eq('is_active', true).order('created_at', { ascending: false })),
       safe(adminClient.from('admin_notes').select('*').eq('user_id', userId).order('created_at', { ascending: false })),
       safe(adminClient.from('support_tickets').select('id, subject, status, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(20)),
-      safe(adminClient.from('tutoring_sessions').select('id, subject, dispute_status, created_at').eq('student_id', userId).not('dispute_status', 'is', null).order('created_at', { ascending: false })),
+      safe(adminClient.from('tutoring_sessions').select('id, subject, scheduled_at, created_at, dispute_reason, dispute_status, dispute_resolved_at, dispute_resolved_in_student_favor, student_price, status').eq('student_id', userId).not('dispute_status', 'is', null).order('created_at', { ascending: false })),
+      safe(adminClient.from('tutoring_sessions').select('id, subject, scheduled_at, status, student_price, tutor_profiles(display_name)').eq('student_id', userId).order('scheduled_at', { ascending: false })),
       safe(adminClient.from('daily_usage').select('date, questions, worksheets, sat').eq('user_id', userId).gte('date', weekAgo).order('date', { ascending: false })),
     ])
 
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
       notes,
       tickets,
       disputes,
+      sessions,
       generations,
     })
   } catch (error: any) {

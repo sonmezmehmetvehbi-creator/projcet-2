@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { checkGenerationAllowed, commitGeneration, type GenType } from '@/lib/usage'
+import { getActiveBan } from '@/lib/bans'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -9,6 +11,13 @@ export async function POST(request: Request) {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Block users with an active generation ban.
+    const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const genBan = await getActiveBan(adminClient, user.id, 'generation')
+    if (genBan) {
+      return NextResponse.json({ error: 'generation_banned', reason: genBan.reason }, { status: 403 })
+    }
 
     const { subject, grade, topic, focus, outputType, questionCount, questionTypes, uploadedText, isRetry, difficulty } = await request.json()
 

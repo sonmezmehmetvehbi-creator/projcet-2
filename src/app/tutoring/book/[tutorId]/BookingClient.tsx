@@ -64,6 +64,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
   const [success, setSuccess] = useState(false)
   const [step, setStep] = useState<'details' | 'payment'>('details')
   const [clientSecret, setClientSecret] = useState('')
+  const [banned, setBanned] = useState<{ reason?: string } | null>(null)
 
   const isPremium = profile?.is_premium ?? false
   const baseRate = isPremium ? 34.99 : 49.99
@@ -119,6 +120,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
         }),
       })
       const data = await res.json()
+      if (data.error === 'tutoring_banned') { setBanned({ reason: data.reason }); setLoading(false); return }
       if (data.error) throw new Error(data.error)
       setClientSecret(data.clientSecret)
       setStep('payment')
@@ -172,6 +174,7 @@ function BookingForm({ profile, tutor, availability }: Props) {
       })
 
       const data = await res.json()
+      if (data.error === 'tutoring_banned') { setBanned({ reason: data.reason }); setLoading(false); return }
       if (data.error) throw new Error(data.error)
       setSuccess(true)
       setTimeout(() => router.push('/tutoring/sessions'), 2000)
@@ -192,6 +195,20 @@ function BookingForm({ profile, tutor, availability }: Props) {
         </h2>
         <p style={{ color: textSecondary, lineHeight: 1.7 }}>
           Payment successful! Your tutor will confirm within 24 hours and send a Google Meet link.
+        </p>
+      </div>
+    </div>
+  )
+
+  if (banned) return (
+    <div className={isDark ? 'student-dark' : ''} style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem', background: bg }}>
+      <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center', border: '1px solid rgba(163,45,45,0.25)' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚫</div>
+        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(163,45,45)', marginBottom: '0.75rem' }}>
+          Tutoring access suspended
+        </h2>
+        <p style={{ color: textSecondary, lineHeight: 1.7 }}>
+          Your access to tutoring has been suspended.{banned.reason ? ` Reason: ${banned.reason}.` : ''} Contact support to appeal.
         </p>
       </div>
     </div>

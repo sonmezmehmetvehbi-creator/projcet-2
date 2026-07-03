@@ -27,6 +27,7 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'pending' | 'confirmed' | 'completed' | 'declined' | 'disputed'>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const now = Date.now()
   const isDisputed = (s: any) => s.status === 'disputed' || s.dispute_filed
@@ -43,7 +44,12 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
 
   const TABS = ['all', 'upcoming', 'pending', 'confirmed', 'completed', 'declined', 'disputed'] as const
 
+  const q = search.trim().toLowerCase()
   const visible = sessions.filter(s => {
+    if (q) {
+      const hay = `${s.student?.display_name ?? ''} ${s.tutor?.display_name ?? ''}`.toLowerCase()
+      if (!hay.includes(q)) return false
+    }
     if (filter === 'all') return true
     if (filter === 'upcoming') return s.status === 'confirmed' && new Date(s.scheduled_at).getTime() > now
     if (filter === 'disputed') return isDisputed(s)
@@ -121,6 +127,11 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
             </div>
           ))}
         </div>
+
+        {/* Search */}
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by student or tutor name…"
+          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: 'rgb(26,26,20)', fontSize: '0.9375rem', boxSizing: 'border-box', marginBottom: '1rem' }} />
 
         {/* Filter tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>

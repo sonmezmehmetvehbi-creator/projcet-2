@@ -1,4 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+import { getActiveBan } from '@/lib/bans'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
@@ -10,6 +12,13 @@ export async function POST(request: Request) {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Block users with an active tutoring ban.
+    const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const tutoringBan = await getActiveBan(adminClient, user.id, 'tutoring')
+    if (tutoringBan) {
+      return NextResponse.json({ error: 'tutoring_banned', reason: tutoringBan.reason }, { status: 403 })
+    }
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     const {

@@ -1,4 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+import { getActiveBan } from '@/lib/bans'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
@@ -11,6 +13,10 @@ export default async function TutoringPage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+
+  // Active tutoring ban → show a banner and hide booking CTAs.
+  const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const tutoringBan = await getActiveBan(adminClient, user.id, 'tutoring')
 
  const { data: tutors } = await supabase
     .from('tutor_profiles')
@@ -27,6 +33,15 @@ export default async function TutoringPage() {
       <Navbar profile={profile} />
       <div style={{ paddingTop:'5rem' }}>
         <div style={{ maxWidth:'64rem', margin:'0 auto', padding:'3rem 1.5rem' }}>
+
+          {tutoringBan && (
+            <div style={{ padding:'1.25rem 1.5rem', borderRadius:'1rem', background:'rgba(163,45,45,0.06)', border:'1px solid rgba(163,45,45,0.25)', marginBottom:'2rem' }}>
+              <p style={{ fontWeight:700, color:'rgb(163,45,45)', marginBottom:'0.25rem' }}>🚫 Your tutoring access is currently suspended.</p>
+              {tutoringBan.reason && (
+                <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>Reason: {tutoringBan.reason}.</p>
+              )}
+            </div>
+          )}
 
           {/* Header */}
           <div style={{ textAlign:'center', marginBottom:'3rem' }}>

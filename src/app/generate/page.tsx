@@ -30,6 +30,7 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(false)
   const [usage, setUsage] = useState({ questions: 0, worksheets: 0 })
   const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
+  const [genBan, setGenBan] = useState<{ reason?: string } | null>(null)
 
   const [useUpload, setUseUpload] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -188,6 +189,11 @@ export default function GeneratePage() {
         setLoading(false)
         return
       }
+      if (data.error === 'generation_banned') {
+        setGenBan({ reason: data.reason })
+        setLoading(false)
+        return
+      }
       if (data.error) throw new Error(data.error)
       router.refresh()
       if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
@@ -199,6 +205,25 @@ export default function GeneratePage() {
   }
 
   if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} />
+
+  if (genBan) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+      <Navbar profile={profile} />
+      <div style={{ paddingTop:'5rem' }}>
+        <div style={{ maxWidth:'42rem', margin:'0 auto', padding:'3rem 1.5rem' }}>
+          <div className="card" style={{ padding:'2.5rem', textAlign:'center', border:'1px solid rgba(163,45,45,0.25)' }}>
+            <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>🚫</div>
+            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(163,45,45)', marginBottom:'0.75rem' }}>
+              AI generation suspended
+            </h1>
+            <p style={{ color:'rgb(107,107,88)', lineHeight:1.7 }}>
+              Your access to AI generation has been suspended.{genBan.reason ? ` Reason: ${genBan.reason}.` : ''} Contact support to appeal.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>

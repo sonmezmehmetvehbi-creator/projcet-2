@@ -106,17 +106,19 @@ export default function SupportClient({ profile, tickets: initialTickets, curren
     setCreating(true)
     setError('')
     try {
-      const { data: ticket, error: ticketError } = await supabase
-        .from('support_tickets')
-        .insert({ user_id: profile.id, subject: `[${category}] ${subject.trim()}`, status: 'open' })
-        .select()
-        .single()
-      if (ticketError) throw ticketError
-      await fetch('/api/support/messages', {
+      const res = await fetch('/api/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketId: ticket.id, message: firstMessage.trim() }),
+        body: JSON.stringify({ subject: `[${category}] ${subject.trim()}`, message: firstMessage.trim() }),
       })
+      const data = await res.json()
+      if (data.error === 'support_banned') {
+        setError('Your access to support has been suspended. Email us directly at contactinfo21342@gmail.com')
+        setCreating(false)
+        return
+      }
+      if (!res.ok) throw new Error(data.error || 'Failed to create ticket')
+      const ticket = data.ticket
       setTickets(prev => [ticket, ...prev])
       setSelectedTicket(ticket)
       setShowNewTicket(false)

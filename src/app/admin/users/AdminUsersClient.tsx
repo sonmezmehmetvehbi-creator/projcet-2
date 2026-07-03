@@ -321,6 +321,23 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
   const [banReason, setBanReason] = useState('')
   const [note, setNote] = useState('')
 
+  // Ticket-conversation modal
+  const [viewTicket, setViewTicket] = useState<any>(null)
+  const [ticketMessages, setTicketMessages] = useState<any[]>([])
+  const [ticketLoading, setTicketLoading] = useState(false)
+
+  async function openTicket(ticket: any) {
+    setViewTicket(ticket)
+    setTicketMessages([])
+    setTicketLoading(true)
+    try {
+      const res = await fetch(`/api/support/messages?ticketId=${ticket.id}`)
+      const data = await res.json()
+      setTicketMessages(data.messages ?? [])
+    } catch { setTicketMessages([]) }
+    setTicketLoading(false)
+  }
+
   useEffect(() => { loadStripe(); loadDetails() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadStripe() {
@@ -362,6 +379,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
   const notes: any[] = details?.notes ?? []
   const tickets: any[] = details?.tickets ?? []
   const disputes: any[] = details?.disputes ?? []
+  const sessions: any[] = details?.sessions ?? []
   const generations: any[] = details?.generations ?? []
 
   const TABS = [
@@ -594,11 +612,17 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
             <div style={actionCard}>
               <p style={cardTitle}>Support Tickets</p>
               {tickets.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No support tickets.</p> : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {tickets.map(t => (
-                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
-                      <span style={{ fontSize: '0.875rem', color: INK }}>{t.subject}</span>
-                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{t.status} · {new Date(t.created_at).toLocaleDateString()}</span>
+                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600 }}>{t.subject}</p>
+                        <p style={{ fontSize: '0.75rem', color: MUTED }}>{new Date(t.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: t.status === 'open' ? 'rgba(34,85,14,0.1)' : 'rgba(107,107,88,0.1)', color: t.status === 'open' ? GREEN : MUTED }}>{t.status}</span>
+                        <button onClick={() => openTicket(t)} style={btnStyle('neutral')}>View Ticket</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -608,11 +632,47 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
             <div style={actionCard}>
               <p style={cardTitle}>Disputes</p>
               {disputes.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No disputes.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  {disputes.map(d => {
+                    const resolution = d.status === 'refunded'
+                      ? 'Resolved — refunded'
+                      : d.dispute_resolved_at
+                        ? `Resolved${d.dispute_resolved_in_student_favor ? ' (student favor)' : ''}`
+                        : 'Open'
+                    return (
+                      <div key={d.id} style={{ padding: '0.75rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.04)', border: '1px solid rgba(163,45,45,0.12)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
+                          <span style={{ fontSize: '0.875rem', color: INK, fontWeight: 600 }}>{d.subject ?? 'Tutoring session'}</span>
+                          <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{d.scheduled_at ? new Date(d.scheduled_at).toLocaleDateString() : '—'}</span>
+                        </div>
+                        {d.dispute_reason && <p style={{ fontSize: '0.8125rem', color: MUTED, lineHeight: 1.5, marginBottom: '0.375rem' }}>{d.dispute_reason}</p>}
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.75rem', color: MUTED }}>
+                          <span>Status: <strong style={{ color: INK }}>{d.dispute_status ?? '—'}</strong></span>
+                          <span>Paid: <strong style={{ color: INK }}>${Number(d.student_price ?? 0).toFixed(2)}</strong></span>
+                          <span>Resolution: <strong style={{ color: INK }}>{resolution}</strong></span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={actionCard}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <p style={{ ...cardTitle, margin: 0 }}>Tutoring Sessions</p>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: GREEN }}>{sessions.length}</span>
+              </div>
+              {sessions.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No tutoring sessions.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  {disputes.map(d => (
-                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
-                      <span style={{ fontSize: '0.875rem', color: INK }}>{d.subject ?? 'Tutoring session'}</span>
-                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{d.dispute_status} · {new Date(d.created_at).toLocaleDateString()}</span>
+                  {sessions.map(s => (
+                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.875rem', color: INK }}>
+                        {s.subject ?? 'Session'} · <span style={{ color: MUTED }}>{s.tutor_profiles?.display_name ?? 'Tutor'}</span>
+                      </span>
+                      <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>
+                        {s.scheduled_at ? new Date(s.scheduled_at).toLocaleDateString() : '—'} · {s.status} · ${Number(s.student_price ?? 0).toFixed(2)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -635,6 +695,39 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
           </div>
         )}
       </div>
+
+      {/* Ticket conversation modal */}
+      {viewTicket && (
+        <div onClick={() => setViewTicket(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '1rem', width: '100%', maxWidth: '36rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(34,85,14,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontWeight: 700, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewTicket.subject}</p>
+                <p style={{ fontSize: '0.75rem', color: MUTED }}>{viewTicket.status} · {new Date(viewTicket.created_at).toLocaleDateString()}</p>
+              </div>
+              <button onClick={() => setViewTicket(null)} style={btnStyle('neutral')}>Close</button>
+            </div>
+            <div style={{ padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {ticketLoading ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>Loading conversation…</p>
+              ) : ticketMessages.length === 0 ? (
+                <p style={{ fontSize: '0.875rem', color: MUTED }}>No messages in this ticket.</p>
+              ) : ticketMessages.map((m, i) => (
+                <div key={m.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.is_admin ? 'flex-end' : 'flex-start' }}>
+                  <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: m.is_admin ? GREEN : MUTED, marginBottom: '0.2rem' }}>{m.is_admin ? 'Admin' : 'User'}</p>
+                  <div style={{ maxWidth: '80%', padding: '0.625rem 0.875rem', borderRadius: m.is_admin ? '0.875rem 0.875rem 0.25rem 0.875rem' : '0.875rem 0.875rem 0.875rem 0.25rem', background: m.is_admin ? 'rgb(26,26,20)' : 'rgba(34,85,14,0.08)', color: m.is_admin ? 'white' : INK }}>
+                    {m.image_url && <a href={m.image_url} target="_blank" rel="noopener noreferrer"><img src={m.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '0.5rem', display: 'block', marginBottom: m.message ? '0.375rem' : 0 }} /></a>}
+                    {m.message && <p style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>{m.message}</p>}
+                  </div>
+                  <p style={{ fontSize: '0.625rem', color: MUTED, marginTop: '0.2rem' }}>{new Date(m.created_at).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
