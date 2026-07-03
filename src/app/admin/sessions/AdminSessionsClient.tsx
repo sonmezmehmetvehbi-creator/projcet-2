@@ -40,6 +40,23 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
+  // Session chat viewer state.
+  const [viewingChatId, setViewingChatId] = useState<string | null>(null)
+  const [chatMessages, setChatMessages] = useState<any[]>([])
+  const [loadingChat, setLoadingChat] = useState(false)
+
+  async function loadSessionChat(sessionId: string) {
+    if (viewingChatId === sessionId) { setViewingChatId(null); setChatMessages([]); return }
+    setLoadingChat(true)
+    setViewingChatId(sessionId)
+    try {
+      const res = await fetch(`/api/tutoring/messages?sessionId=${sessionId}`)
+      const data = await res.json()
+      setChatMessages(data.messages ?? [])
+    } catch {}
+    setLoadingChat(false)
+  }
+
   // Inline cancel form state.
   const [cancelId, setCancelId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0])
@@ -261,6 +278,55 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
                       <div style={{ padding: '0.75rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.06)', border: '1px solid rgba(163,45,45,0.2)', marginBottom: '0.75rem' }}>
                         <p style={labelStyle}>Dispute reason</p>
                         <p style={{ fontSize: '0.875rem', color: 'rgb(120,30,30)' }}>{s.dispute_reason}</p>
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '0.875rem' }}>
+                      <button onClick={() => loadSessionChat(s.id)}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: 'rgb(37,99,235)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                        💬 {viewingChatId === s.id ? 'Hide Session Chat' : 'View Session Chat'}
+                      </button>
+                    </div>
+
+                    {viewingChatId === s.id && (
+                      <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.03)', border: '1px solid rgba(37,99,235,0.2)' }}>
+                        <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.5rem' }}>Session Chat History (admin view)</p>
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', background: 'rgba(107,107,88,0.1)', color: 'rgb(90,90,72)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '1rem' }}>
+                          🔒 This conversation is being reviewed for dispute/admin purposes
+                        </div>
+
+                        {loadingChat ? (
+                          <p style={{ fontSize: '0.875rem', color: 'rgb(140,140,120)', textAlign: 'center', padding: '1.5rem' }}>Loading messages…</p>
+                        ) : chatMessages.length === 0 ? (
+                          <p style={{ fontSize: '0.875rem', color: 'rgb(140,140,120)', textAlign: 'center', padding: '1.5rem' }}>No messages in this session</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {chatMessages.map((m, i) => {
+                              const isTutor = !!m.is_tutor
+                              const accent = isTutor ? 'rgb(79,70,229)' : 'rgb(34,85,14)'
+                              const bg = isTutor ? 'rgba(79,70,229,0.08)' : 'rgba(34,85,14,0.06)'
+                              return (
+                                <div key={m.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: isTutor ? 'flex-end' : 'flex-start' }}>
+                                  <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '9999px', background: bg, color: accent, marginBottom: '0.25rem' }}>
+                                    {isTutor ? 'Tutor' : 'Student'}
+                                  </span>
+                                  <div style={{ maxWidth: '80%', padding: '0.625rem 0.875rem', borderRadius: isTutor ? '0.875rem 0.875rem 0.25rem 0.875rem' : '0.875rem 0.875rem 0.875rem 0.25rem', background: bg, border: `1px solid ${accent}22` }}>
+                                    {m.message && <p style={{ fontSize: '0.875rem', color: 'rgb(26,26,20)', lineHeight: 1.5 }}>{m.message}</p>}
+                                    {m.file_url && (
+                                      <a href={m.file_url} target="_blank" rel="noopener noreferrer"
+                                        style={{ display: 'inline-block', fontSize: '0.8125rem', color: accent, fontWeight: 600, marginTop: m.message ? '0.375rem' : 0 }}>
+                                        📎 {m.file_name || 'View attachment'}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <span style={{ fontSize: '0.625rem', color: 'rgb(140,140,120)', marginTop: '0.2rem' }}>
+                                    {m.created_at ? new Date(m.created_at).toLocaleString() : ''}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
 
