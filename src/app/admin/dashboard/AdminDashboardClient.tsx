@@ -211,7 +211,7 @@ export default function AdminDashboardClient({ profile, stats, recentUsers, tick
       cards: [
         { label: 'Total Users', value: displayStats.totalUsers },
         { label: 'Premium Users', value: displayStats.premiumUsers },
-        { label: 'Active Today', value: displayStats.activeToday },
+        { label: 'Active', value: displayStats.activeToday },
       ],
     },
     {
