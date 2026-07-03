@@ -29,11 +29,19 @@ export default async function AdminDashboardPage() {
   const today = new Date().toISOString().split('T')[0]
   const { count: activeToday } = await adminClient.from('daily_usage').select('*', { count: 'exact', head: true }).eq('date', today)
 
-  const { data: recentUsers } = await adminClient
+  const { data: recentUsersRaw } = await adminClient
     .from('profiles')
-    .select('id, display_name, email, is_premium, created_at')
+    .select('id, display_name, email, is_premium, is_admin, created_at')
     .order('created_at', { ascending: false })
     .limit(10)
+
+  // Derive a role badge (Admin / Tutor / Student) for each recent user.
+  const { data: tutorRows } = await adminClient.from('tutor_profiles').select('user_id')
+  const tutorIds = new Set((tutorRows ?? []).map((r: any) => r.user_id))
+  const recentUsers = (recentUsersRaw ?? []).map((u: any) => ({
+    ...u,
+    role: u.is_admin ? 'Admin' : tutorIds.has(u.id) ? 'Tutor' : 'Student',
+  }))
 
   const { data: ticketsRaw } = await adminClient
     .from('support_tickets')
