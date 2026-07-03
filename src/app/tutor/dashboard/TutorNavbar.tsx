@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, ChevronDown, GraduationCap, FileText, Headphones, Sun, Moon } from 'lucide-react'
+import { LogOut, ChevronDown, GraduationCap, FileText, Headphones, Sun, Moon, Flag } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
 
@@ -130,6 +130,13 @@ export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props)
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = textMuted }}>
                     <FileText style={{ width: '1rem', height: '1rem' }} />
                     Tutor Policies
+                  </Link>
+                  <Link href="/tutor/report" onClick={() => setOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', color: textMuted, textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(234,88,12,0.05)'; e.currentTarget.style.color = textColor }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = textMuted }}>
+                    <Flag style={{ width: '1rem', height: '1rem' }} />
+                    Report Student
                   </Link>
                   <Link href="/support" onClick={() => setOpen(false)}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', color: textMuted, textDecoration: 'none', transition: 'all 0.2s' }}

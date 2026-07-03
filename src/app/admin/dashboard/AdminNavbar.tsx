@@ -37,6 +37,7 @@ export default function AdminNavbar({ profile }: Props) {
     { href: '/admin/tutors', label: '🎓 Tutor Applications' },
     { href: '/admin/appeals', label: '⚖️ Appeals' },
     { href: '/admin/disputes', label: '⚠️ Disputes' },
+    { href: '/admin/reports', label: '🚩 Reports' },
     { href: '/admin/payouts', label: '💰 Payouts' },
   ]
 

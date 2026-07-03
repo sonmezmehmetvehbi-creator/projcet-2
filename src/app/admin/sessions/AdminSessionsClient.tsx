@@ -19,7 +19,18 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   declined: { bg: 'rgba(107,107,88,0.15)', color: 'rgb(90,90,72)' },
   disputed: { bg: 'rgba(163,45,45,0.12)', color: 'rgb(163,45,45)' },
   refunded: { bg: 'rgba(107,107,88,0.15)', color: 'rgb(90,90,72)' },
+  cancelled: { bg: 'rgba(107,107,88,0.15)', color: 'rgb(90,90,72)' },
 }
+
+const CANCEL_REASONS = [
+  'Tutor requested cancellation',
+  'Student requested cancellation',
+  'No-show by tutor',
+  'No-show by student',
+  'Inappropriate behavior',
+  'Technical issues',
+  'Other',
+]
 
 export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
   const router = useRouter()
@@ -28,6 +39,37 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  // Inline cancel form state.
+  const [cancelId, setCancelId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0])
+  const [cancelNotes, setCancelNotes] = useState('')
+  const [cancelRefund, setCancelRefund] = useState(true)
+
+  function openCancel(id: string) {
+    setCancelId(id)
+    setCancelReason(CANCEL_REASONS[0])
+    setCancelNotes('')
+    setCancelRefund(true)
+  }
+
+  async function cancelSession(s: any) {
+    setBusy(s.id)
+    try {
+      const res = await fetch('/api/admin/cancel-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: s.id, reason: cancelReason, notes: cancelNotes, refundStudent: cancelRefund }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(`Cancel failed: ${data.error ?? res.status}`); setBusy(null); return }
+      setSessions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'cancelled', cancellation_reason: cancelReason } : x))
+      setCancelId(null)
+    } catch (e: any) {
+      alert(`Cancel failed: ${e?.message ?? 'network error'}`)
+    }
+    setBusy(null)
+  }
 
   const now = Date.now()
   const isDisputed = (s: any) => s.status === 'disputed' || s.dispute_filed
@@ -160,6 +202,7 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
             const past = new Date(s.scheduled_at).getTime() < now
             const canRefund = (s.status === 'completed' || isDisputed(s)) && s.status !== 'refunded'
             const canComplete = s.status === 'confirmed' && past
+            const canCancel = s.status === 'confirmed' || s.status === 'pending'
             return (
               <div key={s.id} style={{ borderRadius: '1rem', background: 'white', border: cardBorder, overflow: 'hidden' }}>
                 <div onClick={() => setExpanded(open ? null : s.id)} style={{ padding: '1.25rem', cursor: 'pointer' }}>
@@ -221,7 +264,7 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
                       </div>
                     )}
 
-                    {(canRefund || canComplete) && (
+                    {(canRefund || canComplete || canCancel) && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {canComplete && (
                           <button onClick={() => markComplete(s)} disabled={busy === s.id}
@@ -235,6 +278,45 @@ export default function AdminSessionsClient({ sessions: sessionsProp }: Props) {
                             💸 Issue Refund
                           </button>
                         )}
+                        {canCancel && cancelId !== s.id && (
+                          <button onClick={() => openCancel(s.id)} disabled={busy === s.id}
+                            style={{ padding: '0.5rem 1.1rem', borderRadius: '0.625rem', background: 'rgba(163,45,45,0.1)', border: '1px solid rgba(163,45,45,0.3)', color: 'rgb(163,45,45)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                            🚫 Cancel Session
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {cancelId === s.id && (
+                      <div style={{ marginTop: '1rem', padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.04)', border: '1px solid rgba(163,45,45,0.2)' }}>
+                        <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', marginBottom: '0.875rem' }}>Cancel this session</p>
+
+                        <label style={labelStyle}>Reason for cancellation</label>
+                        <select value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+                          style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', fontSize: '0.875rem', marginBottom: '0.875rem', boxSizing: 'border-box' }}>
+                          {CANCEL_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+
+                        <label style={labelStyle}>Additional notes</label>
+                        <textarea value={cancelNotes} onChange={e => setCancelNotes(e.target.value)} rows={2}
+                          placeholder="Optional context…"
+                          style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)', fontSize: '0.875rem', resize: 'vertical', marginBottom: '0.875rem', boxSizing: 'border-box' }} />
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'rgb(40,40,32)', marginBottom: '1rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={cancelRefund} onChange={e => setCancelRefund(e.target.checked)} style={{ width: '1.1rem', height: '1.1rem' }} />
+                          Refund student?
+                        </label>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button onClick={() => cancelSession(s)} disabled={busy === s.id}
+                            style={{ padding: '0.5rem 1.1rem', borderRadius: '0.625rem', background: 'rgb(163,45,45)', border: 'none', color: 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer', opacity: busy === s.id ? 0.6 : 1 }}>
+                            {busy === s.id ? 'Cancelling…' : 'Cancel Session'}
+                          </button>
+                          <button onClick={() => setCancelId(null)} disabled={busy === s.id}
+                            style={{ padding: '0.5rem 1.1rem', borderRadius: '0.625rem', background: 'white', border: '1px solid rgba(34,85,14,0.2)', color: 'rgb(90,90,72)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                            Never mind
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
