@@ -183,6 +183,9 @@ else spawnFloatingXP(1)
         score={score}
         total={total}
         session={session}
+        xpResult={xpResult}
+        topicAlreadyEarned={topicAlreadyEarned}
+        frFeedback={frFeedback}
         onRestart={() => { setAnswers({}); setFrInputs({}); setFrFeedback({}); setCurrent(0); setShowSummary(false); setXpResult(null); setConsecutiveCorrect(0) }}
       />
       <XPModal result={xpResult} onClose={() => setXpResult(null)} />
@@ -196,6 +199,9 @@ else spawnFloatingXP(1)
       score={score}
       total={total}
       session={session}
+      xpResult={xpResult}
+      topicAlreadyEarned={topicAlreadyEarned}
+      frFeedback={frFeedback}
       onRestart={() => { setAnswers({}); setFrInputs({}); setFrFeedback({}); setCurrent(0); setShowSummary(false); setConsecutiveCorrect(0) }}
     />
   )
@@ -445,10 +451,30 @@ function FRInput({ question, value, onChange, onSubmit, loading, feedback, answe
   )
 }
 
-function Summary({ questions, answers, score, total, session, onRestart }: {
+function Summary({ questions, answers, score, total, session, onRestart, xpResult, topicAlreadyEarned, frFeedback }: {
   questions: Question[]; answers: any; score: number; total: number; session: any; onRestart: () => void
+  xpResult?: any; topicAlreadyEarned?: boolean; frFeedback?: Record<number, { score: string; feedback: string }>
 }) {
   const router = useRouter()
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
+  const [expandedQ, setExpandedQ] = useState<number | null>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  async function downloadPDF() {
+    setDownloading(true)
+    try {
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      })
+      const html = await res.text()
+      const w = window.open('', '_blank')
+      if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { w.print(); w.close() }, 500) }
+    } catch {}
+    setDownloading(false)
+  }
+
   const [retryQuestions, setRetryQuestions] = useState<Question[] | null>(null)
   const [retryAnswers, setRetryAnswers] = useState<Record<number, any>>({})
   const [retryFrInputs, setRetryFrInputs] = useState<Record<number, string>>({})
@@ -612,15 +638,66 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
     )
   }
 
+  const grade = pct > 90 ? { label: 'Excellent!', emoji: '🏆' } : pct > 70 ? { label: 'Great Job!', emoji: '⭐' } : pct > 50 ? { label: 'Good Work!', emoji: '👍' } : { label: 'Keep Practicing!', emoji: '💪' }
+  const answeredCount = Object.keys(answers).length
+  const xpEarned = xpResult?.xpEarned ?? 0
+  const showXp = !topicAlreadyEarned && xpEarned > 0
+  const RING_C = 440 // 2π·70
+  const ringOffset = RING_C * (1 - pct / 100)
+  const isCorrectQ = (i: number) => {
+    const a = answers[i]
+    if (!a) return false
+    if (questions[i].type === 'mc') return a.correct === true
+    return a.frScore === '4/4' || a.frScore === '3/4'
+  }
+  const reviewList = questions
+    .map((q, i) => ({ q, i }))
+    .filter(({ i }) => reviewFilter === 'all' ? true : reviewFilter === 'correct' ? isCorrectQ(i) : !isCorrectQ(i))
+
+  const statCards = [
+    { label: 'Score', value: `${pct}%`, color: grade === null ? 'rgb(34,85,14)' : 'rgb(34,85,14)' },
+    { label: 'Correct', value: `${score}`, color: 'rgb(59,109,17)' },
+    { label: 'Answered', value: `${answeredCount}/${total}`, color: 'rgb(37,99,235)' },
+    ...(showXp ? [{ label: 'XP Earned', value: `+${xpEarned}`, color: 'rgb(124,58,237)' }] : []),
+  ]
+
   return (
     <div style={{ paddingTop:'5rem', minHeight:'100vh' }}>
-      <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'44rem' }}>
+      {pct > 80 && (
+        <div aria-hidden style={{ position:'fixed', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:5 }}>
+          {Array.from({ length: 28 }, (_, i) => {
+            const colors = ['rgb(34,85,14)', 'rgb(232,160,32)', 'rgb(37,99,235)', 'rgb(124,58,237)', 'rgb(122,182,72)']
+            const left = (i * 37) % 100
+            return <span key={i} style={{ position:'absolute', top:'-24px', left:`${left}%`, width:'10px', height:'14px', background:colors[i % colors.length], borderRadius:'2px', animation:`qsumConfetti ${3 + (i % 4)}s linear ${(i % 10) * 0.15}s infinite` }} />
+          })}
+        </div>
+      )}
+      <div className="qsum-enter" style={{ maxWidth:'64rem', margin:'0 auto', padding:'2rem 1.5rem', position:'relative', zIndex:10 }}>
+
+        {/* Hero */}
         <div className="card" style={{ padding:'2.5rem', textAlign:'center', marginBottom:'1.5rem' }}>
-          <div style={{ fontSize:'3rem', marginBottom:'0.75rem' }}>{msg.emoji}</div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.5rem' }}>{msg.title}</h1>
-          <p style={{ color:'var(--af-text-muted)', marginBottom:'1.5rem', maxWidth:'28rem', margin:'0 auto 1.5rem' }}>{msg.sub}</p>
-          <div style={{ fontSize:'3.5rem', fontWeight:700, color:msg.color, marginBottom:'0.25rem' }}>{score}/{total}</div>
-          <p style={{ color:'var(--af-text-muted)' }}>{pct}% correct</p>
+          <div style={{ width:'180px', height:'180px', margin:'0 auto 1rem', position:'relative' }}>
+            <svg viewBox="0 0 180 180" style={{ width:'100%', height:'100%', transform:'rotate(-90deg)' }}>
+              <circle cx="90" cy="90" r="70" fill="none" stroke="var(--af-border)" strokeWidth="14" />
+              <circle cx="90" cy="90" r="70" fill="none" stroke={pct >= 70 ? 'rgb(34,85,14)' : pct >= 50 ? 'rgb(232,160,32)' : 'rgb(163,45,45)'} strokeWidth="14" strokeLinecap="round"
+                strokeDasharray={RING_C} strokeDashoffset={ringOffset} style={{ animation:'qsumRing 1.2s cubic-bezier(0.16,1,0.3,1) both' }} />
+            </svg>
+            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontFamily:'Syne, sans-serif', fontSize:'2.25rem', fontWeight:800, color:'var(--af-text)', lineHeight:1 }}>{score}/{total}</span>
+              <span style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', fontWeight:600, marginTop:'0.25rem' }}>{pct}%</span>
+            </div>
+          </div>
+          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.875rem', fontWeight:700, color:'var(--af-text)' }}>{grade.label} {grade.emoji}</h1>
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display:'grid', gridTemplateColumns:`repeat(${statCards.length}, 1fr)`, gap:'1rem', marginBottom:'1.5rem' }} className="qsum-stats">
+          {statCards.map((s, i) => (
+            <div key={s.label} className="card" style={{ padding:'1.25rem', textAlign:'center', animation:'qsumRise 0.5s ease both', animationDelay:`${0.1 * (i + 1)}s` }}>
+              <div style={{ fontFamily:'Syne, sans-serif', fontSize:'1.75rem', fontWeight:800, color:s.color, lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginTop:'0.375rem' }}>{s.label}</div>
+            </div>
+          ))}
         </div>
 
         {(wrongTopics.length > 0 || correctTopics.length > 0) && (
@@ -689,59 +766,120 @@ function Summary({ questions, answers, score, total, session, onRestart }: {
           </div>
         )}
 
-        <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', marginBottom:'1.5rem' }}>
-          {questions.map((q, i) => {
-            const a = answers[i]
-            const isMC = q.type === 'mc'
-            const wasAnswered = !!a
-            let icon: React.ReactNode
-            let badgeStyle: { bg: string; color: string; label: string }
+        {/* Question Review */}
+        <div className="card" style={{ padding:'1.75rem', marginBottom:'1.5rem' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem', marginBottom:'1.25rem' }}>
+            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'var(--af-text)' }}>Question Review</h2>
+            <div style={{ display:'flex', gap:'0.375rem', flexWrap:'wrap' }}>
+              {([
+                { id:'all', label:'All' },
+                { id:'correct', label:'Correct ✅' },
+                { id:'incorrect', label:'Incorrect ❌' },
+              ] as const).map(f => {
+                const active = reviewFilter === f.id
+                return (
+                  <button key={f.id} onClick={() => setReviewFilter(f.id)}
+                    style={{ padding:'0.4rem 0.875rem', borderRadius:'9999px', fontSize:'0.8125rem', fontWeight:600, cursor:'pointer', transition:'all 0.2s', background: active ? 'rgb(34,85,14)' : 'var(--af-card)', color: active ? 'white' : 'var(--af-text-muted)', border:`1px solid ${active ? 'rgb(34,85,14)' : 'var(--af-border)'}` }}>
+                    {f.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-            if (!wasAnswered) {
-              icon = <div style={{ width:'1.25rem', height:'1.25rem', borderRadius:'50%', border:'2px solid rgba(34,85,14,0.2)', flexShrink:0 }} />
-              badgeStyle = { bg:'rgba(34,85,14,0.05)', color:'var(--af-text-muted)', label:'Skipped' }
-            } else if (isMC) {
-              if (a.correct) {
-                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
-                badgeStyle = { bg:'rgb(234,243,222)', color:'rgb(59,109,17)', label:'Correct' }
-              } else {
-                icon = <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
-                badgeStyle = { bg:'rgb(252,235,235)', color:'rgb(163,45,45)', label:'Review' }
-              }
-            } else {
-              const frStyle = getFRSummaryStyle(a.frScore ?? '')
-              badgeStyle = frStyle
-              if (a.frScore === '4/4' || a.frScore === '3/4') {
-                icon = <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', flexShrink:0 }} />
-              } else {
-                icon = <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />
-              }
-            }
+          <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
+            {reviewList.length === 0 && <p style={{ color:'var(--af-text-muted)', fontSize:'0.9375rem', textAlign:'center', padding:'1rem' }}>No {reviewFilter} questions.</p>}
+            {reviewList.map(({ q, i }) => {
+              const a = answers[i]
+              const correct = isCorrectQ(i)
+              const open = expandedQ === i
+              const accent = correct ? 'rgb(59,109,17)' : a ? 'rgb(163,45,45)' : 'rgb(107,107,88)'
+              const badge = correct ? 'Correct' : a ? (q.type === 'mc' ? 'Incorrect' : getFRSummaryStyle(a.frScore ?? '').label) : 'Skipped'
+              return (
+                <div key={i} style={{ borderRadius:'0.875rem', border:'1px solid var(--af-border)', borderLeft:`4px solid ${accent}`, background:'var(--af-card)', overflow:'hidden' }}>
+                  <button onClick={() => setExpandedQ(open ? null : i)}
+                    style={{ width:'100%', display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.875rem 1rem', background:'transparent', border:'none', cursor:'pointer', textAlign:'left' }}>
+                    <span style={{ width:'1.75rem', height:'1.75rem', borderRadius:'0.5rem', flexShrink:0, background:`${accent}18`, color:accent, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'0.8125rem', fontFamily:'Syne, sans-serif' }}>{i + 1}</span>
+                    <span style={{ flex:1, minWidth:0, fontSize:'0.9rem', color:'var(--af-text)', overflow: open ? 'visible' : 'hidden', textOverflow:'ellipsis', whiteSpace: open ? 'normal' : 'nowrap' }}>{q.question}</span>
+                    {correct ? <CheckCircle style={{ width:'1.125rem', height:'1.125rem', color:accent, flexShrink:0 }} /> : <XCircle style={{ width:'1.125rem', height:'1.125rem', color:accent, flexShrink:0 }} />}
+                    <ArrowRight style={{ width:'1rem', height:'1rem', color:'var(--af-text-muted)', flexShrink:0, transform: open ? 'rotate(90deg)' : 'none', transition:'transform 0.2s' }} />
+                  </button>
 
-            return (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'var(--af-card)', border:'1px solid var(--af-border)' }}>
-                {icon}
-                <span style={{ fontSize:'0.875rem', color:'var(--af-text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                  Q{i + 1}: {q.question}
-                </span>
-                <span className="badge" style={{ background:badgeStyle.bg, color:badgeStyle.color, flexShrink:0 }}>
-                  {badgeStyle.label}
-                </span>
-              </div>
-            )
-          })}
+                  {open && (
+                    <div className="qsum-detail" style={{ padding:'0 1rem 1rem', borderTop:'1px solid var(--af-border)' }}>
+                      <div style={{ paddingTop:'0.875rem' }}>
+                        <MathText text={q.question} style={{ fontSize:'0.9375rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, display:'block', marginBottom:'0.875rem' }} />
+                        {q.type === 'mc' ? (
+                          <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem' }}>
+                            {(q as MCQuestion).options.map(option => {
+                              const letter = option.charAt(0)
+                              const isCorrectOpt = letter === (q as MCQuestion).correctAnswer
+                              const isUser = a?.answer === letter
+                              const bg = isCorrectOpt ? 'rgb(234,243,222)' : isUser ? 'rgb(252,235,235)' : 'transparent'
+                              const bc = isCorrectOpt ? 'rgba(59,109,17,0.3)' : isUser ? 'rgba(163,45,45,0.3)' : 'var(--af-border)'
+                              return (
+                                <div key={letter} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 0.75rem', borderRadius:'0.625rem', background:bg, border:`1px solid ${bc}` }}>
+                                  <span style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', fontWeight:700, color: isCorrectOpt ? 'rgb(59,109,17)' : isUser ? 'rgb(163,45,45)' : 'var(--af-text-muted)', border:`2px solid ${isCorrectOpt ? 'rgb(59,109,17)' : isUser ? 'rgb(163,45,45)' : 'var(--af-border)'}` }}>{letter}</span>
+                                  <MathText text={option.substring(3)} style={{ fontSize:'0.875rem', color:'var(--af-text)', lineHeight:1.5 }} />
+                                  {isCorrectOpt && <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
+                                  {isUser && !isCorrectOpt && <XCircle style={{ width:'1rem', height:'1rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
+                                </div>
+                              )
+                            })}
+                            {(q as MCQuestion).explanation && (
+                              <MathText text={(q as MCQuestion).explanation} style={{ fontSize:'0.875rem', color:'var(--af-text-muted)', lineHeight:1.65, display:'block', marginTop:'0.5rem' }} />
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            {a?.frScore && (
+                              <span className="badge" style={{ ...(() => { const s = getFRSummaryStyle(a.frScore); return { background:s.bg, color:s.color } })(), marginBottom:'0.625rem', display:'inline-block' }}>Score: {a.frScore}</span>
+                            )}
+                            {frFeedback?.[i]?.feedback && (
+                              <p style={{ fontSize:'0.875rem', color:'var(--af-text)', lineHeight:1.65, marginBottom:'0.625rem' }}>{frFeedback[i].feedback}</p>
+                            )}
+                            {(q as FRQuestion).modelAnswer && (
+                              <div style={{ padding:'0.75rem', borderRadius:'0.625rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.12)' }}>
+                                <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.375rem' }}>Model answer</p>
+                                <MathText text={(q as FRQuestion).modelAnswer} style={{ fontSize:'0.875rem', color:'var(--af-text)', lineHeight:1.65, display:'block' }} />
+                              </div>
+                            )}
+                            {!a && <p style={{ fontSize:'0.875rem', color:'var(--af-text-muted)' }}>You skipped this question.</p>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
-        <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
-          <button onClick={onRestart} className="btn-secondary" style={{ flex:1 }}>
-            <RotateCcw style={{ width:'1rem', height:'1rem' }} /> Try Again
+        {/* Action buttons */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:'0.75rem' }}>
+          <button onClick={onRestart} className="btn-secondary" style={{ justifyContent:'center', padding:'0.875rem' }}>
+            <RotateCcw style={{ width:'1rem', height:'1rem' }} /> Try Again 🔄
           </button>
-          <button onClick={() => router.push('/generate')} className="btn-primary" style={{ flex:1 }}>
-            New Topic
+          <button onClick={() => router.push('/generate')} className="btn-primary" style={{ justifyContent:'center', padding:'0.875rem' }}>
+            Generate New 📝
+          </button>
+          <button onClick={downloadPDF} disabled={downloading} className="btn-secondary" style={{ justifyContent:'center', padding:'0.875rem' }}>
+            <Download style={{ width:'1rem', height:'1rem' }} /> {downloading ? 'Opening…' : 'Download PDF ⬇️'}
           </button>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes qsumEnter { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes qsumRing { from { stroke-dashoffset: 440; } }
+        @keyframes qsumRise { from { opacity: 0; transform: translateY(16px); } }
+        @keyframes qsumDetail { from { opacity: 0; transform: translateY(-6px); } }
+        @keyframes qsumConfetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(540deg); opacity: 0.9; } }
+        .qsum-enter { animation: qsumEnter 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+        .qsum-detail { animation: qsumDetail 0.25s ease both; }
+        @media (max-width: 560px) { .qsum-stats { grid-template-columns: repeat(2, 1fr) !important; } }
+      `}</style>
     </div>
   )
 }

@@ -12,6 +12,7 @@ export default function WorksheetClient({ session }: Props) {
   const worksheet: Worksheet = session.content?.worksheet
   const router = useRouter()
   const [xpResult, setXpResult] = useState<any>(null)
+  const [showKey, setShowKey] = useState(false)
   const awardedRef = useRef(false)
 
   useEffect(() => {
@@ -69,23 +70,32 @@ export default function WorksheetClient({ session }: Props) {
   )
 
   return (
-    <div className="animate-fade-in" style={{ paddingTop:'5rem', minHeight:'100vh' }}>
+    <div className="ws-enter" style={{ paddingTop:'5rem', minHeight:'100vh' }}>
       {xpResult && <XPModal result={xpResult} onClose={() => setXpResult(null)} />}
       <div className="container-base" style={{ padding:'2rem 1.5rem', maxWidth:'52rem' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom:'2.5rem' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ display:'flex', alignItems:'center', gap:'0.375rem', background:'none', border:'none', cursor:'pointer', color:'var(--af-text-muted)', fontSize:'0.875rem', marginBottom:'1.5rem', padding:0 }}>
-            <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Back to dashboard
-          </button>
-          <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.75rem', flexWrap:'wrap' }}>
-            <span className="badge badge-primary">{session.subject}</span>
-            <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'var(--af-text-muted)' }}>{session.grade}</span>
+        <button onClick={() => router.push('/dashboard')} style={{ display:'flex', alignItems:'center', gap:'0.375rem', background:'none', border:'none', cursor:'pointer', color:'var(--af-text-muted)', fontSize:'0.875rem', marginBottom:'1.25rem', padding:0 }}>
+          <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Back to dashboard
+        </button>
+
+        {/* Header — paper card with left accent bar + prominent print button */}
+        <div className="card" style={{ padding:'1.75rem', marginBottom:'2rem', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1.25rem', flexWrap:'wrap', boxShadow:'0 4px 24px rgba(34,85,14,0.08)' }}>
+          <div style={{ display:'flex', gap:'1rem', flex:1, minWidth:'240px' }}>
+            <div style={{ width:'6px', borderRadius:'9999px', alignSelf:'stretch', minHeight:'4rem', background:'linear-gradient(rgb(34,85,14), rgb(74,122,40))', flexShrink:0 }} />
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.625rem', flexWrap:'wrap' }}>
+                <span className="badge badge-primary">{session.subject}</span>
+                <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'var(--af-text-muted)' }}>{session.grade}</span>
+              </div>
+              <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.25rem', lineHeight:1.15 }}>
+                {session.topic}
+              </h1>
+              <p style={{ color:'var(--af-text-muted)', fontSize:'0.9375rem' }}>📄 Study Worksheet</p>
+            </div>
           </div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.25rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.5rem' }}>
-            {session.topic}
-          </h1>
-          <p style={{ color:'var(--af-text-muted)' }}>Study Worksheet</p>
+          <button onClick={downloadPDF} className="btn-primary" style={{ flexShrink:0 }}>
+            <Download style={{ width:'1rem', height:'1rem' }} /> Print / Download
+          </button>
         </div>
 
         {/* 1. Introduction */}
@@ -185,6 +195,35 @@ export default function WorksheetClient({ session }: Props) {
           </div>
         )}
 
+        {/* Answer Key (collapsed by default) */}
+        {worksheet.practiceQuestions.length > 0 && (
+          <div className="card" style={{ padding:'1.25rem 1.5rem', marginBottom:'1.5rem', border:'1px solid rgba(34,85,14,0.15)' }}>
+            <button onClick={() => setShowKey(k => !k)}
+              style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', background:'transparent', border:'none', cursor:'pointer', padding:0 }}>
+              <span style={{ display:'flex', alignItems:'center', gap:'0.5rem', fontFamily:'Fraunces, Georgia, serif', fontSize:'1.125rem', fontWeight:700, color:'var(--af-text)' }}>
+                🔑 {showKey ? 'Hide' : 'Show'} Answer Key
+              </span>
+              <ArrowLeft style={{ width:'1rem', height:'1rem', color:'var(--af-text-muted)', transform: showKey ? 'rotate(90deg)' : 'rotate(-90deg)', transition:'transform 0.2s' }} />
+            </button>
+            {showKey && (
+              <div className="ws-key" style={{ marginTop:'1rem', display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                {worksheet.practiceQuestions.map((q, i) => (
+                  <div key={i} style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
+                    <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.375rem' }}>Question {i + 1}</p>
+                    {q.type === 'mc' ? (
+                      <p style={{ fontSize:'0.9rem', color:'var(--af-text)', lineHeight:1.6 }}>
+                        <strong>Answer: {(q as MCQuestion).correctAnswer}</strong> — <MathText text={(q as MCQuestion).explanation} />
+                      </p>
+                    ) : (
+                      <MathText text={(q as FRQuestion).modelAnswer} style={{ fontSize:'0.9rem', color:'var(--af-text)', lineHeight:1.6, display:'block' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Bottom nav */}
         <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
           <button onClick={() => router.push('/generate')} className="btn-secondary" style={{ flex:1 }}>
@@ -199,6 +238,12 @@ export default function WorksheetClient({ session }: Props) {
         </div>
 
       </div>
+      <style>{`
+        @keyframes wsEnter { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+        .ws-enter { animation: wsEnter 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes wsKey { from { opacity: 0; transform: translateY(-6px); } }
+        .ws-key { animation: wsKey 0.25s ease both; }
+      `}</style>
     </div>
   )
 }

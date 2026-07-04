@@ -413,7 +413,7 @@ export default function GeneratePage() {
     }
   }
 
-  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} />
+  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} subject={subject} topic={topic} />
 
   if (genBan) return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
@@ -842,46 +842,34 @@ export default function GeneratePage() {
 const backLink: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'transparent', border: 'none', cursor: 'pointer', color: MUTED, fontSize: '0.8125rem', fontWeight: 600, padding: 0, marginBottom: '1rem' }
 const stepTitle: React.CSSProperties = { fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: INK, marginBottom: '0.75rem' }
 
-function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPremium: boolean }) {
+function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; isPremium: boolean; subject: string; topic: string }) {
   const [messageIndex, setMessageIndex] = useState(0)
-  const [triviaIndex, setTriviaIndex] = useState(() => Math.floor(Math.random() * 20))
   const [countdown, setCountdown] = useState(isPremium ? 18 : 30)
   const duration = isPremium ? 18 : 30
 
-  const messages = outputType === 'questions'
-    ? ['Reading up on your topic...', 'Writing your first question...', 'Mixing in some tricky ones...', 'Double-checking the answers...', 'Almost ready for you!']
-    : ['Opening the textbooks...', 'Sketching out your worksheet...', 'Building the step-by-step guide...', 'Adding visuals and examples...', 'Polishing the final touches...']
+  // Stable floating particles.
+  const particles = useRef(
+    Array.from({ length: 14 }, () => ({
+      left: Math.random() * 100,
+      size: 4 + Math.random() * 8,
+      delay: Math.random() * 8,
+      dur: 7 + Math.random() * 8,
+      opacity: 0.15 + Math.random() * 0.35,
+    }))
+  ).current
 
-  const trivia = [
-    { emoji: '🧠', fact: 'Your brain uses about 20% of your body\'s total energy — even though it\'s only 2% of your body weight.' },
-    { emoji: '😴', fact: 'Sleeping after studying helps your brain consolidate memories up to 3x more effectively than staying awake.' },
-    { emoji: '✏️', fact: 'Writing notes by hand beats typing — the slower pace forces your brain to process and summarize, boosting retention.' },
-    { emoji: '🎵', fact: 'Studying with classical or lo-fi music at 60-70 BPM can improve focus by syncing with your brain\'s alpha waves.' },
-    { emoji: '🍅', fact: 'The Pomodoro Technique — 25 min study, 5 min break — is scientifically proven to reduce mental fatigue and boost output.' },
-    { emoji: '🔁', fact: 'The "spacing effect" shows that studying the same material across multiple days beats cramming it all in one session.' },
-    { emoji: '🧪', fact: 'Testing yourself (like with flashcards or practice questions) is 50% more effective for long-term memory than re-reading.' },
-    { emoji: '💧', fact: 'Being just 1-2% dehydrated can reduce cognitive performance by up to 10%. Keep water nearby when studying.' },
-    { emoji: '🏃', fact: 'Even a 10-minute walk before studying increases blood flow to the brain and can improve focus for up to 2 hours.' },
-    { emoji: '🌙', fact: 'The best time to review difficult material is right before bed — your brain actively consolidates it during deep sleep.' },
-    { emoji: '📖', fact: 'The average person forgets 70% of new information within 24 hours without review. That\'s why practice questions matter.' },
-    { emoji: '🎯', fact: 'Breaking a big topic into smaller chunks ("chunking") helps your brain store information more efficiently.' },
-    { emoji: '👁️', fact: 'The human brain processes visual information 60,000 times faster than text — that\'s why diagrams and worksheets work so well.' },
-    { emoji: '☕', fact: 'Caffeine improves short-term memory and focus, but only works if you don\'t consume it daily — tolerance builds fast.' },
-    { emoji: '🔗', fact: 'Connecting new information to something you already know is the fastest way to make it stick permanently.' },
-    { emoji: '😅', fact: 'Mild stress (like a test deadline) can actually sharpen focus — it triggers cortisol which boosts memory formation.' },
-    { emoji: '🗣️', fact: 'Explaining a concept out loud as if teaching someone else — the "Feynman Technique" — is one of the most powerful study methods.' },
-    { emoji: '📱', fact: 'Just having your phone visible (even face down) reduces working memory capacity by 10%, even if you\'re not using it.' },
-    { emoji: '🌿', fact: 'Studying in natural light improves alertness and mood. Students in naturally lit rooms score 20% higher on tests.' },
-    { emoji: '🔢', fact: 'The brain can only hold 4-7 pieces of new information in working memory at once — so short study sessions beat long marathons.' },
+  const messages = [
+    'Analyzing the curriculum...',
+    'Crafting challenging questions...',
+    'Adding educational context...',
+    'Calibrating difficulty level...',
+    'Reviewing for accuracy...',
+    'Polishing the explanations...',
+    'Almost ready...',
   ]
 
   useEffect(() => {
-    const interval = setInterval(() => setMessageIndex(i => (i + 1) % messages.length), 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    const interval = setInterval(() => setTriviaIndex(i => (i + 1) % trivia.length), 10000)
+    const interval = setInterval(() => setMessageIndex(i => (i + 1) % messages.length), 2000)
     return () => clearInterval(interval)
   }, [])
 
@@ -891,90 +879,81 @@ function LoadingScreen({ outputType, isPremium }: { outputType: OutputType; isPr
     return () => clearInterval(interval)
   }, [isPremium])
 
-  const currentTrivia = trivia[triviaIndex]
-
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-      <div style={{ textAlign: 'center', maxWidth: '32rem', width: '100%' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0a1a0a, #0d2b0d, #0a1a0a)', backgroundSize: '220% 220%', animation: 'genGradientShift 12s ease infinite' }}>
 
-        <div className="notebook-breathe" style={{ width: '200px', height: '160px', margin: '0 auto 2rem', position: 'relative' }}>
-          <svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-            <rect x="20" y="20" width="160" height="120" rx="8" fill="rgb(34,85,14)" />
-            {[35, 50, 65, 80, 95, 110, 125].map((y, i) => (
-              <circle key={i} cx="28" cy={y} r="4" fill="rgb(232,160,32)" className="spiral-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
-            ))}
-            <rect x="38" y="28" width="134" height="104" rx="4" fill="#FAFAF8" />
-            {[
-              { y1: 48, y2: 48, cls: 'line-draw-1' },
-              { y1: 68, y2: 68, cls: 'line-draw-2' },
-              { y1: 88, y2: 88, cls: 'line-draw-3' },
-              { y1: 108, y2: 108, cls: 'line-draw-4' },
-            ].map((line, i) => (
-              <line key={i} x1="48" y1={line.y1} x2="162" y2={line.y2}
-                stroke="#C8D8E8" strokeWidth="1.5"
-                strokeDasharray="114" className={line.cls} />
-            ))}
-            <g className="pencil-write">
-              <rect x="-18" y="-5" width="36" height="10" rx="2" fill="#F5C842" />
-              <polygon points="18,-5 18,5 26,0" fill="#E8A020" />
-              <rect x="-22" y="-5" width="6" height="10" rx="1" fill="#F4A0A0" />
-              <rect x="-16" y="-5" width="4" height="10" fill="#B0B0B0" />
-              <circle cx="22" cy="-3" r="1.5" fill="rgba(180,180,180,0.6)" className="eraser-dust-1" />
-              <circle cx="25" cy="1" r="1" fill="rgba(180,180,180,0.5)" className="eraser-dust-2" />
-              <circle cx="20" cy="3" r="1.2" fill="rgba(180,180,180,0.4)" className="eraser-dust-3" />
-            </g>
-          </svg>
+      {/* Floating particles */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {particles.map((p, i) => (
+          <span key={i} style={{ position: 'absolute', bottom: '-24px', left: `${p.left}%`, width: `${p.size}px`, height: `${p.size}px`, borderRadius: '50%', background: 'rgb(122,182,72)', opacity: p.opacity, animation: `genFloat ${p.dur}s linear ${p.delay}s infinite` }} />
+        ))}
+      </div>
+
+      <div style={{ textAlign: 'center', maxWidth: '34rem', width: '100%', position: 'relative', zIndex: 1 }}>
+
+        {/* Glowing icon */}
+        <div className="gen-icon-glow" style={{ width: '128px', height: '128px', margin: '0 auto 2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(34,85,14,0.55), rgba(34,85,14,0.04))' }}>
+          <BookOpen style={{ width: '80px', height: '80px', color: 'white' }} strokeWidth={1.5} />
         </div>
 
-        <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'rgb(26,26,20)', marginBottom: '0.5rem', minHeight: '1.75rem' }}>
+        {/* Subject / topic */}
+        {(topic || subject) && (
+          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.375rem', lineHeight: 1.25 }}>
+            {topic || subject}
+          </p>
+        )}
+        {subject && topic && (
+          <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.5)', marginBottom: '1.75rem' }}>{subject}</p>
+        )}
+
+        {/* Rotating message */}
+        <p key={messageIndex} style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'rgb(154,205,104)', marginBottom: '1.5rem', minHeight: '1.6rem', animation: 'genMsgFade 0.5s ease' }}>
           {messages[messageIndex]}
         </p>
-        <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', marginBottom: '1.75rem' }}>
-          {isPremium ? 'Generating your content...' : `Ready in ${countdown} second${countdown !== 1 ? 's' : ''}...`}
-        </p>
 
-        <div style={{ width: '100%', height: '6px', background: 'rgba(34,85,14,0.12)', borderRadius: '9999px', overflow: 'hidden', marginBottom: '2rem' }}>
-          <div style={{
-            height: '100%', borderRadius: '9999px',
-            background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))',
-            animation: `progressFill ${duration}s linear forwards`,
-          }} />
+        {/* Progress bar fills to ~80% */}
+        <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto 1.75rem', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '9999px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(122,182,72))', boxShadow: '0 0 14px rgba(122,182,72,0.6)', animation: `genFill80 ${duration}s cubic-bezier(0.22,1,0.36,1) forwards` }} />
         </div>
 
-        <div key={triviaIndex} style={{
-          padding: '1.25rem 1.5rem', borderRadius: '1rem',
-          background: 'white', border: '1px solid rgba(34,85,14,0.1)',
-          boxShadow: '0 4px 16px rgba(34,85,14,0.06)',
-          marginBottom: !isPremium ? '1.25rem' : 0,
-          animation: 'triviaFade 0.5s ease-in-out',
-          textAlign: 'left',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: '0.125rem' }}>{currentTrivia.emoji}</span>
-            <div>
-              <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgb(34,85,14)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.375rem' }}>
-                Did you know?
-              </p>
-              <p style={{ fontSize: '0.9rem', color: 'rgb(26,26,20)', lineHeight: 1.65 }}>
-                {currentTrivia.fact}
-              </p>
-            </div>
+        {/* Countdown (free) or bouncing dots (premium) */}
+        {isPremium ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '1.0625rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Crafting your questions</span>
+            <span style={{ display: 'inline-flex', gap: '0.3rem' }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: 'rgb(122,182,72)', animation: `genBounce 1.2s ease-in-out ${i * 0.15}s infinite` }} />
+              ))}
+            </span>
           </div>
-        </div>
-
-        {!isPremium && (
-          <div style={{ marginTop: '1rem' }}>
-            <AdSlot isPremium={false} slot="4455667788" format="horizontal" />
-            <p style={{ fontSize: '0.8125rem', color: 'rgb(107,107,88)', marginTop: '0.75rem' }}>
-              ⚡ <a href="/pricing" style={{ color: 'rgb(34,85,14)', fontWeight: 600, textDecoration: 'none' }}>Premium members</a> load in half the time
+        ) : (
+          <div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '3.75rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{countdown}</div>
+            <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.5rem' }}>
+              Generating your {subject ? `${subject} ` : ''}{topic || 'study'} content...
             </p>
           </div>
         )}
+
+        {/* Branding */}
+        <div className="gen-brand" style={{ marginTop: '2.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ width: '1.5rem', height: '1.5rem', borderRadius: '0.4rem', background: 'rgb(34,85,14)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen style={{ width: '0.9rem', height: '0.9rem', color: 'white' }} strokeWidth={2.5} />
+          </span>
+          <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1rem', color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>AceForge AI</span>
+        </div>
       </div>
+
       <style>{`
-        @keyframes progressFill { from { width: 0% } to { width: 100% } }
-        @keyframes triviaFade { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
-        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes genGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes genFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 0.6; } 100% { transform: translateY(-110vh) scale(1.15); opacity: 0; } }
+        @keyframes genFill80 { from { width: 0%; } to { width: 80%; } }
+        @keyframes genMsgFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes genBounce { 0%,100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-7px); opacity: 1; } }
+        @keyframes genIconGlow { 0%,100% { box-shadow: 0 0 30px rgba(34,85,14,0.5); transform: scale(1); } 50% { box-shadow: 0 0 62px rgba(122,182,72,0.7); transform: scale(1.06); } }
+        @keyframes genBrandPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        .gen-icon-glow { animation: genIconGlow 2.4s ease-in-out infinite; }
+        .gen-brand { animation: genBrandPulse 2.4s ease-in-out infinite; }
       `}</style>
     </div>
   )
