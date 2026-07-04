@@ -230,9 +230,15 @@ function BookingForm({ profile, tutor, availability }: Props) {
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: textPrimary }}>{tutor.display_name}</p>
-              <p style={{ fontSize: '0.875rem', color: textSecondary }}>{tutor.subjects?.join(', ')}</p>
-              {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
+              <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.25rem', color: textPrimary, marginBottom: '0.2rem' }}>{tutor.display_name}</p>
+              {tutor.rating > 0 && <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)', marginBottom: '0.375rem' }}>⭐ {tutor.rating} ({tutor.total_reviews} reviews)</p>}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.375rem' }}>
+                {(tutor.subjects ?? []).slice(0, 3).map((s: string) => (
+                  <span key={s} style={{ fontSize: '0.6875rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.06)', color: 'rgb(34,85,14)', fontWeight: 600 }}>{s}</span>
+                ))}
+                {(tutor.subjects?.length ?? 0) > 3 && <span style={{ fontSize: '0.6875rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(107,107,88,0.1)', color: textSecondary, fontWeight: 600 }}>+{tutor.subjects.length - 3}</span>}
+              </div>
+              <span style={{ fontSize: '0.8125rem', color: 'rgb(34,85,14)', fontWeight: 600 }}>Viewing profile →</span>
             </div>
           </Link>
           <div style={{ textAlign: 'right' }}>
@@ -241,13 +247,22 @@ function BookingForm({ profile, tutor, availability }: Props) {
           </div>
         </div>
 
-        {/* Step indicator */}
-        <div style={{ display: 'flex', gap: '0', marginBottom: '1.5rem', borderBottom: '2px solid var(--af-border)' }}>
-          {[{ id: 'details', label: '1. Session Details' }, { id: 'payment', label: '2. Payment' }].map(s => (
-            <div key={s.id} style={{ flex: 1, padding: '0.625rem 1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: step === s.id ? 700 : 400, color: step === s.id ? 'rgb(34,85,14)' : 'var(--af-text-muted)', borderBottom: step === s.id ? '2px solid rgb(34,85,14)' : '2px solid transparent', marginBottom: '-2px' }}>
-              {s.label}
-            </div>
-          ))}
+        {/* Step progress bar */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+            {[{ id: 'details', n: 1, label: 'Session Details' }, { id: 'payment', n: 2, label: 'Payment' }].map(s => {
+              const reached = step === s.id || (s.id === 'details' && step === 'payment')
+              return (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 800, fontFamily: 'Syne, sans-serif', background: reached ? 'rgb(34,85,14)' : 'var(--af-border)', color: reached ? 'white' : 'var(--af-text-muted)' }}>{s.n}</span>
+                  <span style={{ fontSize: '0.875rem', fontWeight: step === s.id ? 700 : 600, color: step === s.id ? 'rgb(34,85,14)' : 'var(--af-text-muted)' }}>{s.label}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ height: '6px', background: 'var(--af-border)', borderRadius: '9999px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', borderRadius: '9999px', width: step === 'payment' ? '100%' : '50%', transition: 'width 0.3s ease' }} />
+          </div>
         </div>
 
         <div className="card" style={{ padding: '2rem' }}>
@@ -305,17 +320,23 @@ function BookingForm({ profile, tutor, availability }: Props) {
 
               <div>
                 <label className="label">Session Length *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.625rem' }}>
                   {SESSION_LENGTHS.map(sl => {
                     const price = sl.value === 30 ? baseRate / 2 : sl.value === 90 ? (isPremium ? 54.99 : 69.99) : baseRate
                     const expFee = express.fee * (sl.value === 30 ? 0.5 : sl.value === 90 ? 1.5 : 1)
+                    const savings = sl.value === 90 ? (baseRate * 1.5) - price : 0
+                    const active = sessionLength === sl.value
                     return (
                       <button key={sl.value} type="button" onClick={() => setSessionLength(sl.value)}
-                        style={{ padding: '0.875rem 0.5rem', borderRadius: '0.75rem', border: `2px solid ${sessionLength === sl.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: sessionLength === sl.value ? 'rgba(34,85,14,0.06)' : cardBg, cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
-                        <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: sessionLength === sl.value ? 'rgb(34,85,14)' : 'var(--af-text)', marginBottom: '0.25rem' }}>{sl.label}</p>
-                        <p style={{ fontSize: '0.75rem', color: textSecondary, marginBottom: '0.25rem' }}>{sl.desc}</p>
-                        <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'rgb(34,85,14)' }}>${(price + expFee).toFixed(2)}</p>
+                        style={{ position: 'relative', padding: '1.25rem 0.5rem 1rem', borderRadius: '1rem', border: `2px solid ${active ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`, background: active ? 'rgba(34,85,14,0.06)' : cardBg, cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
+                        {sl.value === 60 && (
+                          <span style={{ position: 'absolute', top: '-0.6rem', left: '50%', transform: 'translateX(-50%)', fontSize: '0.625rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px', background: 'rgb(34,85,14)', color: 'white', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>MOST POPULAR</span>
+                        )}
+                        <p style={{ fontWeight: 700, fontSize: '1rem', color: active ? 'rgb(34,85,14)' : 'var(--af-text)', marginBottom: '0.25rem' }}>{sl.label}</p>
+                        <p style={{ fontSize: '0.6875rem', color: textSecondary, marginBottom: '0.375rem' }}>{sl.desc}</p>
+                        <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.125rem', color: 'rgb(34,85,14)' }}>${(price + expFee).toFixed(2)}</p>
                         {expFee > 0 && <p style={{ fontSize: '0.6875rem', color: tierStyle.color }}>+${expFee.toFixed(2)} express</p>}
+                        {savings > 0.5 && expFee === 0 && <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'rgb(34,85,14)' }}>Save ${savings.toFixed(0)}</p>}
                       </button>
                     )
                   })}
@@ -485,9 +506,17 @@ function BookingForm({ profile, tutor, availability }: Props) {
                 </div>
               </div>
 
-              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.12)' }}>
+              <div style={{ padding: '1rem 1.25rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.125rem' }}>🔒</span>
+                  <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: textPrimary }}>Your payment is protected</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: 'rgba(99,91,255,0.12)', color: 'rgb(99,91,255)' }}>Powered by Stripe</span>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: 'rgb(34,85,14)' }}>🔐 256-bit encryption</span>
+                </div>
                 <p style={{ fontSize: '0.8125rem', color: textSecondary, lineHeight: 1.6 }}>
-                  🔒 Secured by Stripe. Your card details are never stored on our servers. Full refund if tutor doesn't show.
+                  Your card details are never stored on our servers. Full refund if the tutor declines or doesn't show.
                 </p>
               </div>
 

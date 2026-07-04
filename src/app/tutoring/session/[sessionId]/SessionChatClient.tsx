@@ -247,7 +247,14 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
 
   return (
     <div className="tutor-chat animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '2rem', background: pageBg }}>
-      <style>{`.tutor-chat input::placeholder, .tutor-chat textarea::placeholder { color: ${text3}; opacity: 1; }`}</style>
+      <style>{`
+        .tutor-chat input::placeholder, .tutor-chat textarea::placeholder { color: ${text3}; opacity: 1; }
+        .chat-time { opacity: 0; transition: opacity 0.2s ease; }
+        .chat-msg:hover .chat-time { opacity: 1; }
+        @keyframes chatWaitDot { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+        .chat-send-btn { transition: transform 0.2s ease, opacity 0.2s ease; }
+        .chat-send-btn:hover { transform: translateY(-1px) scale(1.03); }
+      `}</style>
       <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <Link href={isTutor ? '/tutor/dashboard' : '/tutoring/sessions'}
@@ -319,9 +326,19 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
                 {isTutor ? '⏳ Awaiting your confirmation — go to dashboard to accept' : '⏳ Waiting for tutor to confirm'}
               </p>
               {!isTutor && (
-                <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>
-                  Your tutor will review your request and send a Google Meet link. You can message them below while you wait.
-                </p>
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                    <span style={{ display: 'inline-flex', gap: '0.25rem' }}>
+                      {[0, 1, 2].map(i => (
+                        <span key={i} style={{ width: '0.4rem', height: '0.4rem', borderRadius: '50%', background: 'rgb(180,120,10)', animation: `chatWaitDot 1.2s ease-in-out ${i * 0.15}s infinite` }} />
+                      ))}
+                    </span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(180,120,10)' }}>Typically confirmed within a few hours</span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', lineHeight: 1.6 }}>
+                    Your tutor will review your request and send a Google Meet link. You can message them below while you wait.
+                  </p>
+                </>
               )}
             </div>
           )}
@@ -451,25 +468,24 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             )}
             {messages.map(msg => {
               const isMe = getIsMe(msg)
-              console.log('msg:', msg.id, 'is_tutor:', msg.is_tutor, 'isTutor prop:', isTutor, 'isMe:', isMe)
               return (
-                <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                <div key={msg.id} className="chat-msg" style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                   {!isMe && (
                     <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.6875rem', flexShrink: 0, marginRight: '0.5rem', alignSelf: 'flex-end' }}>
                       {(isTutor ? profile?.display_name?.[0] : tutorProfile?.display_name?.[0]) ?? '?'}
                     </div>
                   )}
                   <div style={{ maxWidth: '70%' }}>
-                    <div style={{ padding: '0.625rem 0.875rem', borderRadius: isMe ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem', background: isMe ? myMsgBg : otherMsgBg, color: isMe ? 'white' : otherMsgColor, fontSize: '0.9375rem', lineHeight: 1.5 }}>
+                    <div style={{ padding: '0.7rem 1rem', borderRadius: isMe ? '1.125rem 1.125rem 0.3rem 1.125rem' : '1.125rem 1.125rem 1.125rem 0.3rem', background: isMe ? myMsgBg : otherMsgBg, color: isMe ? 'white' : otherMsgColor, fontSize: '0.9375rem', lineHeight: 1.5, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                       {msg.message && <p style={{ margin: 0 }}>{msg.message}</p>}
                       {msg.file_url && (
                         <a href={msg.file_url} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: isMe ? 'rgba(255,255,255,0.9)' : accent, fontSize: '0.875rem', marginTop: msg.message ? '0.375rem' : 0 }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.625rem', marginTop: msg.message ? '0.5rem' : 0, borderRadius: '0.625rem', background: isMe ? 'rgba(255,255,255,0.15)' : 'rgba(34,85,14,0.06)', color: isMe ? 'rgba(255,255,255,0.95)' : accent, fontSize: '0.875rem', fontWeight: 600 }}>
                           📎 {msg.file_name || 'View attachment'} →
                         </a>
                       )}
                     </div>
-                    <p style={{ fontSize: '0.6875rem', color: 'rgb(156,163,175)', marginTop: '0.25rem', textAlign: isMe ? 'right' : 'left' }}>
+                    <p className="chat-time" style={{ fontSize: '0.6875rem', color: 'rgb(156,163,175)', marginTop: '0.25rem', textAlign: isMe ? 'right' : 'left' }}>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -497,9 +513,9 @@ export default function SessionChatClient({ session, tutorProfile, profile, isTu
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
               placeholder={isTutor ? 'Message your student...' : 'Message your tutor...'}
-              style={{ flex: 1, padding: '0.625rem 0.875rem', borderRadius: '0.75rem', border: inputBorderStyle, outline: 'none', fontSize: '0.9375rem', color: text1, background: inputBg }} />
-            <button onClick={sendMessage} disabled={sending || uploading || (!input.trim() && !file)}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: sendBtnBg, border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', fontWeight: 600, fontSize: '0.875rem', flexShrink: 0, opacity: sending || uploading ? 0.6 : 1 }}>
+              style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.875rem', border: inputBorderStyle, outline: 'none', fontSize: '0.9375rem', color: text1, background: inputBg }} />
+            <button onClick={sendMessage} disabled={sending || uploading || (!input.trim() && !file)} className="chat-send-btn"
+              style={{ padding: '0.75rem 1.25rem', borderRadius: '0.875rem', background: sendBtnBg, border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', fontWeight: 600, fontSize: '0.875rem', flexShrink: 0, opacity: sending || uploading ? 0.6 : 1 }}>
               <Send style={{ width: '1rem', height: '1rem' }} />
               {uploading ? 'Uploading...' : sending ? 'Sending...' : 'Send'}
             </button>
