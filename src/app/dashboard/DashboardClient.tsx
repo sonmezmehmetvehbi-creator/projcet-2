@@ -4,7 +4,7 @@ import AdSlot from '@/components/ui/AdSlot'
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BookOpen, FileText, Zap, Download, Sparkles, Flame, Trophy, Clock, ArrowRight, PenLine, GraduationCap, Play } from 'lucide-react'
+import { BookOpen, FileText, Zap, Download, Sparkles, CalendarDays, Clock, ArrowRight, PenLine, GraduationCap, Play } from 'lucide-react'
 import { formatTimeUntilMidnight } from '@/lib/resetTime'
 import { createClient } from '@/lib/supabase'
 import type { Profile } from '@/types'
@@ -94,6 +94,19 @@ function relativeDate(dateStr: string) {
 
 function usageBarColor(pct: number) {
   return pct >= 80 ? 'rgb(220,38,38)' : pct >= 50 ? 'rgb(217,119,6)' : GREEN
+}
+
+function subjectEmoji(name: string) {
+  const s = (name || '').toLowerCase()
+  if (/(sat|act)/.test(s)) return '🎯'
+  if (/(calc|algebra|geometry|math|statistic|trig)/.test(s)) return '📐'
+  if (/bio/.test(s)) return '🧬'
+  if (/chem/.test(s)) return '⚗️'
+  if (/phys/.test(s)) return '🔭'
+  if (/(history|social|geograph|econ|gov)/.test(s)) return '📜'
+  if (/(english|read|writ|literat|essay|language)/.test(s)) return '📖'
+  if (/(cs|comput|program|coding)/.test(s)) return '💻'
+  return '📚'
 }
 
 function DashboardInner({ profile, sessions, usage }: Props) {
@@ -192,6 +205,19 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   // Stats.
   const totalSessions = sessions.length
   const questionsAnswered = sessions.reduce((n, s) => n + (s.content?.questions?.length ?? 0), 0)
+  const worksheetsCreated = sessions.filter(s => !s.is_sat && s.output_type === 'worksheet').length
+  const studyDays = (() => {
+    const days = new Set(sessions.map(s => s.created_at ? new Date(s.created_at).toDateString() : null).filter(Boolean))
+    return days.size > 0 ? days.size : streak
+  })()
+
+  // Top subjects by generation count for "Recommended for You" (fallback to popular).
+  const recommendedSubjects = (() => {
+    const counts = new Map<string, number>()
+    for (const s of sessions) { if (s.subject) counts.set(s.subject, (counts.get(s.subject) ?? 0) + 1) }
+    const top = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, 3)
+    return top.length > 0 ? top : ['SAT Math', 'Calculus', 'Biology']
+  })()
 
   async function redownloadPDF(session: any) {
     setDownloadingId(session.id)
@@ -217,8 +243,8 @@ function DashboardInner({ profile, sessions, usage }: Props) {
   const STATS = [
     { label: 'Sessions Generated', value: totalSessions, icon: <BookOpen style={{ width: '1.25rem', height: '1.25rem' }} />, color: GREEN },
     { label: 'Questions Answered', value: questionsAnswered, icon: <Sparkles style={{ width: '1.25rem', height: '1.25rem' }} />, color: BLUE },
-    { label: 'Current Streak', value: streak, icon: <Flame style={{ width: '1.25rem', height: '1.25rem' }} />, color: 'rgb(217,119,6)' },
-    { label: 'Total XP', value: xp, icon: <Trophy style={{ width: '1.25rem', height: '1.25rem' }} />, color: PURPLE },
+    { label: 'Worksheets Created', value: worksheetsCreated, icon: <PenLine style={{ width: '1.25rem', height: '1.25rem' }} />, color: PURPLE },
+    { label: 'Study Days', value: studyDays, icon: <CalendarDays style={{ width: '1.25rem', height: '1.25rem' }} />, color: 'rgb(217,119,6)' },
   ]
 
   const QUICK_ACTIONS = [
@@ -373,7 +399,7 @@ function DashboardInner({ profile, sessions, usage }: Props) {
 
             {/* ── QUICK ACTIONS ── */}
             <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '1rem' }}>Start studying</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               {QUICK_ACTIONS.map((a, i) => (
                 <Link key={a.href} href={a.href} className="qa-card"
                   style={{ textDecoration: 'none', padding: '1.5rem', borderRadius: '1.25rem', background: 'var(--af-card)', border: `1px solid ${a.color}22`, boxShadow: CARD_SHADOW, display: 'block', animation: `fadeUp 0.5s ease both`, animationDelay: `${0.1 * (i + 1)}s` }}>
@@ -389,33 +415,63 @@ function DashboardInner({ profile, sessions, usage }: Props) {
               ))}
             </div>
 
-            {/* ── BOOK AGAIN ── */}
-            {bookAgain.length > 0 && (
-              <div style={{ marginBottom: '2.25rem' }}>
-                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '1rem' }}>Book again 🎓</h2>
-                <div className="book-scroll" style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                  {bookAgain.map(t => (
-                    <div key={t.id} style={{ flexShrink: 0, width: '15rem', padding: '1.25rem', borderRadius: '1.25rem', background: 'var(--af-card)', border: '1px solid var(--af-border)', boxShadow: CARD_SHADOW }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.875rem' }}>
-                        {t.avatar_url ? (
-                          <img src={t.avatar_url} alt={t.display_name} style={{ width: '3rem', height: '3rem', borderRadius: '50%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '3rem', height: '3rem', borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.125rem' }}>{t.display_name?.[0] ?? '?'}</div>
-                        )}
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontWeight: 700, color: 'var(--af-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.display_name}</p>
-                          <p style={{ fontSize: '0.75rem', color: MUTED }}>⭐ {t.rating > 0 ? Number(t.rating).toFixed(1) : 'New'}</p>
+            {/* ── CONTINUE YOUR JOURNEY ── */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '1rem' }}>Continue Your Journey 🚀</h2>
+              <div className="journey-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', borderRadius: '1.25rem', background: 'var(--af-card)', border: '1px solid var(--af-border)', boxShadow: CARD_SHADOW, overflow: 'hidden' }}>
+
+                {/* Left — Your Tutors */}
+                <div className="journey-col" style={{ padding: '1.5rem', borderRight: '1px solid var(--af-border)' }}>
+                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem' }}>Your Tutors</p>
+                  {bookAgain.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                      {bookAgain.slice(0, 3).map(t => (
+                        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          {t.avatar_url ? (
+                            <img src={t.avatar_url} alt={t.display_name} style={{ width: '2.75rem', height: '2.75rem', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, flexShrink: 0 }}>{t.display_name?.[0] ?? '?'}</div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ fontWeight: 700, color: 'var(--af-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.display_name}</p>
+                            <p style={{ fontSize: '0.75rem', color: MUTED }}>{t.lastSubject ? `${t.lastSubject} · ` : ''}⭐ {t.rating > 0 ? Number(t.rating).toFixed(1) : 'New'}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.375rem' }}>
+                            <Link href={`/tutoring/book/${t.id}`} style={{ padding: '0.35rem 0.7rem', borderRadius: '0.625rem', background: 'rgba(34,85,14,0.08)', border: '1px solid rgba(34,85,14,0.2)', color: GREEN, fontWeight: 600, fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>Book Again →</Link>
+                            <Link href={`/tutoring/tutor/${t.id}`} style={{ padding: '0.35rem 0.7rem', borderRadius: '0.625rem', background: 'transparent', border: '1px solid var(--af-border)', color: MUTED, fontWeight: 600, fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>View Profile</Link>
+                          </div>
                         </div>
-                      </div>
-                      {t.lastSubject && <p style={{ fontSize: '0.8125rem', color: MUTED, marginBottom: '0.875rem' }}>Last: {t.lastSubject}</p>}
-                      <Link href={`/tutoring/book/${t.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.5rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.08)', border: '1px solid rgba(34,85,14,0.2)', color: GREEN, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}>
-                        Book Again →
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ fontSize: '0.875rem', color: MUTED, lineHeight: 1.6, marginBottom: '1rem' }}>
+                        Work 1-on-1 with an expert tutor to level up faster. Browse verified tutors by subject.
+                      </p>
+                      <Link href="/tutoring" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.08)', border: '1px solid rgba(34,85,14,0.2)', color: GREEN, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}>
+                        Find a Tutor →
                       </Link>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* Right — Recommended for You */}
+                <div className="journey-col" style={{ padding: '1.5rem' }}>
+                  <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem' }}>Recommended for You</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                    {recommendedSubjects.map(subj => (
+                      <Link key={subj} href={`/generate?subject=${encodeURIComponent(subj)}`}
+                        className="journey-rec"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.15)', textDecoration: 'none' }}>
+                        <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{subjectEmoji(subj)}</span>
+                        <span style={{ flex: 1, fontWeight: 600, color: 'var(--af-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subj}</span>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: BLUE, whiteSpace: 'nowrap' }}>Practice Now →</span>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* ── RECENT SESSIONS ── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -528,8 +584,13 @@ function DashboardInner({ profile, sessions, usage }: Props) {
         .sess-card:hover .sess-actions { opacity: 1; }
         @media (hover: none) { .sess-actions { opacity: 1; } }
         .pill { transition: all 0.2s ease; }
-        .book-scroll { scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
-        .book-scroll::-webkit-scrollbar { display: none; }
+        .journey-rec { transition: transform 0.2s ease, background 0.2s ease; }
+        .journey-rec:hover { transform: translateX(4px); background: rgba(37,99,235,0.08); }
+        @media (max-width: 700px) {
+          .journey-card { grid-template-columns: 1fr !important; }
+          .journey-col { border-right: none !important; border-bottom: 1px solid var(--af-border); }
+          .journey-col:last-child { border-bottom: none; }
+        }
       `}</style>
     </div>
   )
