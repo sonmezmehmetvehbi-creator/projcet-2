@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Zap, Calculator, BookOpen, Check, ArrowRight, ChevronDown } from 'lucide-react'
 import LimitReachedModal from '@/components/ui/LimitReachedModal'
+import ReadyScreen from '@/components/ui/ReadyScreen'
 import type { Profile } from '@/types'
 
 interface Props {
@@ -62,7 +63,24 @@ export default function SATClient({ profile, satUsage }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
+  const [progress, setProgress] = useState(0)
+  const [showReady, setShowReady] = useState(false)
   const router = useRouter()
+
+  // Fill the loading bar to 85% over the wait window, then hold until done.
+  useEffect(() => {
+    if (!loading) return
+    setProgress(0)
+    const duration = profile?.is_premium ? 3000 : 15000
+    const start = Date.now()
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - start
+      const pct = Math.min(85, (elapsed / duration) * 85)
+      setProgress(pct)
+      if (pct >= 85) clearInterval(timer)
+    }, 100)
+    return () => clearInterval(timer)
+  }, [loading, profile?.is_premium])
 
   const bonusGenerations = (profile as any)?.bonus_generations ?? 0
   const atLimit = !profile?.is_premium && satUsage >= 1 && bonusGenerations <= 0
@@ -95,14 +113,19 @@ export default function SATClient({ profile, satUsage }: Props) {
         return
       }
       if (data.error) throw new Error(data.error)
-      router.push(`/questions/${data.sessionId}`)
+      setProgress(100)
+      setShowReady(true)
+      setLoading(false)
+      setTimeout(() => router.push(`/questions/${data.sessionId}`), 2500)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
     }
   }
 
-  if (loading) return <SatLoading subject={selectedSubject?.title ?? 'SAT'} topic={topic} />
+  if (showReady) return <ReadyScreen subject={selectedSubject?.title ?? 'SAT'} topic={topic} outputType="questions" />
+
+  if (loading) return <SatLoading subject={selectedSubject?.title ?? 'SAT'} topic={topic} progress={progress} />
 
   const summary = ready
     ? `${selectedSubject!.title} · ${topic} · ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`
@@ -291,7 +314,7 @@ export default function SATClient({ profile, satUsage }: Props) {
   )
 }
 
-function SatLoading({ subject, topic }: { subject: string; topic: string }) {
+function SatLoading({ subject, topic, progress }: { subject: string; topic: string; progress: number }) {
   const [mi, setMi] = useState(0)
   const messages = [
     'Analyzing the SAT curriculum...',
@@ -316,7 +339,7 @@ function SatLoading({ subject, topic }: { subject: string; topic: string }) {
         <p style={{ fontSize: '0.9375rem', color: MUTED, marginBottom: '1.75rem' }}>{subject}</p>
         <p key={mi} style={{ fontSize: '1.0625rem', fontWeight: 600, color: GREEN, marginBottom: '1.5rem', minHeight: '1.6rem', animation: 'satMsgFade 0.5s ease' }}>{messages[mi]}</p>
         <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto', height: '8px', background: 'rgba(34,85,14,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', animation: 'satFill80 22s cubic-bezier(0.22,1,0.36,1) forwards' }} />
+          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', width: `${progress}%`, transition: 'width 0.3s ease' }} />
         </div>
       </div>
       <style>{`

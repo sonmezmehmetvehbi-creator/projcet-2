@@ -10,6 +10,7 @@ import {
   Palette, Briefcase, HeartPulse, Brain, Sparkles, ArrowLeft, ArrowRight, Check,
 } from 'lucide-react'
 import LimitReachedModal from '@/components/ui/LimitReachedModal'
+import ReadyScreen from '@/components/ui/ReadyScreen'
 import type { Profile, Grade, OutputType, QuestionType, Difficulty } from '@/types'
 
 const GREEN = 'rgb(34,85,14)'
@@ -212,6 +213,12 @@ export default function GeneratePage() {
   const [genBan, setGenBan] = useState<{ reason?: string } | null>(null)
   const [bans, setBans] = useState({ generation: false, tutoring: false, support: false })
 
+  // Loading progress + "ready" transition.
+  const [progress, setProgress] = useState(0)
+  const [showReady, setShowReady] = useState(false)
+  const [readySessionId, setReadySessionId] = useState<string | null>(null)
+  const [readyOutputType, setReadyOutputType] = useState<string>('')
+
   // Multi-step wizard state.
   const [step, setStep] = useState(1)
   const [maxStep, setMaxStep] = useState(1)
@@ -243,6 +250,21 @@ export default function GeneratePage() {
     }
     load()
   }, [])
+
+  // Fill the loading progress bar to 85% over the wait window, then hold.
+  useEffect(() => {
+    if (!loading) return
+    setProgress(0)
+    const duration = profile?.is_premium ? 3000 : 15000
+    const start = Date.now()
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - start
+      const pct = Math.min(85, (elapsed / duration) * 85)
+      setProgress(pct)
+      if (pct >= 85) clearInterval(timer)
+    }, 100)
+    return () => clearInterval(timer)
+  }, [loading, profile?.is_premium])
 
   const bonusGenerations = (profile as any)?.bonus_generations ?? 0
   const atLimit = !profile?.is_premium && bonusGenerations <= 0 && (
@@ -404,16 +426,26 @@ export default function GeneratePage() {
         return
       }
       if (data.error) throw new Error(data.error)
-      router.refresh()
-      if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
-      else router.push(`/worksheet/${data.sessionId}`)
+      // Snap the bar to 100%, then show the "ready" transition before navigating.
+      setProgress(100)
+      setReadySessionId(data.sessionId)
+      setReadyOutputType(outputType)
+      setShowReady(true)
+      setLoading(false)
+      setTimeout(() => {
+        router.refresh()
+        if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
+        else router.push(`/worksheet/${data.sessionId}`)
+      }, 2500)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
     }
   }
 
-  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} subject={subject} topic={topic} />
+  if (showReady) return <ReadyScreen subject={subject} topic={topic} outputType={readyOutputType} />
+
+  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} subject={subject} topic={topic} progress={progress} />
 
   if (genBan) return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
@@ -842,7 +874,7 @@ export default function GeneratePage() {
 const backLink: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'transparent', border: 'none', cursor: 'pointer', color: MUTED, fontSize: '0.8125rem', fontWeight: 600, padding: 0, marginBottom: '1rem' }
 const stepTitle: React.CSSProperties = { fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: INK, marginBottom: '0.75rem' }
 
-function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; isPremium: boolean; subject: string; topic: string }) {
+function LoadingScreen({ isPremium, subject, topic, progress }: { outputType: OutputType; isPremium: boolean; subject: string; topic: string; progress: number }) {
   const [messageIndex, setMessageIndex] = useState(0)
   const [countdown, setCountdown] = useState(isPremium ? 18 : 30)
   const duration = isPremium ? 18 : 30
@@ -913,7 +945,7 @@ function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; 
 
         {/* Progress bar fills to ~80% */}
         <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto 1.75rem', height: '8px', background: 'rgba(34,85,14,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', animation: `genFill80 ${duration}s cubic-bezier(0.22,1,0.36,1) forwards` }} />
+          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', width: `${progress}%`, transition: 'width 0.3s ease' }} />
         </div>
 
         {/* Countdown (free) or bouncing dots (premium) */}
@@ -958,3 +990,4 @@ function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; 
     </div>
   )
 }
+
