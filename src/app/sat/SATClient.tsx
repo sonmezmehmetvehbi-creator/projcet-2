@@ -56,6 +56,7 @@ const QUESTION_COUNT = 22
 export default function SATClient({ profile, satUsage }: Props) {
   const [subject, setSubject] = useState<'math' | 'rw' | ''>('')
   const [topic, setTopic] = useState('')
+  const [mathModule, setMathModule] = useState<'math_calc' | 'math_no_calc'>('math_calc')
   const [difficulty, setDifficulty] = useState('medium')
   const [showFormat, setShowFormat] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -78,11 +79,13 @@ export default function SATClient({ profile, satUsage }: Props) {
     if (!selectedSubject) return
     setError('')
     setLoading(true)
+    // For SAT Math, the calculator toggle decides the module; otherwise use the subject's module.
+    const apiModule = subject === 'math' ? mathModule : selectedSubject.module
     try {
       const res = await fetch('/api/sat-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module: selectedSubject.module, questionCount: QUESTION_COUNT, difficulty, topic }),
+        body: JSON.stringify({ module: apiModule, questionCount: QUESTION_COUNT, difficulty, topic }),
       })
       const data = await res.json()
       if (data.limitReached) {
@@ -181,6 +184,28 @@ export default function SATClient({ profile, satUsage }: Props) {
                   <button key={t} type="button" onClick={() => setTopic(t)}
                     style={{ padding: '0.5rem 0.95rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: active ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s ease', background: active ? `${accent}12` : 'white', color: active ? accent : INK, border: `1.5px solid ${active ? accent : 'rgba(34,85,14,0.15)'}` }}>
                     {t}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── CALCULATOR TOGGLE (SAT Math only) ── */}
+        {subject === 'math' && (
+          <div className="sat-slide" style={{ marginBottom: '2rem' }}>
+            <p style={sectionLabel}>Calculator section</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.625rem' }}>
+              {([
+                { value: 'math_calc' as const, label: 'Calculator Section', sub: 'Module 2 — Calculator allowed', color: GREEN },
+                { value: 'math_no_calc' as const, label: 'No Calculator Section', sub: 'Module 1 — No calculator', color: BLUE },
+              ]).map(opt => {
+                const active = mathModule === opt.value
+                return (
+                  <button key={opt.value} type="button" onClick={() => setMathModule(opt.value)}
+                    style={{ padding: '1rem 1.25rem', borderRadius: '9999px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s ease', border: `2px solid ${active ? opt.color : 'rgba(34,85,14,0.15)'}`, background: active ? `${opt.color}12` : 'white' }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: active ? opt.color : INK }}>{opt.label}</p>
+                    <p style={{ fontSize: '0.75rem', color: MUTED, marginTop: '0.15rem' }}>{opt.sub}</p>
                   </button>
                 )
               })}
