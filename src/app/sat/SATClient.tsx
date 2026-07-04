@@ -81,11 +81,12 @@ export default function SATClient({ profile, satUsage }: Props) {
     setLoading(true)
     // For SAT Math, the calculator toggle decides the module; otherwise use the subject's module.
     const apiModule = subject === 'math' ? mathModule : selectedSubject.module
+    console.log('SAT generate request:', { subject: selectedSubject, module: apiModule, topic, difficulty, questionCount: QUESTION_COUNT })
     try {
       const res = await fetch('/api/sat-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module: apiModule, questionCount: QUESTION_COUNT, difficulty, topic }),
+        body: JSON.stringify({ subject: selectedSubject.title, module: apiModule, questionCount: QUESTION_COUNT, difficulty, topic }),
       })
       const data = await res.json()
       if (data.limitReached) {

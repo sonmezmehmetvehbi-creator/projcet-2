@@ -19,7 +19,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'generation_banned', reason: genBan.reason }, { status: 403 })
     }
 
-    const { module, questionCount, difficulty } = await request.json()
+    const { subject, module, questionCount, difficulty, topic } = await request.json()
+    console.log('SAT generate received:', { subject, module, topic, difficulty, questionCount })
 
     // Check SAT daily limit (1/day free), falling back to bonus generations.
     const limit = await checkGenerationAllowed(supabase, user.id, 'sat')
@@ -132,6 +133,9 @@ For each question:
 Return JSON: { "questions": [...] }`
     }
 
+    // Focus the whole set on the selected topic when one was chosen.
+    if (topic) userPrompt += `\n\nFocus every question specifically on this SAT skill/topic: ${topic}.`
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -139,20 +143,35 @@ Return JSON: { "questions": [...] }`
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 6000,
+      // gpt-4o allows a large output window; 22-question sets with passages can be
+      // long, so keep this high to avoid truncated (unparseable) JSON.
+      max_tokens: 16000,
+      response_format: { type: 'json_object' },
     })
 
     const raw = completion.choices[0].message.content ?? '{}'
     let clean = raw.replace(/```json|```/g, '').trim()
     clean = clean.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').trim()
 
+    console.log('Raw AI response length:', clean.length)
+    console.log('Raw AI response start:', clean.substring(0, 200))
+
     let parsed
     try {
       parsed = JSON.parse(clean)
     } catch {
-      clean = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
-      try { parsed = JSON.parse(clean) }
-      catch { throw new Error('Failed to parse AI response. Please try again.') }
+      // Attempt 2: escape stray backslashes.
+      const escaped = clean.replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
+      try {
+        parsed = JSON.parse(escaped)
+      } catch {
+        // Attempt 3: extract just the outermost JSON object.
+        const jsonMatch = clean.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[0]) } catch {}
+        }
+        if (!parsed) throw new Error('Failed to parse AI response. Please try again.')
+      }
     }
 
     // Save session
@@ -182,6 +201,7 @@ Return JSON: { "questions": [...] }`
     return NextResponse.json({ sessionId: session.id })
   } catch (error: any) {
     console.error('SAT generate error:', error)
+    console.error('SAT generate error details:', error.message, error.stack)
     return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })
   }
 }
