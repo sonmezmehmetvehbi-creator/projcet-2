@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Zap } from 'lucide-react'
+import { AlertCircle, Zap, Calculator, BookOpen, Check, ArrowRight, ChevronDown } from 'lucide-react'
 import LimitReachedModal from '@/components/ui/LimitReachedModal'
 import type { Profile } from '@/types'
 
@@ -11,59 +11,53 @@ interface Props {
   satUsage: number
 }
 
-const MODULES = [
+const INK = 'rgb(26,26,20)'
+const MUTED = 'rgb(107,107,88)'
+const GREEN = 'rgb(34,85,14)'
+const BLUE = 'rgb(37,99,235)'
+const PURPLE = 'rgb(124,58,237)'
+
+// Subject → API module + presentation. Math maps to the digital-SAT calculator
+// module; Reading & Writing maps to reading_writing.
+const SUBJECTS = [
   {
-    id: 'math_no_calc',
-    label: 'SAT Math',
-    sub: 'No Calculator',
-    emoji: '📐',
-    desc: 'Algebra, advanced math, problem solving — no calculator allowed',
-    color: 'rgba(99,102,241,0.08)',
-    border: 'rgba(99,102,241,0.25)',
-    activeColor: 'rgb(79,70,229)',
-    badge: '⛔ No Calc',
-    badgeBg: 'rgba(239,68,68,0.1)',
-    badgeColor: 'rgb(185,28,28)',
+    id: 'math' as const,
+    module: 'math_calc',
+    icon: Calculator,
+    title: 'SAT Math',
+    desc: 'Algebra, Advanced Math, Problem Solving, Data Analysis',
+    topics: ['Heart of Algebra', 'Passport to Advanced Math', 'Problem Solving & Data Analysis', 'Geometry & Trigonometry'],
+    color: BLUE,
   },
   {
-    id: 'math_calc',
-    label: 'SAT Math',
-    sub: 'Calculator',
-    emoji: '🔢',
-    desc: 'Data analysis, statistics, complex algebra — calculator permitted',
-    color: 'rgba(34,85,14,0.06)',
-    border: 'rgba(34,85,14,0.25)',
-    activeColor: 'rgb(34,85,14)',
-    badge: '✅ Calculator',
-    badgeBg: 'rgba(34,85,14,0.08)',
-    badgeColor: 'rgb(34,85,14)',
-  },
-  {
-    id: 'reading_writing',
-    label: 'SAT Reading',
-    sub: '& Writing',
-    emoji: '📖',
-    desc: 'Passage-based questions — words in context, evidence, grammar',
-    color: 'rgba(245,158,11,0.07)',
-    border: 'rgba(245,158,11,0.25)',
-    activeColor: 'rgb(180,120,10)',
-    badge: '📝 Passage-based',
-    badgeBg: 'rgba(245,158,11,0.1)',
-    badgeColor: 'rgb(180,120,10)',
+    id: 'rw' as const,
+    module: 'reading_writing',
+    icon: BookOpen,
+    title: 'SAT Reading & Writing',
+    desc: 'Information & Ideas, Craft & Structure, Expression of Ideas, Standard English',
+    topics: ['Command of Evidence', 'Words in Context', 'Text Structure', 'Rhetorical Synthesis'],
+    color: PURPLE,
   },
 ]
 
-const QUESTION_COUNTS = [5, 10, 15, 22]
+const TOPICS: Record<string, string[]> = {
+  math: ['Heart of Algebra', 'Linear Equations', 'Systems of Equations', 'Quadratic Equations', 'Exponential Functions', 'Passport to Advanced Math', 'Polynomial Operations', 'Rational Equations', 'Radical Equations', 'Problem Solving & Data Analysis', 'Ratios & Proportions', 'Percentages & Statistics', 'Scatterplots & Data', 'Geometry & Trigonometry', 'Lines & Angles', 'Circles', 'Triangles', 'Trigonometric Functions'],
+  rw: ['Command of Evidence', 'Textual Evidence', 'Quantitative Evidence', 'Words in Context', 'Vocabulary in Context', 'Text Structure & Purpose', 'Cross-text Connections', 'Central Ideas & Details', 'Inferences', 'Rhetorical Synthesis', 'Transitions', 'Boundaries (punctuation)', 'Form, Structure & Sense'],
+}
+
 const DIFFICULTIES = [
-  { value: 'easy', label: 'Easy', emoji: '🟢', desc: 'CB Level 1-2' },
-  { value: 'medium', label: 'Medium', emoji: '🟡', desc: 'CB Level 3' },
-  { value: 'hard', label: 'Hard', emoji: '🔴', desc: 'CB Level 4-5' },
+  { value: 'medium', label: 'Medium', desc: 'Matches average SAT difficulty', color: 'rgb(202,138,4)' },
+  { value: 'hard', label: 'Hard', desc: 'Above average, for high scorers', color: 'rgb(217,119,6)' },
+  { value: 'expert', label: 'Expert', desc: '800-level questions', color: 'rgb(220,38,38)' },
 ]
+
+const QUESTION_COUNT = 22
 
 export default function SATClient({ profile, satUsage }: Props) {
-  const [module, setModule] = useState('math_no_calc')
-  const [questionCount, setQuestionCount] = useState(10)
+  const [subject, setSubject] = useState<'math' | 'rw' | ''>('')
+  const [topic, setTopic] = useState('')
   const [difficulty, setDifficulty] = useState('medium')
+  const [showFormat, setShowFormat] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [limitModal, setLimitModal] = useState<{ open: boolean; bonus: number }>({ open: false, bonus: 0 })
@@ -71,17 +65,24 @@ export default function SATClient({ profile, satUsage }: Props) {
 
   const bonusGenerations = (profile as any)?.bonus_generations ?? 0
   const atLimit = !profile?.is_premium && satUsage >= 1 && bonusGenerations <= 0
-  const selectedModule = MODULES.find(m => m.id === module)!
+  const selectedSubject = SUBJECTS.find(s => s.id === subject) ?? null
+  const ready = !!subject && !!topic
+
+  function pickSubject(id: 'math' | 'rw') {
+    setSubject(id)
+    setTopic('')
+  }
 
   async function handleStart() {
     if (atLimit) { setLimitModal({ open: true, bonus: bonusGenerations }); return }
+    if (!selectedSubject) return
     setError('')
     setLoading(true)
     try {
       const res = await fetch('/api/sat-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module, questionCount, difficulty }),
+        body: JSON.stringify({ module: selectedSubject.module, questionCount: QUESTION_COUNT, difficulty, topic }),
       })
       const data = await res.json()
       if (data.limitReached) {
@@ -97,184 +98,146 @@ export default function SATClient({ profile, satUsage }: Props) {
     }
   }
 
-  if (loading) return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ textAlign:'center' }}>
-        <div style={{ fontSize:'3rem', marginBottom:'1rem', animation:'spin 2s linear infinite', display:'inline-block' }}>📐</div>
-        <p style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
-          Building your SAT practice set...
-        </p>
-        <p style={{ color:'rgb(107,107,88)' }}>Crafting College Board-style questions</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    </div>
-  )
+  if (loading) return <SatLoading subject={selectedSubject?.title ?? 'SAT'} topic={topic} />
+
+  const summary = ready
+    ? `${selectedSubject!.title} · ${topic} · ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`
+    : 'Select a subject and topic to begin'
 
   return (
-    <div className="animate-fade-in" style={{ minHeight:'100vh', paddingTop:'5rem' }}>
-      <div style={{ maxWidth:'44rem', margin:'0 auto', padding:'2rem 1.5rem' }}>
+    <div className="animate-fade-in" style={{ minHeight: '100vh', paddingTop: '5rem', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+      <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '2rem 1.25rem 4rem' }}>
 
-        {/* Header */}
-        <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>
-          <div style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', background:'rgba(34,85,14,0.06)', border:'1px solid rgba(34,85,14,0.15)', padding:'0.375rem 1rem', borderRadius:'9999px', marginBottom:'1rem' }}>
-            <span style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif', textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              SAT Prep
-            </span>
-          </div>
-          <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
-            SAT Practice
-          </h1>
-          <p style={{ color:'rgb(107,107,88)', fontSize:'1.0625rem' }}>
-            College Board-style questions. Real format, real difficulty.
-          </p>
-          {!profile?.is_premium && (
-            <div style={{ marginTop:'0.875rem', display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.375rem 0.875rem', borderRadius:'9999px', background: atLimit ? 'rgba(239,68,68,0.08)' : 'rgba(34,85,14,0.06)', border:`1px solid ${atLimit ? 'rgba(239,68,68,0.2)' : 'rgba(34,85,14,0.15)'}` }}>
-              <span style={{ fontSize:'0.8125rem', color: atLimit ? 'rgb(185,28,28)' : 'rgb(34,85,14)', fontWeight:600 }}>
-                {atLimit ? '⚠️ Daily limit reached' : `✅ ${1 - satUsage} SAT set remaining today`}
-              </span>
+        {/* ── HERO ── */}
+        <div style={{ borderRadius: '1.5rem', padding: '2.25rem', marginBottom: '2rem', background: 'linear-gradient(135deg, rgb(34,85,14), rgb(59,130,46))', color: 'white', boxShadow: '0 12px 40px rgba(34,85,14,0.25)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-30px', right: '-10px', fontSize: '9rem', opacity: 0.12, lineHeight: 1 }}>📐</div>
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1.1 }}>SAT Prep</h1>
+              <span style={{ padding: '0.3rem 0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '0.9375rem' }}>400–1600</span>
+              {profile?.is_premium && (
+                <span style={{ padding: '0.3rem 0.75rem', borderRadius: '9999px', background: 'rgba(232,160,32,0.25)', border: '1px solid rgba(232,160,32,0.5)', fontWeight: 700, fontSize: '0.8125rem' }}>⚡ Premium</span>
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="card" style={{ padding:'2rem' }}>
-          {error && (
-            <div className="alert-error" style={{ marginBottom:'1.5rem' }}>
-              <AlertCircle style={{ width:'1rem', height:'1rem', flexShrink:0 }} />
-              <div>
-                {error}
-                {atLimit && <a href="/pricing" style={{ display:'block', marginTop:'0.25rem', fontWeight:600, color:'rgb(34,85,14)' }}>Upgrade to Premium →</a>}
+            <p style={{ fontSize: '1.0625rem', color: 'rgba(255,255,255,0.85)', marginBottom: '1.25rem' }}>College Board-style practice questions</p>
+            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+              <span style={{ padding: '0.45rem 0.875rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.8125rem', fontWeight: 600 }}>📖 54 Reading & Writing questions</span>
+              <span style={{ padding: '0.45rem 0.875rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.8125rem', fontWeight: 600 }}>📐 54 Math questions</span>
+            </div>
+            {!profile?.is_premium && (
+              <div style={{ marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '9999px', background: atLimit ? 'rgba(255,180,180,0.2)' : 'rgba(255,255,255,0.15)', border: `1px solid ${atLimit ? 'rgba(255,180,180,0.4)' : 'rgba(255,255,255,0.25)'}` }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                  {atLimit ? '⚠️ Daily limit reached' : `1 free practice set per day · ${1 - satUsage} remaining today`}
+                </span>
               </div>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="alert-error" style={{ marginBottom: '1.5rem' }}>
+            <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+            <div>
+              {error}
+              {atLimit && <a href="/pricing" style={{ display: 'block', marginTop: '0.25rem', fontWeight: 600, color: GREEN }}>Upgrade to Premium →</a>}
+            </div>
+          </div>
+        )}
+
+        {/* ── SUBJECT CARDS ── */}
+        <p style={sectionLabel}>1 · Choose a subject</p>
+        <div className="sat-subjects" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          {SUBJECTS.map((s, i) => {
+            const selected = subject === s.id
+            const Icon = s.icon
+            return (
+              <button key={s.id} type="button" onClick={() => pickSubject(s.id)}
+                className="sat-card" style={{ animationDelay: `${0.1 * (i + 1)}s`, textAlign: 'left', position: 'relative', padding: '1.5rem', borderRadius: '1.25rem', cursor: 'pointer', border: `2px solid ${selected ? s.color : `${s.color}33`}`, background: selected ? s.color : 'white', color: selected ? 'white' : INK, boxShadow: '0 4px 24px rgba(34,85,14,0.06)', transition: 'transform 0.15s ease, box-shadow 0.15s ease' }}>
+                {selected && <span style={{ position: 'absolute', top: '1rem', right: '1rem' }}><Check style={{ width: '1.25rem', height: '1.25rem', color: 'white' }} /></span>}
+                <div style={{ width: '3rem', height: '3rem', borderRadius: '0.875rem', background: selected ? 'rgba(255,255,255,0.2)' : `${s.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.875rem' }}>
+                  <Icon style={{ width: '1.5rem', height: '1.5rem', color: selected ? 'white' : s.color }} />
+                </div>
+                <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.375rem' }}>{s.title}</h3>
+                <p style={{ fontSize: '0.875rem', color: selected ? 'rgba(255,255,255,0.85)' : MUTED, lineHeight: 1.5, marginBottom: '0.875rem' }}>{s.desc}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                  {s.topics.map(t => (
+                    <span key={t} style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: selected ? 'rgba(255,255,255,0.15)' : `${s.color}12`, color: selected ? 'white' : s.color }}>{t}</span>
+                  ))}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── TOPIC PILLS ── */}
+        {subject && (
+          <div className="sat-slide" style={{ marginBottom: '2rem' }}>
+            <p style={sectionLabel}>2 · Pick a topic</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {TOPICS[subject].map(t => {
+                const active = topic === t
+                const accent = selectedSubject!.color
+                return (
+                  <button key={t} type="button" onClick={() => setTopic(t)}
+                    style={{ padding: '0.5rem 0.95rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: active ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s ease', background: active ? `${accent}12` : 'white', color: active ? accent : INK, border: `1.5px solid ${active ? accent : 'rgba(34,85,14,0.15)'}` }}>
+                    {t}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── DIFFICULTY ── */}
+        {topic && (
+          <div className="sat-fade" style={{ marginBottom: '2rem' }}>
+            <p style={sectionLabel}>3 · Difficulty</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.625rem' }}>
+              {DIFFICULTIES.map(d => {
+                const active = difficulty === d.value
+                return (
+                  <button key={d.value} type="button" onClick={() => setDifficulty(d.value)}
+                    style={{ padding: '1rem', borderRadius: '0.875rem', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s ease', border: `2px solid ${active ? d.color : 'rgba(34,85,14,0.15)'}`, background: active ? `${d.color}12` : 'white' }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: active ? d.color : INK, marginBottom: '0.2rem' }}>{d.label}</p>
+                    <p style={{ fontSize: '0.75rem', color: MUTED, lineHeight: 1.4 }}>{d.desc}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── FORMAT INFO (collapsible) ── */}
+        <div style={{ borderRadius: '1rem', background: 'white', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '2rem', overflow: 'hidden' }}>
+          <button type="button" onClick={() => setShowFormat(f => !f)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '1rem 1.25rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            <span style={{ fontWeight: 700, color: INK, fontSize: '0.9375rem' }}>ℹ️ About this practice set</span>
+            <ChevronDown style={{ width: '1.125rem', height: '1.125rem', color: MUTED, transform: showFormat ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+          {showFormat && (
+            <div className="sat-fade" style={{ padding: '0 1.25rem 1.25rem' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  '📝 22 questions total — matching real SAT module length',
+                  '🔀 A mix of multiple choice and student-produced response',
+                  '⏱ Timed practice recommended (~35 minutes per module)',
+                  '🎯 Aligned to the College Board digital SAT format and difficulty',
+                ].map(t => <li key={t} style={{ fontSize: '0.875rem', color: MUTED, lineHeight: 1.6 }}>{t}</li>)}
+              </ul>
             </div>
           )}
-
-          {/* Module selector */}
-          <div style={{ marginBottom:'1.75rem' }}>
-            <label style={{ display:'block', fontSize:'0.8125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              Select Module
-            </label>
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-              {MODULES.map(m => (
-                <button key={m.id} type="button" onClick={() => setModule(m.id)}
-                  style={{
-                    padding:'1.25rem', borderRadius:'0.875rem',
-                    border:`2px solid ${module === m.id ? m.border : 'rgba(34,85,14,0.1)'}`,
-                    background: module === m.id ? m.color : 'white',
-                    cursor:'pointer', textAlign:'left', transition:'all 0.2s',
-                    display:'flex', alignItems:'center', gap:'1rem',
-                  }}>
-                  <span style={{ fontSize:'2rem', flexShrink:0 }}>{m.emoji}</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.25rem' }}>
-                      <p style={{ fontWeight:700, color:'rgb(26,26,20)', fontSize:'1rem' }}>{m.label}</p>
-                      <span style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{m.sub}</span>
-                      <span style={{ marginLeft:'auto', fontSize:'0.6875rem', fontWeight:700, padding:'0.2rem 0.5rem', borderRadius:'9999px', background:m.badgeBg, color:m.badgeColor }}>
-                        {m.badge}
-                      </span>
-                    </div>
-                    <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)' }}>{m.desc}</p>
-                  </div>
-                  <div style={{
-                    width:'1.25rem', height:'1.25rem', borderRadius:'50%', flexShrink:0,
-                    border:`2px solid ${module === m.id ? m.activeColor : 'rgba(34,85,14,0.2)'}`,
-                    background: module === m.id ? m.activeColor : 'transparent',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                  }}>
-                    {module === m.id && <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'white' }} />}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Question count */}
-          <div style={{ marginBottom:'1.75rem' }}>
-            <label style={{ display:'block', fontSize:'0.8125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              Number of Questions
-            </label>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'0.5rem' }}>
-              {QUESTION_COUNTS.map(n => (
-                <button key={n} type="button" onClick={() => setQuestionCount(n)}
-                  style={{
-                    padding:'0.75rem', borderRadius:'0.75rem',
-                    border:`2px solid ${questionCount === n ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`,
-                    background: questionCount === n ? 'rgba(34,85,14,0.06)' : 'white',
-                    cursor:'pointer', transition:'all 0.2s', textAlign:'center',
-                  }}>
-                  <p style={{ fontWeight:700, fontSize:'1.25rem', color: questionCount === n ? 'rgb(34,85,14)' : 'rgb(26,26,20)' }}>{n}</p>
-                  <p style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)' }}>
-                    {n === 22 ? 'Full module' : n === 15 ? 'Long set' : n === 10 ? 'Standard' : 'Quick set'}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Difficulty */}
-          <div style={{ marginBottom:'2rem' }}>
-            <label style={{ display:'block', fontSize:'0.8125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.75rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              Difficulty
-            </label>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'0.5rem' }}>
-              {DIFFICULTIES.map(d => (
-                <button key={d.value} type="button" onClick={() => setDifficulty(d.value)}
-                  style={{
-                    padding:'0.875rem 0.5rem', borderRadius:'0.75rem',
-                    border:`2px solid ${difficulty === d.value ? 'rgb(34,85,14)' : 'rgba(34,85,14,0.15)'}`,
-                    background: difficulty === d.value ? 'rgba(34,85,14,0.06)' : 'white',
-                    cursor:'pointer', textAlign:'center', transition:'all 0.2s',
-                  }}>
-                  <div style={{ fontSize:'1.25rem', marginBottom:'0.25rem' }}>{d.emoji}</div>
-                  <p style={{ fontWeight:700, fontSize:'0.875rem', color: difficulty === d.value ? 'rgb(34,85,14)' : 'rgb(26,26,20)' }}>{d.label}</p>
-                  <p style={{ fontSize:'0.6875rem', color:'rgb(107,107,88)' }}>{d.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* What to expect */}
-          <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.08)', marginBottom:'1.5rem' }}>
-            <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.5rem' }}>
-              What to expect for {selectedModule.label} {selectedModule.sub}:
-            </p>
-            <ul style={{ listStyle:'none', padding:0, margin:0, display:'flex', flexDirection:'column', gap:'0.25rem' }}>
-              {module === 'math_no_calc' && [
-                '⛔ No calculator — mental math and paper work only',
-                '📐 Linear equations, quadratics, functions, word problems',
-                '⏱ ~90 seconds per question',
-                '🎯 Grid-in questions included for sets of 10+',
-              ].map(t => <li key={t} style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{t}</li>)}
-              {module === 'math_calc' && [
-                '✅ Calculator permitted',
-                '📊 Data analysis, statistics, complex algebra, geometry',
-                '⏱ ~90 seconds per question',
-                '🎯 Real-world context in every word problem',
-              ].map(t => <li key={t} style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{t}</li>)}
-              {module === 'reading_writing' && [
-                '📖 Every question has its own passage',
-                '✍️ Words in context, evidence, inference, grammar',
-                '⏱ ~1.5 minutes per question',
-                '🎯 Passage topics: science, history, literature, social studies',
-              ].map(t => <li key={t} style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>{t}</li>)}
-            </ul>
-          </div>
-
-          <button onClick={handleStart} disabled={atLimit} className="btn-primary"
-            style={{ width:'100%', justifyContent:'center', padding:'1rem', fontSize:'1.0625rem' }}>
-            {atLimit
-              ? <><Zap style={{ width:'1rem', height:'1rem' }} />Upgrade for unlimited SAT prep</>
-              : `Start ${questionCount}-Question ${selectedModule.label} Practice ✨`}
-          </button>
         </div>
 
-        {/* SAT score info */}
-        <div style={{ marginTop:'1.5rem', padding:'1.25rem 1.5rem', borderRadius:'1rem', background:'white', border:'1px solid rgba(34,85,14,0.08)' }}>
-          <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.5rem' }}>
-            📊 About the Digital SAT
-          </p>
-          <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', lineHeight:1.6 }}>
-            The Digital SAT has 2 math modules (27 questions each, 70 min total) and 2 Reading & Writing modules (54 questions, 64 min total). Score range: 400–1600. AceForge generates College Board-style questions matching the real exam format and difficulty distribution.
-          </p>
-        </div>
+        {/* ── GENERATE ── */}
+        <p style={{ fontSize: '0.8125rem', color: MUTED, textAlign: 'center', marginBottom: '0.75rem' }}>{summary}</p>
+        <button onClick={handleStart} disabled={atLimit || !ready}
+          className={`sat-cta ${ready && !atLimit ? 'sat-cta-ready' : ''}`}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1.1rem', fontSize: '1.0625rem', fontWeight: 700, borderRadius: '0.875rem', border: 'none', color: 'white', cursor: atLimit ? 'not-allowed' : ready ? 'pointer' : 'default', background: atLimit ? MUTED : `linear-gradient(135deg, ${GREEN}, rgb(59,130,46))`, opacity: !ready && !atLimit ? 0.55 : 1 }}>
+          {atLimit
+            ? <><Zap style={{ width: '1rem', height: '1rem' }} /> Upgrade for unlimited SAT prep</>
+            : <>Generate SAT Practice Set <ArrowRight style={{ width: '1.125rem', height: '1.125rem' }} /></>}
+        </button>
+        {atLimit && <a href="/pricing" style={{ display: 'block', textAlign: 'center', marginTop: '1rem', fontWeight: 600, color: GREEN, textDecoration: 'none' }}>Upgrade to Premium →</a>}
 
       </div>
 
@@ -284,6 +247,63 @@ export default function SATClient({ profile, satUsage }: Props) {
         limitLabel="1 free SAT practice set"
         bonusRemaining={limitModal.bonus}
       />
+
+      <style>{`
+        @keyframes satStagger { from { opacity: 0; transform: translateY(16px); } }
+        @keyframes satSlideDown { from { opacity: 0; transform: translateY(-12px); } }
+        @keyframes satFadeIn { from { opacity: 0; transform: translateY(8px); } }
+        @keyframes satCtaPulse { 0%,100% { box-shadow: 0 8px 28px rgba(34,85,14,0.28); } 50% { box-shadow: 0 8px 44px rgba(34,85,14,0.55); } }
+        .sat-card { animation: satStagger 0.45s ease both; }
+        .sat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(34,85,14,0.14); }
+        .sat-slide { animation: satSlideDown 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+        .sat-fade { animation: satFadeIn 0.35s ease both; }
+        .sat-cta { transition: transform 0.2s ease; }
+        .sat-cta-ready { animation: satCtaPulse 2.2s ease-in-out infinite; }
+        .sat-cta-ready:hover { transform: translateY(-2px); }
+      `}</style>
     </div>
   )
+}
+
+function SatLoading({ subject, topic }: { subject: string; topic: string }) {
+  const [mi, setMi] = useState(0)
+  const messages = [
+    'Analyzing the SAT curriculum...',
+    'Crafting College Board-style questions...',
+    'Calibrating difficulty level...',
+    'Reviewing for accuracy...',
+    'Polishing the explanations...',
+    'Almost ready...',
+  ]
+  useEffect(() => {
+    const id = setInterval(() => setMi(i => (i + 1) % messages.length), 2000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: 'linear-gradient(135deg, rgb(240,247,234), rgb(228,242,218), rgb(240,247,234))' }}>
+      <div style={{ textAlign: 'center', maxWidth: '32rem', width: '100%' }}>
+        <div className="sat-icon-glow" style={{ width: '128px', height: '128px', margin: '0 auto 2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(34,85,14,0.14), rgba(34,85,14,0.02))' }}>
+          <BookOpen style={{ width: '80px', height: '80px', color: GREEN }} strokeWidth={1.5} />
+        </div>
+        <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: INK, marginBottom: '0.375rem', lineHeight: 1.25 }}>{topic || subject}</p>
+        <p style={{ fontSize: '0.9375rem', color: MUTED, marginBottom: '1.75rem' }}>{subject}</p>
+        <p key={mi} style={{ fontSize: '1.0625rem', fontWeight: 600, color: GREEN, marginBottom: '1.5rem', minHeight: '1.6rem', animation: 'satMsgFade 0.5s ease' }}>{messages[mi]}</p>
+        <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto', height: '8px', background: 'rgba(34,85,14,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', animation: 'satFill80 22s cubic-bezier(0.22,1,0.36,1) forwards' }} />
+        </div>
+      </div>
+      <style>{`
+        @keyframes satMsgFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes satFill80 { from { width: 0%; } to { width: 80%; } }
+        @keyframes satIconGlow { 0%,100% { box-shadow: 0 0 30px rgba(34,85,14,0.4); transform: scale(1); } 50% { box-shadow: 0 0 60px rgba(122,182,72,0.6); transform: scale(1.06); } }
+        .sat-icon-glow { animation: satIconGlow 2.4s ease-in-out infinite; }
+      `}</style>
+    </div>
+  )
+}
+
+const sectionLabel: React.CSSProperties = {
+  fontFamily: 'Syne, sans-serif', fontSize: '0.75rem', fontWeight: 800, color: MUTED,
+  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.875rem',
 }
