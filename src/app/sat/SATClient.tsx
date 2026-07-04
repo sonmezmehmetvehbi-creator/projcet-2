@@ -113,10 +113,13 @@ export default function SATClient({ profile, satUsage }: Props) {
         return
       }
       if (data.error) throw new Error(data.error)
+      // Snap to 100%, hold 300ms so the completed bar is visible, then transition.
       setProgress(100)
-      setShowReady(true)
-      setLoading(false)
-      setTimeout(() => router.push(`/questions/${data.sessionId}`), 2500)
+      setTimeout(() => {
+        setShowReady(true)
+        setLoading(false)
+        setTimeout(() => router.push(`/questions/${data.sessionId}`), 2500)
+      }, 300)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)

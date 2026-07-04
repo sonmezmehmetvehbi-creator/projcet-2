@@ -214,9 +214,8 @@ export default function GeneratePage() {
   const [bans, setBans] = useState({ generation: false, tutoring: false, support: false })
 
   // Loading progress + "ready" transition.
-  const [progress, setProgress] = useState(0)
+  const [finished, setFinished] = useState(false)
   const [showReady, setShowReady] = useState(false)
-  const [readySessionId, setReadySessionId] = useState<string | null>(null)
   const [readyOutputType, setReadyOutputType] = useState<string>('')
 
   // Multi-step wizard state.
@@ -250,21 +249,6 @@ export default function GeneratePage() {
     }
     load()
   }, [])
-
-  // Fill the loading progress bar to 85% over the wait window, then hold.
-  useEffect(() => {
-    if (!loading) return
-    setProgress(0)
-    const duration = profile?.is_premium ? 3000 : 15000
-    const start = Date.now()
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - start
-      const pct = Math.min(85, (elapsed / duration) * 85)
-      setProgress(pct)
-      if (pct >= 85) clearInterval(timer)
-    }, 100)
-    return () => clearInterval(timer)
-  }, [loading, profile?.is_premium])
 
   const bonusGenerations = (profile as any)?.bonus_generations ?? 0
   const atLimit = !profile?.is_premium && bonusGenerations <= 0 && (
@@ -397,6 +381,7 @@ export default function GeneratePage() {
     if (useUpload && !uploadedText) { setError('Please upload a file or disable the upload option.'); return }
     if (atLimit) { setError('You have reached your daily limit. Upgrade to Premium for unlimited generations.'); return }
     setError('')
+    setFinished(false)
     setLoading(true)
 
     const minWait = profile?.is_premium ? 15000 : 30000
@@ -426,17 +411,19 @@ export default function GeneratePage() {
         return
       }
       if (data.error) throw new Error(data.error)
-      // Snap the bar to 100%, then show the "ready" transition before navigating.
-      setProgress(100)
-      setReadySessionId(data.sessionId)
+      // Snap the bar to 100%, hold 300ms so the user sees it complete, then
+      // show the "ready" transition before navigating.
       setReadyOutputType(outputType)
-      setShowReady(true)
-      setLoading(false)
+      setFinished(true)
       setTimeout(() => {
-        router.refresh()
-        if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
-        else router.push(`/worksheet/${data.sessionId}`)
-      }, 2500)
+        setShowReady(true)
+        setLoading(false)
+        setTimeout(() => {
+          router.refresh()
+          if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
+          else router.push(`/worksheet/${data.sessionId}`)
+        }, 2500)
+      }, 300)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
@@ -445,7 +432,7 @@ export default function GeneratePage() {
 
   if (showReady) return <ReadyScreen subject={subject} topic={topic} outputType={readyOutputType} />
 
-  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} subject={subject} topic={topic} progress={progress} />
+  if (loading) return <LoadingScreen outputType={outputType} isPremium={profile?.is_premium ?? false} subject={subject} topic={topic} finished={finished} />
 
   if (genBan) return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
@@ -874,10 +861,19 @@ export default function GeneratePage() {
 const backLink: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'transparent', border: 'none', cursor: 'pointer', color: MUTED, fontSize: '0.8125rem', fontWeight: 600, padding: 0, marginBottom: '1rem' }
 const stepTitle: React.CSSProperties = { fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: INK, marginBottom: '0.75rem' }
 
-function LoadingScreen({ isPremium, subject, topic, progress }: { outputType: OutputType; isPremium: boolean; subject: string; topic: string; progress: number }) {
+function LoadingScreen({ isPremium, subject, topic, finished }: { outputType: OutputType; isPremium: boolean; subject: string; topic: string; finished: boolean }) {
   const [messageIndex, setMessageIndex] = useState(0)
-  const [countdown, setCountdown] = useState(isPremium ? 18 : 30)
-  const duration = isPremium ? 18 : 30
+  const totalSeconds = isPremium ? 18 : 30
+  const [countdown, setCountdown] = useState(totalSeconds)
+
+  // Progress bar: synced to the countdown while waiting; jumps to 100% when done.
+  // Free users fill all the way to 100% (in step with the 30s timer); premium
+  // fills toward 85% while the API responds, then snaps to 100%.
+  const progress = finished
+    ? 100
+    : isPremium
+      ? Math.min(85, ((totalSeconds - countdown) / totalSeconds) * 85)
+      : Math.min(100, ((totalSeconds - countdown) / totalSeconds) * 100)
 
   // Stable floating particles.
   const particles = useRef(
@@ -905,11 +901,12 @@ function LoadingScreen({ isPremium, subject, topic, progress }: { outputType: Ou
     return () => clearInterval(interval)
   }, [])
 
+  // Tick every second so both the free countdown display and the progress bar
+  // stay in sync (premium doesn't show the number but still advances the bar).
   useEffect(() => {
-    if (isPremium) return
     const interval = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
     return () => clearInterval(interval)
-  }, [isPremium])
+  }, [])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgb(240,247,234), rgb(228,242,218), rgb(240,247,234))', backgroundSize: '220% 220%', animation: 'genGradientShift 12s ease infinite' }}>
@@ -979,7 +976,6 @@ function LoadingScreen({ isPremium, subject, topic, progress }: { outputType: Ou
       <style>{`
         @keyframes genGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes genFloat { 0% { transform: translateY(0) scale(1); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 0.6; } 100% { transform: translateY(-110vh) scale(1.15); opacity: 0; } }
-        @keyframes genFill80 { from { width: 0%; } to { width: 80%; } }
         @keyframes genMsgFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes genBounce { 0%,100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-7px); opacity: 1; } }
         @keyframes genIconGlow { 0%,100% { box-shadow: 0 0 30px rgba(34,85,14,0.5); transform: scale(1); } 50% { box-shadow: 0 0 62px rgba(122,182,72,0.7); transform: scale(1.06); } }
