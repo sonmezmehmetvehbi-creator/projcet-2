@@ -880,56 +880,56 @@ function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; 
   }, [isPremium])
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0a1a0a, #0d2b0d, #0a1a0a)', backgroundSize: '220% 220%', animation: 'genGradientShift 12s ease infinite' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgb(240,247,234), rgb(228,242,218), rgb(240,247,234))', backgroundSize: '220% 220%', animation: 'genGradientShift 12s ease infinite' }}>
 
       {/* Floating particles */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         {particles.map((p, i) => (
-          <span key={i} style={{ position: 'absolute', bottom: '-24px', left: `${p.left}%`, width: `${p.size}px`, height: `${p.size}px`, borderRadius: '50%', background: 'rgb(122,182,72)', opacity: p.opacity, animation: `genFloat ${p.dur}s linear ${p.delay}s infinite` }} />
+          <span key={i} style={{ position: 'absolute', bottom: '-24px', left: `${p.left}%`, width: `${p.size}px`, height: `${p.size}px`, borderRadius: '50%', background: 'rgb(34,85,14)', opacity: p.opacity * 0.6, animation: `genFloat ${p.dur}s linear ${p.delay}s infinite` }} />
         ))}
       </div>
 
       <div style={{ textAlign: 'center', maxWidth: '34rem', width: '100%', position: 'relative', zIndex: 1 }}>
 
         {/* Glowing icon */}
-        <div className="gen-icon-glow" style={{ width: '128px', height: '128px', margin: '0 auto 2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(34,85,14,0.55), rgba(34,85,14,0.04))' }}>
-          <BookOpen style={{ width: '80px', height: '80px', color: 'white' }} strokeWidth={1.5} />
+        <div className="gen-icon-glow" style={{ width: '128px', height: '128px', margin: '0 auto 2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(34,85,14,0.14), rgba(34,85,14,0.02))' }}>
+          <BookOpen style={{ width: '80px', height: '80px', color: 'rgb(34,85,14)' }} strokeWidth={1.5} />
         </div>
 
         {/* Subject / topic */}
         {(topic || subject) && (
-          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.375rem', lineHeight: 1.25 }}>
+          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.375rem', lineHeight: 1.25 }}>
             {topic || subject}
           </p>
         )}
         {subject && topic && (
-          <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.5)', marginBottom: '1.75rem' }}>{subject}</p>
+          <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', marginBottom: '1.75rem' }}>{subject}</p>
         )}
 
         {/* Rotating message */}
-        <p key={messageIndex} style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'rgb(154,205,104)', marginBottom: '1.5rem', minHeight: '1.6rem', animation: 'genMsgFade 0.5s ease' }}>
+        <p key={messageIndex} style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'rgb(34,85,14)', marginBottom: '1.5rem', minHeight: '1.6rem', animation: 'genMsgFade 0.5s ease' }}>
           {messages[messageIndex]}
         </p>
 
         {/* Progress bar fills to ~80% */}
-        <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto 1.75rem', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '9999px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(122,182,72))', boxShadow: '0 0 14px rgba(122,182,72,0.6)', animation: `genFill80 ${duration}s cubic-bezier(0.22,1,0.36,1) forwards` }} />
+        <div style={{ width: '100%', maxWidth: '26rem', margin: '0 auto 1.75rem', height: '8px', background: 'rgba(34,85,14,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: '9999px', background: 'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', boxShadow: '0 0 14px rgba(34,85,14,0.35)', animation: `genFill80 ${duration}s cubic-bezier(0.22,1,0.36,1) forwards` }} />
         </div>
 
         {/* Countdown (free) or bouncing dots (premium) */}
         {isPremium ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
-            <span style={{ fontSize: '1.0625rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Crafting your questions</span>
+            <span style={{ fontSize: '1.0625rem', color: 'rgb(26,26,20)', fontWeight: 600 }}>Crafting your questions</span>
             <span style={{ display: 'inline-flex', gap: '0.3rem' }}>
               {[0, 1, 2].map(i => (
-                <span key={i} style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: 'rgb(122,182,72)', animation: `genBounce 1.2s ease-in-out ${i * 0.15}s infinite` }} />
+                <span key={i} style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: 'rgb(34,85,14)', animation: `genBounce 1.2s ease-in-out ${i * 0.15}s infinite` }} />
               ))}
             </span>
           </div>
         ) : (
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '3.75rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{countdown}</div>
-            <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.5rem' }}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '3.75rem', fontWeight: 800, color: 'rgb(34,85,14)', lineHeight: 1 }}>{countdown}</div>
+            <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', marginTop: '0.5rem' }}>
               Generating your {subject ? `${subject} ` : ''}{topic || 'study'} content...
             </p>
           </div>
@@ -940,7 +940,7 @@ function LoadingScreen({ isPremium, subject, topic }: { outputType: OutputType; 
           <span style={{ width: '1.5rem', height: '1.5rem', borderRadius: '0.4rem', background: 'rgb(34,85,14)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
             <BookOpen style={{ width: '0.9rem', height: '0.9rem', color: 'white' }} strokeWidth={2.5} />
           </span>
-          <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1rem', color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>AceForge AI</span>
+          <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1rem', color: 'rgb(26,26,20)', letterSpacing: '0.02em' }}>AceForge AI</span>
         </div>
       </div>
 

@@ -30,6 +30,8 @@ export default function QuestionsClient({ session, isPremium = false }: Props) {
   const [showFireBanner, setShowFireBanner] = useState(false)
   const [xpLoading, setXpLoading] = useState(false)
   const [topicAlreadyEarned, setTopicAlreadyEarned] = useState(false)
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('left')
+  const [animating, setAnimating] = useState(false)
   const floatingIdRef = useRef(0)
   const router = useRouter()
 
@@ -167,13 +169,21 @@ else spawnFloatingXP(1)
 
   function next() {
     if (current < total - 1) {
-      setCurrent(c => c + 1)
+      setSlideDir('left')
+      setAnimating(true)
+      setTimeout(() => { setCurrent(c => c + 1); setAnimating(false) }, 200)
     } else {
       handleFinish(answers)
     }
   }
 
-  function prev() { if (current > 0) setCurrent(c => c - 1) }
+  function prev() {
+    if (current > 0) {
+      setSlideDir('right')
+      setAnimating(true)
+      setTimeout(() => { setCurrent(c => c - 1); setAnimating(false) }, 200)
+    }
+  }
 
   if (xpResult && showSummary) return (
     <>
@@ -209,7 +219,7 @@ else spawnFloatingXP(1)
   if (!q) return <div style={{ paddingTop:'6rem', textAlign:'center', color:'var(--af-text-muted)' }}>No questions found.</div>
 
   return (
-    <div className="animate-fade-in" style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative' }}>
+    <div className="animate-fade-in" style={{ paddingTop:'5rem', minHeight:'100vh', position:'relative', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
 
       {/* Floating XP animations */}
       {floatingXPs.map(f => (
@@ -221,29 +231,38 @@ else spawnFloatingXP(1)
           pointerEvents:'none',
           fontFamily:'Syne, sans-serif',
           fontWeight:800,
-          fontSize:'1.25rem',
-          color: f.amount >= 15 ? 'rgb(34,85,14)' : f.amount >= 5 ? 'rgb(74,122,40)' : 'var(--af-text-muted)',
-          animation:'floatXP 1.4s ease-out forwards',
-          textShadow:'0 2px 8px rgba(0,0,0,0.15)',
+          fontSize: f.amount >= 15 ? '2rem' : '1.75rem',
+          color: f.amount >= 15 ? 'rgb(232,160,32)' : f.amount >= 5 ? 'rgb(34,85,14)' : 'rgb(74,122,40)',
+          animation:'floatXP 2.2s ease-out forwards',
+          textShadow:'0 2px 12px rgba(232,160,32,0.4)',
         }}>
           +{f.amount} XP
         </div>
       ))}
 
-      {/* On fire banner */}
+      {/* On fire banner + emoji rain */}
       {showFireBanner && (
-        <div style={{
-          position:'fixed', top:'5rem', left:'50%', transform:'translateX(-50%)',
-          zIndex:9998, background:'linear-gradient(135deg, rgb(34,85,14), rgb(74,122,40))',
-          color:'white', padding:'0.625rem 1.5rem', borderRadius:'9999px',
-          fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'1rem',
-          boxShadow:'0 4px 20px rgba(34,85,14,0.4)',
-          animation:'fireBanner 0.4s cubic-bezier(0.16,1,0.3,1)',
-          display:'flex', alignItems:'center', gap:'0.5rem',
-          whiteSpace:'nowrap',
-        }}>
-          🔥 On fire! {consecutiveCorrect} in a row!
-        </div>
+        <>
+          <div style={{
+            position:'fixed', top:'5rem', left:'50%', transform:'translateX(-50%)',
+            zIndex:9998, background:'linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12), rgb(220,38,38))',
+            color:'white', padding:'0.875rem 2rem', borderRadius:'9999px',
+            fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.25rem',
+            boxShadow:'0 8px 30px rgba(234,88,12,0.5)',
+            animation:'fireBanner 0.5s cubic-bezier(0.16,1,0.3,1), firePulse 1s ease-in-out infinite',
+            display:'flex', alignItems:'center', gap:'0.5rem',
+            whiteSpace:'nowrap',
+          }}>
+            🔥 On fire! {consecutiveCorrect} in a row! 🔥
+          </div>
+          <div aria-hidden style={{ position:'fixed', inset:0, zIndex:9997, pointerEvents:'none', overflow:'hidden' }}>
+            {Array.from({ length: 14 }, (_, i) => (
+              <span key={i} style={{ position:'absolute', top:'-2rem', left:`${(i * 7 + 3) % 100}%`, fontSize:`${1 + (i % 3) * 0.5}rem`, animation:`fireRain ${2 + (i % 4) * 0.4}s linear ${(i % 7) * 0.12}s infinite` }}>
+                {['🔥', '⭐', '✨'][i % 3]}
+              </span>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Loading overlay */}
@@ -289,17 +308,23 @@ else spawnFloatingXP(1)
           </div>
         </div>
 
-        <div className="card" style={{ padding:'2rem', marginBottom:'1.5rem' }}>
-          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
-            Question {current + 1} of {total} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
-          </p>
+        <div key={current} className={`card ${animating ? (slideDir === 'left' ? 'q-out-left' : 'q-out-right') : (slideDir === 'left' ? 'q-slide-right' : 'q-slide-left')}`} style={{ padding:'2.5rem', marginBottom:'1.5rem', boxShadow:'0 8px 32px rgba(34,85,14,0.1)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'0.625rem', marginBottom:'0.75rem', flexWrap:'wrap' }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:'0.4rem', padding:'0.35rem 0.875rem', borderRadius:'9999px', background:'rgba(34,85,14,0.08)', color:'rgb(34,85,14)', fontWeight:700, fontSize:'0.8125rem', fontFamily:'Syne, sans-serif' }}>
+              Question {current + 1} of {total}
+            </span>
+            <span style={{ fontSize:'0.8125rem', color:'var(--af-text-muted)', fontWeight:600 }}>{q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}</span>
+          </div>
+          <div style={{ width:'100%', height:'5px', background:'rgba(34,85,14,0.1)', borderRadius:'9999px', overflow:'hidden', marginBottom:'1.75rem' }}>
+            <div style={{ height:'100%', background:'linear-gradient(90deg, rgb(34,85,14), rgb(74,122,40))', borderRadius:'9999px', width:`${((current + 1) / total) * 100}%`, transition:'width 0.3s' }} />
+          </div>
          {(q as any).passage && (
             <div style={{ padding:'1rem 1.25rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)', marginBottom:'1.25rem', borderLeft:'3px solid rgb(34,85,14)' }}>
               <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.5rem' }}>Passage</p>
               <p style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.8 }}>{(q as any).passage}</p>
             </div>
           )}
-          <MathText text={q.question} style={{ fontSize:'1.125rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, marginBottom:'1.5rem', display:'block' }} />
+          <MathText text={q.question} style={{ fontSize:'1.25rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.8, marginBottom:'1.75rem', display:'block' }} />
 
           {q.type === 'mc' ? (
             <MCOptions
@@ -321,14 +346,14 @@ else spawnFloatingXP(1)
         </div>
 
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.75rem' }}>
-          <button onClick={prev} disabled={current === 0} className="btn-secondary" style={{ padding:'0.625rem 1.25rem' }}>
-            <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Previous
+          <button onClick={prev} disabled={current === 0} className="btn-secondary" style={{ padding:'0.875rem 1.5rem', fontSize:'0.9375rem' }}>
+            <ArrowLeft style={{ width:'1.125rem', height:'1.125rem' }} /> Previous
           </button>
           <button onClick={downloadPDF} className="btn-ghost" style={{ fontSize:'0.875rem' }}>
             <Download style={{ width:'1rem', height:'1rem' }} /> Save PDF
           </button>
-          <button onClick={next} disabled={!answers[current]} className="btn-primary" style={{ padding:'0.625rem 1.25rem' }}>
-            {current === total - 1 ? 'See Results' : 'Next'} <ArrowRight style={{ width:'1rem', height:'1rem' }} />
+          <button onClick={next} disabled={!answers[current]} className={`btn-primary ${answers[current] ? 'q-next-pulse' : ''}`} style={{ padding:'0.875rem 1.75rem', fontSize:'0.9375rem' }}>
+            {current === total - 1 ? 'See Results' : 'Next'} <ArrowRight style={{ width:'1.125rem', height:'1.125rem' }} />
           </button>
         </div>
       </div>
@@ -336,14 +361,26 @@ else spawnFloatingXP(1)
       <style>{`
         @keyframes floatXP {
           0% { opacity:0; transform:translateY(0) scale(0.8); }
-          20% { opacity:1; transform:translateY(-8px) scale(1.1); }
-          80% { opacity:1; transform:translateY(-40px) scale(1); }
-          100% { opacity:0; transform:translateY(-60px) scale(0.9); }
+          15% { opacity:1; transform:translateY(-10px) scale(1.15); }
+          80% { opacity:1; transform:translateY(-70px) scale(1); }
+          100% { opacity:0; transform:translateY(-110px) scale(0.9); }
         }
         @keyframes fireBanner {
           from { opacity:0; transform:translateX(-50%) translateY(-10px) scale(0.9); }
           to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
         }
+        @keyframes firePulse { 0%,100% { box-shadow:0 8px 30px rgba(234,88,12,0.5); } 50% { box-shadow:0 8px 44px rgba(234,88,12,0.8); } }
+        @keyframes fireRain { 0% { transform:translateY(0) rotate(0deg); opacity:0; } 10% { opacity:1; } 100% { transform:translateY(105vh) rotate(360deg); opacity:0; } }
+        @keyframes slideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes slideInLeft { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes slideOutLeft { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-40px); } }
+        @keyframes slideOutRight { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(40px); } }
+        .q-slide-right { animation: slideInRight 0.25s ease both; }
+        .q-slide-left { animation: slideInLeft 0.25s ease both; }
+        .q-out-left { animation: slideOutLeft 0.2s ease both; }
+        .q-out-right { animation: slideOutRight 0.2s ease both; }
+        @keyframes qNextPulse { 0%,100% { box-shadow:0 4px 16px rgba(34,85,14,0.25); } 50% { box-shadow:0 6px 26px rgba(34,85,14,0.5); } }
+        .q-next-pulse { animation: qNextPulse 1.6s ease-in-out infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
       `}</style>
     </div>
@@ -361,30 +398,34 @@ function MCOptions({ question, answered, onSelect }: {
         const letter = option.charAt(0)
         const isSelected = answered?.answer === letter
         const isCorrect = letter === question.correctAnswer
-        let cls = 'mc-option'
+
+        let border = '2px solid rgba(34,85,14,0.18)'
+        let bg = 'var(--af-card)'
+        let letterBg = 'transparent'
+        let letterColor = 'rgb(34,85,14)'
+        let letterBorder = '2px solid rgba(34,85,14,0.3)'
+        let textColor = 'var(--af-text)'
         if (answered) {
-          if (isCorrect) cls += ' mc-option-correct'
-          else if (isSelected) cls += ' mc-option-wrong'
-          else cls += ' mc-option-disabled'
+          if (isSelected && isCorrect) { border = '2px solid rgb(59,109,17)'; bg = 'rgb(34,85,14)'; letterBg = 'white'; letterColor = 'rgb(34,85,14)'; letterBorder = '2px solid white'; textColor = 'white' }
+          else if (isSelected && !isCorrect) { border = '2px solid rgb(163,45,45)'; bg = 'rgb(252,235,235)'; letterColor = 'rgb(163,45,45)'; letterBorder = '2px solid rgb(163,45,45)' }
+          else if (isCorrect) { border = '2px solid rgb(59,109,17)'; bg = 'rgb(234,243,222)'; letterColor = 'rgb(59,109,17)'; letterBorder = '2px solid rgb(59,109,17)' }
+          else { bg = 'var(--af-card)'; textColor = 'var(--af-text-muted)'; border = '2px solid var(--af-border)'; letterColor = 'var(--af-text-muted)'; letterBorder = '2px solid var(--af-border)' }
         }
+
         return (
-          <button key={letter} onClick={() => onSelect(letter)} className={cls}
-            style={{ width:'100%', background:'none', textAlign:'left' }}>
-            <div style={{
-              width:'1.75rem', height:'1.75rem', borderRadius:'50%', flexShrink:0,
-              border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:'0.8125rem', fontWeight:700,
-              color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'var(--af-text-muted)') : 'rgb(34,85,14)'
-            }}>
+          <button key={letter} onClick={() => onSelect(letter)} disabled={!!answered} className={!answered ? 'q-mc-opt' : ''}
+            style={{ width:'100%', display:'flex', alignItems:'center', gap:'0.875rem', padding:'1rem 1.25rem', borderRadius:'0.875rem', border, background:bg, cursor: answered ? 'default' : 'pointer', textAlign:'left', transition:'all 0.15s ease' }}>
+            <span style={{ width:'2rem', height:'2rem', borderRadius:'50%', flexShrink:0, border:letterBorder, background:letterBg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.9375rem', fontWeight:800, color:letterColor }}>
               {letter}
-            </div>
-            <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'var(--af-text)', lineHeight:1.5 }} />
-            {answered && isCorrect && <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
-            {answered && isSelected && !isCorrect && <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
+            </span>
+            <MathText text={option.substring(3)} style={{ fontSize:'1rem', color:textColor, lineHeight:1.5, flex:1 }} />
+            {answered && isCorrect && <CheckCircle style={{ width:'1.25rem', height:'1.25rem', color: isSelected ? 'white' : 'rgb(59,109,17)', flexShrink:0 }} />}
+            {answered && isSelected && !isCorrect && <XCircle style={{ width:'1.25rem', height:'1.25rem', color:'rgb(163,45,45)', flexShrink:0 }} />}
           </button>
         )
       })}
+
+      <style>{`.q-mc-opt:hover { background: rgba(34,85,14,0.05) !important; border-color: rgba(34,85,14,0.45) !important; transform: translateX(3px); }`}</style>
 
       {answered && (
         <div style={{
@@ -431,12 +472,17 @@ function FRInput({ question, value, onChange, onSubmit, loading, feedback, answe
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-      <textarea value={value} onChange={e => onChange(e.target.value)} disabled={answered}
-        placeholder="Write your answer here..." rows={5}
-        className="input" style={{ resize:'vertical', lineHeight:1.6 }} />
+      <div>
+        <textarea value={value} onChange={e => onChange(e.target.value)} disabled={answered}
+          placeholder="Write your answer here..." rows={6}
+          style={{ width:'100%', boxSizing:'border-box', resize:'vertical', padding:'0.5rem 1rem', fontSize:'1rem', color:'var(--af-text)', lineHeight:'2rem', border:'1.5px solid rgba(34,85,14,0.2)', borderRadius:'0.875rem', outline:'none', background:'repeating-linear-gradient(var(--af-card), var(--af-card) calc(2rem - 1px), rgba(34,85,14,0.15) calc(2rem - 1px), rgba(34,85,14,0.15) 2rem)', backgroundAttachment:'local' }} />
+        <p style={{ fontSize:'0.75rem', color:'var(--af-text-muted)', marginTop:'0.375rem', textAlign:'right' }}>
+          {value.trim() ? value.trim().split(/\s+/).length : 0} words
+        </p>
+      </div>
       {!answered && (
-        <button onClick={onSubmit} disabled={loading || !value.trim()} className="btn-primary" style={{ alignSelf:'flex-start' }}>
-          {loading ? 'Checking...' : 'Check My Answer'}
+        <button onClick={onSubmit} disabled={loading || !value.trim()} className={`btn-primary ${value.trim() && !loading ? 'q-next-pulse' : ''}`} style={{ width:'100%', justifyContent:'center', padding:'0.875rem' }}>
+          {loading ? 'Checking...' : 'Submit Answer'}
         </button>
       )}
       {feedback && colors && (

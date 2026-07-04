@@ -78,24 +78,24 @@ export default function WorksheetClient({ session }: Props) {
           <ArrowLeft style={{ width:'1rem', height:'1rem' }} /> Back to dashboard
         </button>
 
-        {/* Header — paper card with left accent bar + prominent print button */}
-        <div className="card" style={{ padding:'1.75rem', marginBottom:'2rem', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1.25rem', flexWrap:'wrap', boxShadow:'0 4px 24px rgba(34,85,14,0.08)' }}>
-          <div style={{ display:'flex', gap:'1rem', flex:1, minWidth:'240px' }}>
-            <div style={{ width:'6px', borderRadius:'9999px', alignSelf:'stretch', minHeight:'4rem', background:'linear-gradient(rgb(34,85,14), rgb(74,122,40))', flexShrink:0 }} />
-            <div>
-              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.625rem', flexWrap:'wrap' }}>
-                <span className="badge badge-primary">{session.subject}</span>
-                <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'var(--af-text-muted)' }}>{session.grade}</span>
-              </div>
-              <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'var(--af-text)', marginBottom:'0.25rem', lineHeight:1.15 }}>
-                {session.topic}
-              </h1>
-              <p style={{ color:'var(--af-text-muted)', fontSize:'0.9375rem' }}>📄 Study Worksheet</p>
+        {/* Fixed print button — top-right corner */}
+        <button onClick={downloadPDF} className="btn-primary ws-print-fixed" style={{ position:'fixed', top:'5.25rem', right:'1.5rem', zIndex:40, boxShadow:'0 6px 22px rgba(34,85,14,0.35)' }}>
+          <Download style={{ width:'1rem', height:'1rem' }} /> Print
+        </button>
+
+        {/* Decorative header — large subject, topic below, colored accent */}
+        <div className="card" style={{ padding:'2rem', marginBottom:'2.5rem', display:'flex', gap:'1.25rem', boxShadow:'0 4px 24px rgba(34,85,14,0.08)', overflow:'hidden', position:'relative' }}>
+          <div style={{ position:'absolute', top:0, left:0, bottom:0, width:'8px', background:'linear-gradient(rgb(34,85,14), rgb(74,122,40))' }} />
+          <div style={{ flex:1, paddingLeft:'0.75rem' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.625rem', flexWrap:'wrap' }}>
+              <span className="badge" style={{ background:'rgba(34,85,14,0.06)', color:'var(--af-text-muted)' }}>{session.grade}</span>
+              <span style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.08em' }}>📄 Study Worksheet</span>
             </div>
+            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2.75rem', fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.25rem', lineHeight:1.05 }}>
+              {session.subject}
+            </h1>
+            <p style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.375rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.3 }}>{session.topic}</p>
           </div>
-          <button onClick={downloadPDF} className="btn-primary" style={{ flexShrink:0 }}>
-            <Download style={{ width:'1rem', height:'1rem' }} /> Print / Download
-          </button>
         </div>
 
         {/* 1. Introduction */}
@@ -208,8 +208,10 @@ export default function WorksheetClient({ session }: Props) {
             {showKey && (
               <div className="ws-key" style={{ marginTop:'1rem', display:'flex', flexDirection:'column', gap:'0.75rem' }}>
                 {worksheet.practiceQuestions.map((q, i) => (
-                  <div key={i} style={{ padding:'0.75rem 1rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.03)', border:'1px solid rgba(34,85,14,0.1)' }}>
-                    <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', marginBottom:'0.375rem' }}>Question {i + 1}</p>
+                  <div key={i} style={{ display:'flex', gap:'0.625rem', padding:'0.875rem 1rem', borderRadius:'0.75rem', background:'rgb(234,243,222)', border:'1px solid rgba(59,109,17,0.2)' }}>
+                    <CheckCircle style={{ width:'1.125rem', height:'1.125rem', color:'rgb(59,109,17)', flexShrink:0, marginTop:'0.125rem' }} />
+                    <div style={{ flex:1 }}>
+                      <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'rgb(59,109,17)', marginBottom:'0.375rem' }}>Question {i + 1}</p>
                     {q.type === 'mc' ? (
                       <p style={{ fontSize:'0.9rem', color:'var(--af-text)', lineHeight:1.6 }}>
                         <strong>Answer: {(q as MCQuestion).correctAnswer}</strong> — <MathText text={(q as MCQuestion).explanation} />
@@ -217,6 +219,7 @@ export default function WorksheetClient({ session }: Props) {
                     ) : (
                       <MathText text={(q as FRQuestion).modelAnswer} style={{ fontSize:'0.9rem', color:'var(--af-text)', lineHeight:1.6, display:'block' }} />
                     )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -284,14 +287,21 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
   }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'3rem' }}>
       {questions.map((q, i) => (
         <div key={i}>
-          <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--af-text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem' }}>
-            Question {i + 1} · {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
-          </p>
-          <MathText text={q.question} style={{ fontSize:'1rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.6, marginBottom:'1rem', display:'block' }} />
+          {/* Question header — large circular badge */}
+          <div style={{ display:'flex', alignItems:'flex-start', gap:'1rem', marginBottom:'1rem' }}>
+            <div style={{ width:'40px', height:'40px', borderRadius:'50%', background:'linear-gradient(135deg, rgb(34,85,14), rgb(74,122,40))', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.0625rem', flexShrink:0, boxShadow:'0 3px 10px rgba(34,85,14,0.25)' }}>{i + 1}</div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'0.375rem' }}>
+                {q.type === 'mc' ? 'Multiple Choice' : 'Free Response'}
+              </p>
+              <MathText text={q.question} style={{ fontSize:'1.0625rem', fontWeight:600, color:'var(--af-text)', lineHeight:1.7, display:'block' }} />
+            </div>
+          </div>
 
+          <div style={{ paddingLeft:'3.5rem' }}>
           {q.type === 'mc' ? (
             <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
               {(q as MCQuestion).options.map(option => {
@@ -308,12 +318,12 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
                 return (
                   <button key={letter} onClick={() => selectMC(i, q as MCQuestion, letter)}
                     className={cls} style={{ width:'100%', background:'none', textAlign:'left' }}>
-                    <div style={{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.75rem', fontWeight:700, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'var(--af-text-muted)') : 'rgb(34,85,14)' }}>
+                    <div style={{ width:'2.25rem', height:'2.25rem', borderRadius:'50%', border:`2px solid ${answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)') : 'rgba(34,85,14,0.35)'}`, background: answered && isCorrect ? 'rgba(59,109,17,0.08)' : answered && isSelected ? 'rgba(163,45,45,0.06)' : 'rgba(34,85,14,0.03)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.9375rem', fontWeight:800, color: answered ? (isCorrect ? 'rgb(59,109,17)' : isSelected ? 'rgb(163,45,45)' : 'var(--af-text-muted)') : 'rgb(34,85,14)' }}>
                       {letter}
                     </div>
                    <MathText text={option.substring(3)} style={{ fontSize:'0.9375rem', color:'var(--af-text)' }} />
-                    {answered && isCorrect && <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
-                    {answered && isSelected && !isCorrect && <XCircle style={{ width:'1rem', height:'1rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
+                    {answered && isCorrect && <CheckCircle style={{ width:'1.125rem', height:'1.125rem', color:'rgb(59,109,17)', marginLeft:'auto', flexShrink:0 }} />}
+                    {answered && isSelected && !isCorrect && <XCircle style={{ width:'1.125rem', height:'1.125rem', color:'rgb(163,45,45)', marginLeft:'auto', flexShrink:0 }} />}
                   </button>
                 )
               })}
@@ -331,8 +341,8 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
               <textarea value={frInputs[i] ?? ''} onChange={e => setFrInputs(prev => ({ ...prev, [i]: e.target.value }))}
-                disabled={!!answers[i]} placeholder="Write your answer here..." rows={4}
-                className="input" style={{ resize:'vertical', lineHeight:1.6 }} />
+                disabled={!!answers[i]} placeholder="Write your answer here..." rows={8}
+                style={{ width:'100%', boxSizing:'border-box', resize:'vertical', padding:'0.5rem 1rem', fontSize:'1rem', color:'var(--af-text)', lineHeight:'2rem', border:'1.5px solid rgba(34,85,14,0.2)', borderRadius:'0.75rem', outline:'none', background:'repeating-linear-gradient(var(--af-card), var(--af-card) calc(2rem - 1px), rgba(34,85,14,0.15) calc(2rem - 1px), rgba(34,85,14,0.15) 2rem)', backgroundAttachment:'local' }} />
               {!answers[i] && (
                 <button onClick={() => submitFR(i, q as FRQuestion)}
                   disabled={frLoading[i] || !frInputs[i]?.trim()} className="btn-primary" style={{ alignSelf:'flex-start' }}>
@@ -347,9 +357,7 @@ function PracticeQuestions({ questions, session }: { questions: Question[]; sess
               )}
             </div>
           )}
-          {i < questions.length - 1 && (
-            <div style={{ height:'1px', background:'var(--af-border)', marginTop:'1.5rem' }} />
-          )}
+          </div>
         </div>
       ))}
     </div>
