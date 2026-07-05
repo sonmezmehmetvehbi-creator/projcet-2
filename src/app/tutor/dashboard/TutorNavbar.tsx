@@ -17,6 +17,16 @@ export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props)
   const pathname = usePathname()
   const { theme, toggle } = useTutorTheme()
   const isDark = theme === 'dark'
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const rating = Number(tutorProfile?.rating ?? 0)
 
   const accent = isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)'
   const navBg = isDark ? 'rgba(20,20,40,0.97)' : 'rgba(255,255,255,0.97)'
@@ -59,8 +69,11 @@ export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props)
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
       background: navBg,
       backdropFilter: 'blur(12px)',
-      borderBottom: `1px solid ${navBorder}`,
-      boxShadow: isDark ? '0 1px 16px rgba(0,0,0,0.3)' : '0 1px 12px rgba(234,88,12,0.08)',
+      borderBottom: `1px solid ${scrolled ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(234,88,12,0.2)') : navBorder}`,
+      boxShadow: scrolled
+        ? (isDark ? '0 6px 28px rgba(0,0,0,0.5)' : '0 6px 24px rgba(234,88,12,0.14)')
+        : (isDark ? '0 1px 16px rgba(0,0,0,0.3)' : '0 1px 12px rgba(234,88,12,0.08)'),
+      transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
     }}>
       <div style={{ maxWidth: '80rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', padding: '0 1.5rem', gap: '1rem' }}>
 
@@ -81,10 +94,13 @@ export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props)
             const isActive = pathname === link.href
             return (
               <Link key={link.href} href={link.href}
-                style={{ padding: '0.5rem 0.875rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: isActive ? 600 : 400, color: isActive ? textColor : textMuted, textDecoration: 'none', transition: 'all 0.2s', whiteSpace: 'nowrap', background: isActive ? activeBg : 'transparent' }}
+                style={{ position: 'relative', padding: '0.5rem 0.875rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: isActive ? 600 : 400, color: isActive ? textColor : textMuted, textDecoration: 'none', transition: 'all 0.2s', whiteSpace: 'nowrap', background: isActive ? activeBg : 'transparent' }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(26,26,20,0.85)' }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = textMuted }}>
                 {link.label}
+                {isActive && (
+                  <span style={{ position: 'absolute', left: '50%', bottom: '-2px', transform: 'translateX(-50%)', width: '1.5rem', height: '3px', borderRadius: '9999px', background: accent }} />
+                )}
               </Link>
             )
           })}
@@ -122,6 +138,14 @@ export default function TutorNavbar({ profile, tutorProfile, avatarUrl }: Props)
                 <div style={{ padding: '0.875rem 1rem', borderBottom: `1px solid ${dropdownDivider}` }}>
                   <p style={{ fontSize: '0.875rem', fontWeight: 600, color: textColor, marginBottom: '0.125rem' }}>{profile?.display_name}</p>
                   <p style={{ fontSize: '0.75rem', color: textFaint }}>{profile?.email}</p>
+                  {rating > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.8125rem', letterSpacing: '0.05em', color: 'rgb(251,191,36)' }}>
+                        {'★'.repeat(Math.round(rating))}<span style={{ color: textFaint }}>{'★'.repeat(Math.max(0, 5 - Math.round(rating)))}</span>
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: accent }}>{rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ padding: '0.5rem 0' }}>
                   <Link href="/tutoring/legal" onClick={() => setOpen(false)}

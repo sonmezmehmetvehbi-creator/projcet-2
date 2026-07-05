@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Edit, Save, X, Plus, Search, ChevronDown } from 'lucide-react'
+import { Edit, Save, X, Plus, Search, ChevronDown, DollarSign, TrendingUp, Clock, CheckCircle, Star, Calendar } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useTutorTheme } from './TutorThemeContext'
@@ -482,9 +482,79 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
     { id: 'profile', label: '👤 My Profile' },
   ] as const
 
+  const sectionHeader: React.CSSProperties = { fontFamily: 'Syne, sans-serif', fontSize: '0.8125rem', fontWeight: 800, color: text2, textTransform: 'uppercase', letterSpacing: '0.08em' }
+  const sectionDivider = <div style={{ height: '1px', background: border2, margin: '0.25rem 0' }} />
+
+  // Education/degrees editor — extracted so it can live in the Education section
+  // of the profile card (below the Public Profile group).
+  const educationBlock = editingProfile ? (
+    <div>
+      {degrees.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {degrees.map((d, i) => (
+            <div key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
+              <span style={{ fontSize: '0.875rem', color: text2 }}>🎓 {formatDegree(d)}</span>
+              <button type="button" onClick={() => removeDegree(i)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: dangerText, display: 'flex', flexShrink: 0 }}>
+                <X style={{ width: '1rem', height: '1rem' }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!showDegreeForm ? (
+        <button type="button" onClick={() => setShowDegreeForm(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+          <Plus style={{ width: '0.875rem', height: '0.875rem' }} /> Add Degree
+        </button>
+      ) : (
+        <div style={{ padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border3}` }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.625rem' }}>
+            <select value={newDegreeLevel} onChange={e => setNewDegreeLevel(e.target.value)}
+              style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}>
+              <option value="" style={{ background: optionBg }}>Education level</option>
+              {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
+                <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
+              ))}
+            </select>
+            <input value={newDegreeField} onChange={e => setNewDegreeField(e.target.value)} placeholder="Field of Study, e.g. Computer Science"
+              style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+            <input value={newDegreeInstitution} onChange={e => setNewDegreeInstitution(e.target.value)} placeholder="Institution, e.g. MIT"
+              style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="button" onClick={addDegree}
+              style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+              Add
+            </button>
+            <button type="button" onClick={() => { setShowDegreeForm(false); setNewDegreeLevel(''); setNewDegreeField(''); setNewDegreeInstitution('') }}
+              style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: 'transparent', border: `1px solid ${border4}`, color: text3, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : degrees.length > 0 ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {degrees.map((d, i) => (
+        <p key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
+          🎓 {formatDegree(d)}
+        </p>
+      ))}
+    </div>
+  ) : (
+    <p style={{ fontSize: '0.875rem', color: text5 }}>No education added yet</p>
+  )
+
   return (
     <div className="tutor-dash" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: pageBg }}>
-      <style>{`.tutor-dash input::placeholder, .tutor-dash textarea::placeholder { color: ${text4}; opacity: 1; }`}</style>
+      <style>{`
+        .tutor-dash input::placeholder, .tutor-dash textarea::placeholder { color: ${text4}; opacity: 1; }
+        @keyframes sessionFade { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        .session-expand { animation: sessionFade 0.25s ease both; }
+        .tutor-stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+      `}</style>
 
       <TutorNavbar profile={profile} tutorProfile={tutorProfile} avatarUrl={avatarUrl} />
 
@@ -599,19 +669,25 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
         {/* OVERVIEW */}
         {tab === 'overview' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
-                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, emoji: '💰', color: posText, bg: 'rgba(34,197,94,0.1)' },
-                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, emoji: '📈', color: accent, bg: accentBg },
-                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, emoji: '⏳', color: warnText, bg: 'rgba(234,179,8,0.1)' },
-                { label: 'Sessions Done', value: completed.length, emoji: '✅', color: posText, bg: 'rgba(34,197,94,0.1)' },
-                { label: 'Avg Rating', value: avgRating ? `${avgRating}⭐` : '—', emoji: '⭐', color: warnText, bg: 'rgba(234,179,8,0.1)' },
-                { label: 'Upcoming', value: upcoming.length, emoji: '📅', color: accent, bg: accentBg },
+                { label: 'Total Earned', value: `$${totalEarned.toFixed(2)}`, Icon: DollarSign, color: posText, rgb: '34,197,94' },
+                { label: 'This Week', value: `$${weeklyEarned.toFixed(2)}`, Icon: TrendingUp, color: accent, rgb: isDark ? '99,102,241' : '234,88,12' },
+                { label: 'Pending Payout', value: `$${pendingPayout.toFixed(2)}`, Icon: Clock, color: warnText, rgb: '234,179,8' },
+                { label: 'Sessions Done', value: completed.length, Icon: CheckCircle, color: posText, rgb: '34,197,94' },
+                { label: 'Avg Rating', value: avgRating ? `${avgRating}★` : '—', Icon: Star, color: warnText, rgb: '234,179,8' },
+                { label: 'Upcoming', value: upcoming.length, Icon: Calendar, color: accent, rgb: isDark ? '99,102,241' : '234,88,12' },
               ].map(s => (
-                <div key={s.label} style={{ padding: '1.25rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>{s.emoji}</div>
-                  <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: s.color, marginBottom: '0.25rem' }}>{s.value}</div>
-                  <div style={{ fontSize: '0.75rem', color: text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+                <div key={s.label} className="tutor-stat-card"
+                  style={{ padding: '1.25rem', borderRadius: '1rem', background: `linear-gradient(135deg, rgba(${s.rgb},0.12), rgba(${s.rgb},0.03))`, border: `1px solid rgba(${s.rgb},0.25)` }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 10px 28px rgba(${s.rgb},0.25)` }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '0.875rem', background: `rgba(${s.rgb},0.18)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.875rem' }}>
+                    <s.Icon style={{ width: '1.375rem', height: '1.375rem', color: s.color }} strokeWidth={2.25} />
+                  </div>
+                  <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '2rem', fontWeight: 800, color: text1, lineHeight: 1, marginBottom: '0.375rem' }}>{s.value}</div>
+                  <div style={{ fontSize: '0.75rem', color: text3, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+                  <div style={{ fontSize: '0.6875rem', color: text4, marginTop: '0.375rem' }}>+0% this week</div>
                 </div>
               ))}
             </div>
@@ -624,18 +700,22 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {pending.map(s => (
                     <div key={s.id} style={{ padding: '1.25rem', borderRadius: '0.875rem', background: cardBg3, border: '1px solid rgba(234,179,8,0.2)' }}>
-                      <div onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSession === s.id ? '1rem' : '0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div>
+                      <div onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+                          <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, flexShrink: 0 }}>
+                            {(s.profiles?.display_name?.[0] ?? 'S').toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
                             <p style={{ fontWeight: 700, color: text1 }}>{s.profiles?.display_name ?? 'Student'}</p>
                             <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
                           </div>
-                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: warnText }}>⏳ Pending</span>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(234,179,8,0.15)', color: warnText, flexShrink: 0 }}>⏳ Pending</span>
                         </div>
-                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, flexShrink: 0, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                       </div>
 
-                      <div style={{ overflow: 'hidden', maxHeight: expandedSession === s.id ? '1000px' : '0', transition: 'max-height 0.3s ease', marginTop: expandedSession === s.id ? '1rem' : '0' }}>
+                      {expandedSession === s.id && (
+                      <div className="session-expand" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${border3}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                           <div style={{ flex: 1 }}>
 
@@ -709,6 +789,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         </div>
                         </div>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -722,13 +803,19 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   {upcoming.map(s => (
                     <div key={s.id} style={{ padding: '1rem', borderRadius: '0.875rem', background: cardBg, border: `1px solid ${accentBorder2}` }}>
                       <div onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: '0.75rem' }}>
-                        <div>
-                          <p style={{ fontWeight: 600, color: text1, marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
-                          <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+                          <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: btnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, flexShrink: 0 }}>
+                            {(s.profiles?.display_name?.[0] ?? 'S').toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, color: text1, marginBottom: '0.25rem' }}>{s.profiles?.display_name ?? 'Student'}</p>
+                            <p style={{ fontSize: '0.875rem', color: text3 }}>{s.subject} · {new Date(s.scheduled_at).toLocaleString()} · {s.session_length} min</p>
+                          </div>
                         </div>
-                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <ChevronDown style={{ width: '1.25rem', height: '1.25rem', color: text3, flexShrink: 0, transform: expandedSession === s.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                       </div>
-                      <div style={{ overflow: 'hidden', maxHeight: expandedSession === s.id ? '1000px' : '0', transition: 'max-height 0.3s ease', marginTop: expandedSession === s.id ? '0.75rem' : '0' }}>
+                      {expandedSession === s.id && (
+                      <div className="session-expand" style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: `1px solid ${border2}` }}>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {s.meet_link && (
                           <a href={safeMeetLink(s.meet_link)} target="_blank" rel="noopener noreferrer"
@@ -746,6 +833,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                         </button>
                       </div>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -946,7 +1034,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 { label: 'Available Balance', value: `$${availableBalance.toFixed(2)}`, color: accent, bg: accentBg },
                 { label: 'Total Earned', value: `$${totalPaidBalance.toFixed(2)}`, color: posText, bg: 'rgba(34,197,94,0.1)' },
               ].map(s => (
-                <div key={s.label} style={{ padding: '1.5rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, textAlign: 'center' }}>
+                <div key={s.label} style={{ padding: '1.5rem', borderRadius: '1rem', background: s.bg, border: `1px solid ${s.color}33`, borderLeft: `4px solid ${s.color}` }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{s.label}</p>
                   <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '2.5rem', fontWeight: 800, color: s.color }}>{s.value}</p>
                 </div>
@@ -964,7 +1052,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
             {/* Earnings chart */}
             <div style={{ padding: '1.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}`, marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: text1 }}>Earnings Over Time</h2>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.125rem', fontWeight: 700, color: text1 }}>{earningsView === 'monthly' ? 'Last 6 Months' : 'Earnings Over Time'}</h2>
                 <div style={{ display: 'flex', gap: '0.375rem' }}>
                   {(['weekly', 'monthly'] as const).map(v => (
                     <button key={v} onClick={() => setEarningsView(v)}
@@ -978,7 +1066,7 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
               </div>
               <div style={{ width: '100%', height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={earningsView === 'weekly' ? earningsData.weekly : earningsData.monthly}>
+                  <BarChart data={earningsView === 'weekly' ? earningsData.weekly : earningsData.monthly.slice(-6)}>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'} vertical={false} />
                     <XAxis dataKey="label" tick={{ fill: text3, fontSize: 12 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: text3, fontSize: 12 }} axisLine={false} tickLine={false} width={40} />
@@ -996,21 +1084,35 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
               {payoutRows.length === 0 ? (
                 <p style={{ color: text4, textAlign: 'center', padding: '2rem' }}>No payouts yet</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {payoutRows.map(p => {
+                <div style={{ borderRadius: '0.75rem', overflow: 'hidden', border: `1px solid ${border2}` }}>
+                  {payoutRows.map((p, i) => {
                     const rs = p.request_status ?? 'pending'
                     const isPaid = rs === 'paid'
+                    const fmtDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    const methodMeta: Record<string, { icon: string; label: string }> = {
+                      venmo: { icon: '🅥', label: 'Venmo' }, paypal: { icon: '🅿', label: 'PayPal' }, zelle: { icon: '⚡', label: 'Zelle' },
+                    }
+                    const m = p.method ? methodMeta[String(p.method).toLowerCase()] : null
                     return (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', borderRadius: '0.75rem', background: isPaid ? 'rgba(34,197,94,0.06)' : 'rgba(234,179,8,0.06)', border: `1px solid ${isPaid ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}` }}>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: text1 }}>${p.amount.toFixed(2)}</p>
-                        <p style={{ fontSize: '0.8125rem', color: text4 }}>
-                          {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString()}` : rs === 'processing' ? `Requested ${p.requested_at ? new Date(p.requested_at).toLocaleDateString() : ''}` : 'Pending'}
-                        </p>
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', background: i % 2 ? 'rgba(255,255,255,0.02)' : 'transparent', borderTop: i === 0 ? 'none' : `1px solid ${border2}`, borderLeft: `3px solid ${isPaid ? posText : warnText}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: text1 }}>${p.amount.toFixed(2)}</p>
+                          <p style={{ fontSize: '0.8125rem', color: text4 }}>
+                            {p.paid_at ? `Paid ${fmtDate(p.paid_at)}` : rs === 'processing' ? `Requested ${p.requested_at ? fmtDate(p.requested_at) : ''}` : 'Pending'}
+                          </p>
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: isPaid ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: isPaid ? posText : warnText }}>
-                        {rs}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        {m && (
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: cardBg3, color: text3, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span aria-hidden>{m.icon}</span> {m.label}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.625rem', borderRadius: '9999px', background: isPaid ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)', color: isPaid ? posText : warnText }}>
+                          {rs}
+                        </span>
+                      </div>
                     </div>
                     )
                   })}
@@ -1071,26 +1173,10 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
 
         {/* PROFILE */}
         {tab === 'profile' && (
-          <div style={{ padding: '2rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: text1 }}>Your Public Profile</h2>
-              {!editingProfile ? (
-                <button onClick={() => setEditingProfile(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                  <Edit style={{ width: '0.875rem', height: '0.875rem' }} /> Edit Profile
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => setEditingProfile(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border4}`, color: text2, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                    <X style={{ width: '0.875rem', height: '0.875rem' }} /> Cancel
-                  </button>
-                  <button onClick={saveProfile} disabled={saving}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-                    <Save style={{ width: '0.875rem', height: '0.875rem' }} /> {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              )}
+          <div style={{ position: 'relative', padding: '2rem', paddingBottom: '5.5rem', borderRadius: '1rem', background: cardBg, border: `1px solid ${border1}` }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: text1, marginBottom: '0.375rem' }}>Your Public Profile</h2>
+              <p style={{ fontSize: '0.8125rem', color: text4, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>👁️ This information is visible to students</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1136,6 +1222,9 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 </div>
               </div>
 
+              {sectionDivider}
+              <p style={sectionHeader}>Public Profile</p>
+
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Bio</label>
                 {editingProfile ? (
@@ -1146,73 +1235,6 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   </p>
                 )}
               </div>
-
-              {/* Education / Degrees */}
-              {editingProfile ? (
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
-
-                  {/* Existing degrees */}
-                  {degrees.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                      {degrees.map((d, i) => (
-                        <div key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: cardBg2, border: `1px solid ${border2}` }}>
-                          <span style={{ fontSize: '0.875rem', color: text2 }}>🎓 {formatDegree(d)}</span>
-                          <button type="button" onClick={() => removeDegree(i)}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: dangerText, display: 'flex', flexShrink: 0 }}>
-                            <X style={{ width: '1rem', height: '1rem' }} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add Degree toggle + inline form */}
-                  {!showDegreeForm ? (
-                    <button type="button" onClick={() => setShowDegreeForm(true)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '0.625rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
-                      <Plus style={{ width: '0.875rem', height: '0.875rem' }} /> Add Degree
-                    </button>
-                  ) : (
-                    <div style={{ padding: '1rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border3}` }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.625rem', marginBottom: '0.625rem' }}>
-                        <select value={newDegreeLevel} onChange={e => setNewDegreeLevel(e.target.value)}
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}>
-                          <option value="" style={{ background: optionBg }}>Education level</option>
-                          {['High School Diploma', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD / Doctorate', 'Professional Degree'].map(opt => (
-                            <option key={opt} value={opt} style={{ background: optionBg }}>{opt}</option>
-                          ))}
-                        </select>
-                        <input value={newDegreeField} onChange={e => setNewDegreeField(e.target.value)} placeholder="Field of Study, e.g. Computer Science"
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
-                        <input value={newDegreeInstitution} onChange={e => setNewDegreeInstitution(e.target.value)} placeholder="Institution, e.g. MIT"
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', border: inputBorder, background: inputBg, color: text1, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button type="button" onClick={addDegree}
-                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
-                          Add
-                        </button>
-                        <button type="button" onClick={() => { setShowDegreeForm(false); setNewDegreeLevel(''); setNewDegreeField(''); setNewDegreeInstitution('') }}
-                          style={{ padding: '0.5rem 1.25rem', borderRadius: '0.625rem', background: 'transparent', border: `1px solid ${border4}`, color: text3, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : degrees.length > 0 ? (
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Education</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {degrees.map((d, i) => (
-                      <p key={`${d.level}|${d.field}|${d.institution}|${i}`} style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7, padding: '0.75rem 1rem', background: cardBg2, borderRadius: '0.75rem', border: `1px solid ${border2}` }}>
-                        🎓 {formatDegree(d)}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
 
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Subjects</label>
@@ -1312,6 +1334,11 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 )}
               </div>
 
+              {sectionDivider}
+              <p style={sectionHeader}>Education</p>
+              {educationBlock}
+
+              {sectionDivider}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: text3, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>Payment Info</label>
                 {editingProfile ? (
@@ -1341,6 +1368,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                 )}
               </div>
 
+              {sectionDivider}
+              <p style={sectionHeader}>Rate</p>
               <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)' }}>
                 <p style={{ fontSize: '0.875rem', color: text3, marginBottom: '0.25rem' }}>Your payout rate</p>
                 <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: posText }}>${tutorProfile?.hourly_rate ?? 30}/hr</p>
@@ -1371,6 +1400,27 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                   )
                 })()}
               </div>
+            </div>
+
+            {/* Sticky action footer */}
+            <div style={{ position: 'sticky', bottom: 0, marginLeft: '-2rem', marginRight: '-2rem', marginTop: '1.5rem', marginBottom: '-5.5rem', padding: '1rem 2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', background: isDark ? 'rgba(20,20,35,0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', borderTop: `1px solid ${border2}`, borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
+              {!editingProfile ? (
+                <button onClick={() => setEditingProfile(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem', borderRadius: '0.75rem', background: accentBg, border: `1px solid ${accentBorder}`, color: accent, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                  <Edit style={{ width: '0.875rem', height: '0.875rem' }} /> Edit Profile
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setEditingProfile(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', borderRadius: '0.75rem', background: cardBg3, border: `1px solid ${border4}`, color: text2, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <X style={{ width: '0.875rem', height: '0.875rem' }} /> Cancel
+                  </button>
+                  <button onClick={saveProfile} disabled={saving}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem', borderRadius: '0.75rem', background: btnGrad, border: 'none', color: 'white', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <Save style={{ width: '0.875rem', height: '0.875rem' }} /> {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
