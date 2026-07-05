@@ -1,9 +1,50 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import Navbar from '@/components/layout/Navbar'
 import Link from 'next/link'
-import { CheckCircle, Zap } from 'lucide-react'
+import { CheckCircle, XCircle, Zap } from 'lucide-react'
 import type { Profile } from '@/types'
 import UpgradeButton from '@/components/premium/UpgradeButton'
+
+const GREEN = 'rgb(34,85,14)'
+const INK = 'rgb(26,26,20)'
+const MUTED = 'rgb(107,107,88)'
+
+// Free card: positives included, premium-only perks shown as excluded.
+const FREE_ROWS = [
+  { label: '2 AI questions per day', on: true },
+  { label: '2 worksheets per day', on: true },
+  { label: '1 SAT practice set per day', on: true },
+  { label: 'Access to tutoring marketplace', on: true },
+  { label: 'Basic progress tracking', on: true },
+  { label: 'No wait time between generations', on: false },
+  { label: 'Priority tutor matching', on: false },
+  { label: 'Advanced analytics & XP tracking', on: false },
+  { label: 'Ad-free experience', on: false },
+]
+
+const PREMIUM_ROWS = [
+  'Unlimited AI questions',
+  'Unlimited worksheets',
+  'Unlimited SAT practice',
+  'No wait time ⚡',
+  'Priority tutor matching',
+  'Advanced analytics & XP tracking',
+  'Ad-free experience',
+  'Bonus generations on level up 🎁',
+]
+
+const FAQS = [
+  { q: 'Can I cancel anytime?', a: 'Yes — cancel from your settings page in one click, no questions asked. You keep Premium until the end of your billing period.' },
+  { q: 'What happens when I hit the free limit?', a: 'Your daily limits reset at midnight, so you can wait until then — or upgrade to Premium for unlimited access right away.' },
+  { q: 'Is my payment secure?', a: 'Absolutely. All payments are processed securely through Stripe. We never see or store your card details.' },
+  { q: 'Can I switch plans?', a: 'Yes — you can upgrade or downgrade anytime. Changes take effect immediately and billing is prorated.' },
+]
+
+const TESTIMONIALS = [
+  { quote: 'Upgrading was the best study decision I made — no more waiting between practice sets.', name: 'Jordan M.', initial: 'J' },
+  { quote: 'Unlimited SAT practice got my score up 120 points in six weeks.', name: 'Aisha R.', initial: 'A' },
+  { quote: 'Priority tutor matching found me help the night before my exam. Lifesaver.', name: 'Diego L.', initial: 'D' },
+]
 
 export default async function PricingPage() {
   let profile: Profile | null = null
@@ -16,213 +57,121 @@ export default async function PricingPage() {
     }
   } catch {}
 
-  const FREE = [
-    'Up to 12 questions per set',
-    '2 question sets per day',
-    '2 worksheets per day',
-    'All subjects & grade levels',
-    'Session history & PDF download',
-    '30-second generation wait',
-    'Bonus generations on level up 🎁',
-    'XP & level system',
-    'Daily streak rewards 🔥',
-  ]
-
-  const PREMIUM = [
-    'Up to 30 questions per set',
-    'Unlimited question sets',
-    'Unlimited worksheets',
-    'All subjects & grade levels',
-    'Session history & PDF download',
-    '~15 second generation ⚡',
-    'No ads',
-    'Priority support',
-    'Early access to new features',
-    'XP & level system',
-    'Daily streak rewards 🔥',
-    'Streak XP multiplier boost 🔥',
-    'Dark mode at Level 5 🌙',
-    'Speed Mode at Level 8 ⚡',
-    'Legend border at Level 9 👑',
-  ]
-
-  const COMPARISON = [
-    { feature: 'Max questions per set', free: '12', premium: '30' },
-    { feature: 'Question sets per day', free: '2', premium: 'Unlimited' },
-    { feature: 'Worksheets per day', free: '2', premium: 'Unlimited' },
-    { feature: 'Generation wait', free: '30 seconds', premium: '~15 seconds ⚡' },
-    { feature: 'Ads', free: '✓', premium: '✗ (No ads)' },
-    { feature: 'Session history', free: '✓', premium: '✓' },
-    { feature: 'PDF download', free: '✓', premium: '✓' },
-    { feature: 'All subjects & grades', free: '✓', premium: '✓' },
-    { feature: 'XP & level system', free: '✓', premium: '✓' },
-    { feature: 'Daily streak rewards', free: '✓', premium: '✓' },
-    { feature: 'Streak XP multiplier', free: '1x–2x', premium: 'Up to 5x 🔥' },
-    { feature: 'Bonus generations on level up', free: '✓ (one-time gifts)', premium: '✗ (unlimited anyway)' },
-    { feature: 'Dark mode (Level 5)', free: '✗', premium: '✓ 🌙' },
-    { feature: 'Speed Mode at Level 8', free: '✗', premium: '✓ ⚡' },
-    { feature: 'Legend border at Level 9', free: '✗', premium: '✓ 👑' },
-    { feature: 'Priority support', free: '✗', premium: '✓' },
-    { feature: 'Early access to features', free: '✗', premium: '✓' },
-  ]
-
   return (
-    <div className="animate-fade-in" style={{ minHeight:'100vh', background:'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+    <div className="animate-fade-in" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
       <Navbar profile={profile} />
 
-      <div style={{ padding:'6rem 1.5rem 5rem' }}>
-        <div className="container-base" style={{ maxWidth:'56rem' }}>
+      <div style={{ padding: '6rem 1.5rem 5rem' }}>
+        <div className="container-base" style={{ maxWidth: '58rem' }}>
 
-          {/* Header */}
-          <div style={{ textAlign:'center', marginBottom:'4rem' }}>
-            <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'0.75rem' }}>Pricing</p>
-            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'clamp(2rem,5vw,3rem)', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'1rem' }}>
-              Simple, honest pricing
+          {/* ── Header ── */}
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 700, color: GREEN, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Pricing</p>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.5rem', fontWeight: 700, color: INK, marginBottom: '0.875rem', lineHeight: 1.1 }}>
+              Simple, Transparent Pricing
             </h1>
-            <p style={{ color:'rgb(107,107,88)', fontSize:'1.0625rem', maxWidth:'32rem', margin:'0 auto' }}>
-              Start free, upgrade when you need more. No hidden fees, cancel anytime.
+            <p style={{ color: MUTED, fontSize: '1.0625rem', maxWidth: '32rem', margin: '0 auto' }}>
+              Start free, upgrade when you're ready.
             </p>
           </div>
 
-          {/* Cards */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:'1.5rem', marginBottom:'3rem' }}>
+          {/* ── Pricing cards ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.75rem', alignItems: 'center', maxWidth: '46rem', margin: '0 auto 4rem' }}>
 
             {/* Free */}
-            <div className="card" style={{ padding:'2.5rem' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>Free</h2>
-              <div style={{ fontSize:'2.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'2rem' }}>
-                $0<span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
+            <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '1.5rem', padding: '2.5rem' }}>
+              <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, color: MUTED, background: 'rgb(243,244,246)', padding: '0.375rem 0.875rem', borderRadius: '9999px', marginBottom: '1.25rem' }}>Free</span>
+              <div style={{ fontSize: '3rem', fontWeight: 700, color: INK, lineHeight: 1 }}>
+                $0<span style={{ fontSize: '1rem', fontWeight: 400, color: MUTED }}> / month</span>
               </div>
-              <ul style={{ listStyle:'none', padding:0, margin:'0 0 2rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
-                {FREE.map(f => (
-                  <li key={f} style={{ display:'flex', alignItems:'center', gap:'0.625rem', fontSize:'0.9375rem', color:'rgb(107,107,88)' }}>
-                    <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(59,109,17)', flexShrink:0 }} />
-                    {f}
+              <p style={{ fontSize: '0.875rem', color: MUTED, margin: '0.5rem 0 1.75rem' }}>Forever free</p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                {FREE_ROWS.map(r => (
+                  <li key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9375rem', color: r.on ? INK : 'rgb(156,163,175)' }}>
+                    {r.on
+                      ? <CheckCircle style={{ width: '1.125rem', height: '1.125rem', color: 'rgb(59,109,17)', flexShrink: 0 }} />
+                      : <XCircle style={{ width: '1.125rem', height: '1.125rem', color: 'rgb(209,213,219)', flexShrink: 0 }} />}
+                    {r.label}
                   </li>
                 ))}
               </ul>
               {profile ? (
                 profile.is_premium ? (
-                  <div style={{ textAlign:'center', padding:'0.875rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.05)', color:'rgb(107,107,88)', fontSize:'0.9375rem' }}>
-                    You're on Premium
-                  </div>
+                  <div style={{ textAlign: 'center', padding: '0.875rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.05)', color: MUTED, fontSize: '0.9375rem' }}>You're on Premium</div>
                 ) : (
-                  <div style={{ textAlign:'center', padding:'0.875rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.05)', color:'rgb(34,85,14)', fontWeight:600, fontSize:'0.9375rem' }}>
-                    Your current plan ✓
-                  </div>
+                  <div style={{ textAlign: 'center', padding: '0.875rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.05)', color: GREEN, fontWeight: 600, fontSize: '0.9375rem' }}>Your current plan ✓</div>
                 )
               ) : (
-                <Link href="/signup" className="btn-secondary" style={{ width:'100%', justifyContent:'center' }}>
-                  Get started free
+                <Link href="/signup" className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
+                  Get Started →
                 </Link>
               )}
             </div>
 
             {/* Premium */}
-            <div className="card" style={{ padding:'2.5rem', border:'2px solid rgb(34,85,14)', position:'relative', boxShadow:'0 8px 32px rgba(34,85,14,0.12)' }}>
-              <div style={{ position:'absolute', top:'-0.875rem', left:'50%', transform:'translateX(-50%)', background:'rgb(34,85,14)', color:'white', fontSize:'0.75rem', fontWeight:700, padding:'0.375rem 1.25rem', borderRadius:'9999px', whiteSpace:'nowrap' }}>
-                MOST POPULAR
-              </div>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.75rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem', display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                Premium <span style={{ color:'rgb(217,119,6)' }}>⚡</span>
-              </h2>
-              <div style={{ fontSize:'2.5rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
-                $5.99<span style={{ fontSize:'1rem', fontWeight:400, color:'rgb(107,107,88)' }}> / month</span>
-              </div>
-              <p style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)', marginBottom:'2rem' }}>Billed monthly · Cancel anytime</p>
-              <ul style={{ listStyle:'none', padding:0, margin:'0 0 2rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
-                {PREMIUM.map(f => (
-                  <li key={f} style={{ display:'flex', alignItems:'center', gap:'0.625rem', fontSize:'0.9375rem', color:'rgb(26,26,20)' }}>
-                    <CheckCircle style={{ width:'1rem', height:'1rem', color:'rgb(34,85,14)', flexShrink:0 }} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {profile?.is_premium ? (
-                <div style={{ textAlign:'center', padding:'0.875rem', borderRadius:'0.75rem', background:'rgba(34,85,14,0.06)', color:'rgb(34,85,14)', fontWeight:600, fontSize:'0.9375rem' }}>
-                  Your current plan ✓
+            <div style={{ position: 'relative' }}>
+              {/* green glow */}
+              <div aria-hidden style={{ position: 'absolute', inset: '-8px', borderRadius: '1.75rem', background: 'radial-gradient(ellipse at center, rgba(34,85,14,0.22), transparent 70%)', filter: 'blur(20px)', zIndex: 0 }} />
+              <div style={{ position: 'relative', zIndex: 1, transform: 'scale(1.02)', background: 'white', border: `2px solid ${GREEN}`, borderRadius: '1.5rem', padding: '2.5rem', boxShadow: '0 16px 48px rgba(34,85,14,0.18)' }}>
+                <div style={{ position: 'absolute', top: '-0.875rem', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', padding: '0.375rem 1.25rem', borderRadius: '9999px', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
+                  ⭐ MOST POPULAR
                 </div>
-              ) : profile ? (
-                <UpgradeButton />
-              ) : (
-                <Link href="/signup?plan=premium" className="btn-primary" style={{ width:'100%', justifyContent:'center', boxShadow:'0 4px 16px rgba(34,85,14,0.2)' }}>
-                  <Zap style={{ width:'1rem', height:'1rem' }} />
-                  Get Started →
-                </Link>
-              )}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: 700, color: GREEN, background: 'rgba(34,85,14,0.1)', padding: '0.375rem 0.875rem', borderRadius: '9999px', marginBottom: '1.25rem' }}>Premium ⚡</span>
+                <div style={{ fontSize: '3rem', fontWeight: 700, color: INK, lineHeight: 1 }}>
+                  $5.99<span style={{ fontSize: '1rem', fontWeight: 400, color: MUTED }}> / month</span>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: MUTED, margin: '0.5rem 0 1.75rem' }}>Cancel anytime</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  {PREMIUM_ROWS.map(f => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9375rem', color: INK, fontWeight: 500 }}>
+                      <CheckCircle style={{ width: '1.125rem', height: '1.125rem', color: GREEN, flexShrink: 0 }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {profile?.is_premium ? (
+                  <div style={{ textAlign: 'center', padding: '0.875rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.06)', color: GREEN, fontWeight: 600, fontSize: '0.9375rem' }}>Your current plan ✓</div>
+                ) : profile ? (
+                  <UpgradeButton />
+                ) : (
+                  <Link href="/signup?plan=premium" className="btn-primary" style={{ width: '100%', justifyContent: 'center', boxShadow: '0 4px 16px rgba(34,85,14,0.25)' }}>
+                    <Zap style={{ width: '1rem', height: '1rem' }} />
+                    Upgrade Now →
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Level rewards section */}
-          <div className="card" style={{ padding:'2rem', marginBottom:'2rem', background:'linear-gradient(135deg, rgba(34,85,14,0.02), rgba(122,182,72,0.03))' }}>
-            <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.375rem' }}>
-              🎮 Level Rewards
+          {/* ── FAQ ── */}
+          <div style={{ maxWidth: '42rem', margin: '0 auto 3.5rem' }}>
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: INK, textAlign: 'center', marginBottom: '1.75rem' }}>
+              Frequently asked questions
             </h2>
-            <p style={{ fontSize:'0.875rem', color:'rgb(107,107,88)', marginBottom:'1.5rem' }}>
-              Earn XP by studying and unlock rewards as you level up. Takes months to reach the top — that's the point.
-            </p>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'0.75rem' }}>
-              {[
-                { level:1, name:'Freshman', emoji:'📚', free:'Starting rank', premium:'Starting rank' },
-                { level:2, name:'Apprentice', emoji:'✏️', free:'🎁 +1 bonus generation', premium:'Level badge unlocked' },
-                { level:3, name:'Scholar', emoji:'🎓', free:'🎁 +2 bonus generations', premium:'Level badge unlocked' },
-                { level:4, name:'Analyst', emoji:'🔍', free:'Level badge', premium:'Level badge unlocked' },
-                { level:5, name:'Achiever', emoji:'⭐', free:'🎁 +3 bonus generations', premium:'🌙 Dark mode unlocked' },
-                { level:6, name:'Expert', emoji:'🧠', free:'Level badge', premium:'Level badge unlocked' },
-                { level:7, name:'Master', emoji:'🏆', free:'🎁 +5 bonus generations', premium:'Level badge unlocked' },
-                { level:8, name:'Prodigy', emoji:'⚡', free:'Level badge', premium:'⚡ Speed Mode (10s gen)' },
-                { level:9, name:'Sage', emoji:'🌟', free:'Level badge', premium:'👑 Legend border' },
-                { level:10, name:'Legend', emoji:'👑', free:'Legend status', premium:'Legend status + all rewards' },
-              ].map(l => (
-                <div key={l.level} style={{ padding:'1rem', borderRadius:'0.875rem', background:'white', border:'1px solid rgba(34,85,14,0.08)' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.5rem' }}>
-                    <span style={{ fontSize:'1.25rem' }}>{l.emoji}</span>
-                    <div>
-                      <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>Level {l.level}</p>
-                      <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'rgb(26,26,20)' }}>{l.name}</p>
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:'0.25rem' }}>
-                    <p style={{ fontSize:'0.75rem', color:'rgb(107,107,88)' }}>
-                      <span style={{ fontWeight:600, color:'rgb(26,26,20)' }}>Free:</span> {l.free}
-                    </p>
-                    <p style={{ fontSize:'0.75rem', color:'rgb(34,85,14)' }}>
-                      <span style={{ fontWeight:600 }}>Premium:</span> {l.premium}
-                    </p>
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {FAQS.map(f => (
+                <div key={f.q} className="card" style={{ padding: '1.5rem 1.75rem' }}>
+                  <p style={{ fontSize: '1rem', fontWeight: 700, color: INK, marginBottom: '0.5rem' }}>{f.q}</p>
+                  <p style={{ fontSize: '0.9375rem', color: MUTED, lineHeight: 1.6 }}>{f.a}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Comparison table */}
-          <div className="card" style={{ overflow:'hidden', marginBottom:'2rem' }}>
-            <div style={{ padding:'1.5rem 2rem', borderBottom:'1px solid rgba(34,85,14,0.08)' }}>
-              <h2 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'rgb(26,26,20)' }}>Full comparison</h2>
-            </div>
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead>
-                  <tr style={{ background:'rgba(34,85,14,0.03)' }}>
-                    <th style={{ padding:'1rem 2rem', textAlign:'left', fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Feature</th>
-                    <th style={{ padding:'1rem 1.5rem', textAlign:'center', fontSize:'0.8125rem', fontWeight:600, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Free</th>
-                    <th style={{ padding:'1rem 1.5rem', textAlign:'center', fontSize:'0.8125rem', fontWeight:700, color:'rgb(34,85,14)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Premium ⚡</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMPARISON.map((row, i) => (
-                    <tr key={i} style={{ borderTop:'1px solid rgba(34,85,14,0.06)', background: i % 2 === 0 ? 'white' : 'rgba(34,85,14,0.01)' }}>
-                      <td style={{ padding:'1rem 2rem', fontSize:'0.9375rem', color:'rgb(26,26,20)', fontWeight:500 }}>{row.feature}</td>
-                      <td style={{ padding:'1rem 1.5rem', textAlign:'center', fontSize:'0.9375rem', color: row.free === '✗' ? 'rgb(209,213,219)' : 'rgb(107,107,88)' }}>{row.free}</td>
-                      <td style={{ padding:'1rem 1.5rem', textAlign:'center', fontSize:'0.9375rem', color: row.premium === '✗' ? 'rgb(209,213,219)' : 'rgb(34,85,14)', fontWeight: row.premium !== '✓' && row.premium !== '✗' ? 600 : 400 }}>{row.premium}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {/* ── Testimonials ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', maxWidth: '52rem', margin: '0 auto' }}>
+            {TESTIMONIALS.map(t => (
+              <div key={t.name} className="card" style={{ padding: '1.5rem' }}>
+                <p style={{ fontSize: '0.9375rem', color: INK, lineHeight: 1.6, marginBottom: '1rem' }}>"{t.quote}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '50%', background: GREEN, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>{t.initial}</div>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: INK }}>{t.name}</span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <p style={{ textAlign:'center', fontSize:'0.9375rem', color:'rgb(107,107,88)' }}>
+          <p style={{ textAlign: 'center', fontSize: '0.9375rem', color: MUTED, marginTop: '3rem' }}>
             🔒 Secure payment via Stripe · Cancel any time from your account settings
           </p>
 

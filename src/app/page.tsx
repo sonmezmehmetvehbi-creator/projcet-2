@@ -588,14 +588,13 @@ export default async function HomePage() {
                 <div><span className="af-pc-price">$0</span><span className="af-pc-per"> / month</span></div>
                 <ul className="af-pc-list">
                   {[
-                    'Up to 12 questions per set',
-                    '2 question sets per day',
+                    '2 AI questions per day',
                     '2 worksheets per day',
-                    'All subjects & grades',
-                    'PDF download & session history',
-                    'XP & level system 🎮',
-                    'Daily streak rewards 🔥',
-                    'Bonus generations on level up 🎁',
+                    '1 SAT practice set per day',
+                    '30-second wait between generations',
+                    'Access to tutoring marketplace',
+                    'Basic progress tracking',
+                    'Ad supported',
                   ].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g3)', flexShrink:0 }} />{f}
@@ -615,19 +614,18 @@ export default async function HomePage() {
                   <span className="af-pc-price">$5.99</span>
                   <span className="af-pc-per"> / month</span>
                 </div>
-                <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.8125rem', color:'#7a9470', margin:'0.25rem 0 0.5rem' }}>Billed monthly · Cancel anytime</p>
+                <p style={{ fontFamily:'Syne,sans-serif', fontSize:'0.8125rem', color:'#7a9470', margin:'0.25rem 0 0.25rem' }}>Billed monthly · Cancel anytime</p>
+                <p style={{ display:'inline-block', fontFamily:'Syne,sans-serif', fontSize:'0.75rem', fontWeight:700, color:'var(--g)', background:'rgba(34,85,14,0.08)', padding:'0.25rem 0.625rem', borderRadius:'9999px', margin:'0 0 0.5rem' }}>💰 Save 40% with annual billing</p>
                 <ul className="af-pc-list">
                   {[
-                    'Up to 30 questions per set',
-                    'Unlimited question sets & worksheets',
-                    'Faster generation (~15s)',
-                    'No ads',
-                    'Priority support',
-                    'XP streak multiplier (up to 5x) 🔥',
-                    'Dark mode at Level 5 🌙',
-                    'Speed Mode at Level 8 ⚡',
-                    'Legend border at Level 9 👑',
-                    'Early access to new features',
+                    'Unlimited AI questions',
+                    'Unlimited worksheets',
+                    'Unlimited SAT practice',
+                    'No wait time ⚡',
+                    'Priority tutor matching',
+                    'Advanced analytics & XP tracking',
+                    'Ad free experience',
+                    'Bonus generations on level up 🎁',
                   ].map(f => (
                     <li key={f} className="af-pc-item">
                       <CheckCircle style={{ width:'1rem', height:'1rem', color:'var(--g)', flexShrink:0 }} />{f}
