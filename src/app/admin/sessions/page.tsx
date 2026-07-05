@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import AdminNavbar from '../dashboard/AdminNavbar'
+import AdminSidebar from '../dashboard/AdminSidebar'
+import { getSidebarCounts } from '../dashboard/adminSidebarCounts'
 import AdminSessionsClient from './AdminSessionsClient'
 
 export const dynamic = 'force-dynamic'
@@ -58,10 +59,14 @@ export default async function AdminSessionsPage() {
     tutor: tutorMap.get(s.tutor_id) ?? null,
   }))
 
+  const counts = await getSidebarCounts()
+
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
-      <AdminNavbar profile={profile} />
-      <AdminSessionsClient sessions={enriched} />
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
+      <AdminSidebar profile={profile} counts={counts} />
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+        <AdminSessionsClient sessions={enriched} />
+      </div>
     </div>
   )
 }

@@ -1,4 +1,5 @@
-import AdminNavbar from '../dashboard/AdminNavbar'
+import AdminSidebar from '../dashboard/AdminSidebar'
+import { getSidebarCounts } from '../dashboard/adminSidebarCounts'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -10,9 +11,12 @@ export default async function AdminPolicyPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile?.is_admin) redirect('/dashboard')
 
+  const counts = await getSidebarCounts()
+
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
-      <AdminNavbar profile={profile} />
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
+      <AdminSidebar profile={profile} counts={counts} />
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(250,250,247)' }}>
       <div style={{ paddingTop: '5rem', paddingBottom: '5rem' }}>
         <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '3rem 1.5rem' }}>
 
@@ -135,6 +139,7 @@ export default async function AdminPolicyPage() {
             </a>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

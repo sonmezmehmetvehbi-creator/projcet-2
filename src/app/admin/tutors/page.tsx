@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import AdminNavbar from '../dashboard/AdminNavbar'
+import AdminSidebar from '../dashboard/AdminSidebar'
+import { getSidebarCounts } from '../dashboard/adminSidebarCounts'
 import AdminTutorsClient from './AdminTutorsClient'
 
 export default async function AdminTutorsPage() {
@@ -31,10 +32,14 @@ export default async function AdminTutorsPage() {
     return { ...app, profiles: profileData }
   }))
 
+  const counts = await getSidebarCounts()
+
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
-      <AdminNavbar profile={profile} />
-      <AdminTutorsClient applications={applications} />
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
+      <AdminSidebar profile={profile} counts={counts} />
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+        <AdminTutorsClient applications={applications} />
+      </div>
     </div>
   )
 }

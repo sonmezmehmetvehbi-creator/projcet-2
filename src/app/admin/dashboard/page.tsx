@@ -2,7 +2,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import AdminDashboardClient from './AdminDashboardClient'
-import AdminNavbar from './AdminNavbar'
+import AdminSidebar from './AdminSidebar'
+import { getSidebarCounts } from './adminSidebarCounts'
 
 export default async function AdminDashboardPage() {
   const supabase = await createServerSupabaseClient()
@@ -73,9 +74,12 @@ export default async function AdminDashboardPage() {
     return { ...tutor, profiles: profileData }
   }))
 
+  const counts = await getSidebarCounts()
+
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(18,18,28)' }}>
-      <AdminNavbar profile={profile} />
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
+      <AdminSidebar profile={profile} counts={counts} />
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(18,18,28)' }}>
       <AdminDashboardClient
         profile={profile}
         stats={{
@@ -94,6 +98,7 @@ export default async function AdminDashboardPage() {
         pendingTutorList={pendingTutorList ?? []}
         currentUserId={user.id}
       />
+      </div>
     </div>
   )
 }
