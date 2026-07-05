@@ -42,7 +42,7 @@ export default async function TutorApplyPage() {
     .single()
 
   const content = (
-    <div style={{ minHeight: '100vh', background: isTutor ? 'rgb(15,15,30)' : 'linear-gradient(135deg, #F4F7EC, #EFF5E3)' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, rgb(10,10,20), rgb(15,15,30), rgb(18,15,35))' }}>
       {isTutor ? (
         <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
       ) : (

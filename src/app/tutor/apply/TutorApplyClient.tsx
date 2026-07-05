@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { AlertCircle, CheckCircle, Upload, X, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
-import { useTutorTheme } from '@/app/tutor/dashboard/TutorThemeContext'
+
+const INDIGO = 'rgb(99,102,241)'
+const PURPLE = 'rgb(139,92,246)'
+const SUCCESS = 'rgb(74,222,128)'
+const GRAD = 'linear-gradient(135deg, rgb(99,102,241), rgb(139,92,246))'
+const text1 = 'white'
+const text2 = 'rgba(255,255,255,0.6)'
+const surfaceBg = 'rgb(22,22,38)'
 
 const COMMON_SUBJECTS = [
   'SAT Math', 'SAT Reading & Writing', 'ACT Math', 'ACT English',
@@ -63,17 +70,20 @@ interface Props {
   isTutor?: boolean
 }
 
-export default function TutorApplyClient({ profile, existingApplication, appeal, isTutor = false }: Props) {
-  // Tutors (approved / pending) get the dark-purple tutor theme; the navbar
-  // toggle drives useTutorTheme. Non-tutor applicants keep the original green.
-  const { theme } = useTutorTheme()
-  const isDark = isTutor && theme === 'dark'
-  const accent = isTutor ? (isDark ? 'rgb(99,102,241)' : 'rgb(234,88,12)') : 'rgb(34,85,14)'
-  const text1 = isDark ? 'white' : 'rgb(26,26,20)'
-  const text2 = isDark ? 'rgba(255,255,255,0.55)' : 'rgb(107,107,88)'
-  const surfaceBg = isDark ? 'rgb(30,30,46)' : 'white'
-  const rootClass = isDark ? 'tutor-dark' : ''
+// Common pill styling (indigo for subjects, purple for languages).
+function pillStyle(selected: boolean, purple = false): React.CSSProperties {
+  const base = purple ? '139,92,246' : '99,102,241'
+  return {
+    padding: '0.375rem 0.875rem', borderRadius: '9999px', cursor: 'pointer',
+    fontSize: '0.8125rem', fontWeight: selected ? 700 : 500,
+    border: `1.5px solid ${selected ? `rgb(${base})` : `rgba(${base},0.4)`}`,
+    background: selected ? `rgba(${base},0.25)` : `rgba(${base},0.1)`,
+    color: selected ? 'white' : 'rgba(255,255,255,0.5)',
+    transition: 'transform 0.15s, background 0.15s, border-color 0.15s',
+  }
+}
 
+export default function TutorApplyClient({ profile, existingApplication, appeal, isTutor = false }: Props) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -218,27 +228,30 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
     setLoading(false)
   }
 
+  // ── Existing application status ──
   if (existingApplication) {
-    const statusEmoji = existingApplication.status === 'approved' ? '✅' : existingApplication.status === 'rejected' ? '❌' : '⏳'
+    const st = existingApplication.status
+    const statusEmoji = st === 'approved' ? '✅' : st === 'rejected' ? '❌' : '⏳'
+    const cardBorder = st === 'approved' ? 'rgba(74,222,128,0.3)' : st === 'rejected' ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'
     return (
-      <div className={rootClass} style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
-        <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center' }}>
+      <div className="ta-page" style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
+        <div className="ta-fade" style={{ padding: '3rem 2rem', maxWidth: '32rem', width: '100%', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid ${cardBorder}`, borderRadius: '1.25rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{statusEmoji}</div>
           <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: text1, marginBottom: '0.75rem' }}>
-            Application {existingApplication.status === 'pending' ? 'Under Review' : existingApplication.status === 'approved' ? 'Approved!' : 'Not Approved'}
+            Application {st === 'pending' ? 'Under Review' : st === 'approved' ? 'Approved!' : 'Not Approved'}
           </h1>
           <p style={{ color: text2, lineHeight: 1.7, marginBottom: '1.5rem' }}>
-            {existingApplication.status === 'pending' ? "Your application is being reviewed. We'll email you within 2-3 business days."
-              : existingApplication.status === 'approved' ? 'Congratulations! Your tutor account is active.'
+            {st === 'pending' ? "Your application is being reviewed. We'll email you within 2-3 business days."
+              : st === 'approved' ? 'Congratulations! Your tutor account is active.'
               : 'Unfortunately your application was not approved. Please contact us for more information.'}
           </p>
-         {existingApplication.status === 'approved' && (
-            <a href="/tutor/dashboard" className="btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>Go to Tutor Dashboard →</a>
+          {st === 'approved' && (
+            <a href="/tutor/dashboard" className="ta-cta" style={{ display: 'inline-flex', textDecoration: 'none' }}>Go to Tutor Dashboard →</a>
           )}
-          {existingApplication.status === 'rejected' && (
+          {st === 'rejected' && (
             appeal?.status === 'rejected' ? (
-              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.06)', border: '1px solid rgba(163,45,45,0.2)' }}>
-                <p style={{ fontWeight: 700, color: 'rgb(163,45,45)', marginBottom: '0.5rem' }}>⚖️ Appeal Rejected — Final Decision</p>
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', textAlign: 'left' }}>
+                <p style={{ fontWeight: 700, color: 'rgb(248,113,113)', marginBottom: '0.5rem' }}>⚖️ Appeal Rejected — Final Decision</p>
                 <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7 }}>
                   We have reviewed your appeal and our decision is final. You are welcome to reapply after{' '}
                   <strong style={{ color: text1 }}>
@@ -248,36 +261,39 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
                 </p>
               </div>
             ) : appeal?.status === 'pending' ? (
-              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.06)', border: '1px solid rgba(232,160,32,0.2)' }}>
-                <p style={{ fontWeight: 700, color: 'rgb(180,120,10)', marginBottom: '0.5rem' }}>⏳ Appeal Under Review</p>
+              <div style={{ padding: '1.25rem', borderRadius: '0.875rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', textAlign: 'left' }}>
+                <p style={{ fontWeight: 700, color: 'rgb(251,191,36)', marginBottom: '0.5rem' }}>⏳ Appeal Under Review</p>
                 <p style={{ fontSize: '0.9375rem', color: text2, lineHeight: 1.7 }}>
                   Your appeal has been submitted and is being reviewed by our team. We will email you within 3-5 business days.
                 </p>
               </div>
             ) : (
               <a href={`/tutor/appeal?email=${encodeURIComponent(profile?.email ?? '')}&name=${encodeURIComponent(profile?.display_name ?? '')}`}
-                style={{ display: 'inline-flex', justifyContent: 'center', padding: '0.875rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.08)', border: '2px solid rgba(163,45,45,0.2)', color: 'rgb(163,45,45)', fontWeight: 700, textDecoration: 'none', fontSize: '0.9375rem' }}>
+                style={{ display: 'inline-flex', justifyContent: 'center', padding: '0.875rem 1.5rem', borderRadius: '0.875rem', background: 'rgba(248,113,113,0.1)', border: '2px solid rgba(248,113,113,0.4)', color: 'rgb(248,113,113)', fontWeight: 700, textDecoration: 'none', fontSize: '0.9375rem' }}>
                 ⚖️ Appeal This Decision →
               </a>
             )
           )}
         </div>
+        <style>{taStyles}</style>
       </div>
     )
   }
 
+  // ── Success ──
   if (success) return (
-    <div className={rootClass} style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
-      <div className="card" style={{ padding: '3rem', maxWidth: '32rem', width: '100%', textAlign: 'center' }}>
-        <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgb(234,243,222)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-          <CheckCircle style={{ width: '2rem', height: '2rem', color: 'rgb(59,109,17)' }} />
+    <div className="ta-page" style={{ paddingTop: '6rem', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem 3rem' }}>
+      <div className="ta-fade" style={{ padding: '3rem 2rem', maxWidth: '32rem', width: '100%', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '1.25rem' }}>
+        <div className="ta-pop" style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <CheckCircle style={{ width: '2rem', height: '2rem', color: SUCCESS }} strokeWidth={2.5} />
         </div>
         <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 700, color: text1, marginBottom: '0.75rem' }}>Application Submitted! 🎉</h1>
         <p style={{ color: text2, lineHeight: 1.7, marginBottom: '1.5rem' }}>
           Thanks for applying! We'll review your application and get back to you within 2-3 business days.
         </p>
-        <a href="/dashboard" className="btn-primary" style={{ display: 'inline-flex', justifyContent: 'center' }}>Back to Dashboard</a>
+        <a href="/dashboard" className="ta-cta" style={{ display: 'inline-flex', textDecoration: 'none' }}>Back to Dashboard</a>
       </div>
+      <style>{taStyles}</style>
     </div>
   )
 
@@ -285,362 +301,433 @@ export default function TutorApplyClient({ profile, existingApplication, appeal,
   const filteredLangs = ALL_LANGUAGES.filter(l => l.toLowerCase().includes(langSearch.toLowerCase()) && !languages.includes(l))
   const filteredSubjects = ALL_SUBJECTS.filter(s => s.toLowerCase().includes(subjectSearch.toLowerCase()) && !subjects.includes(s) && !COMMON_SUBJECTS.includes(s))
 
+  const uploadBox: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(99,102,241,0.3)', cursor: 'pointer', background: 'rgba(99,102,241,0.04)', transition: 'background 0.15s' }
+  const fileChosen: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)' }
+  const dropdownStyle: React.CSSProperties = { position: 'absolute', top: '100%', left: 0, right: 0, background: surfaceBg, border: '1px solid rgba(99,102,241,0.25)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }
+
   return (
-    <div className={`${rootClass} animate-fade-in`} style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
-      <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div className="ta-page ta-fade" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem' }}>
+      <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>Become an AceForge Tutor</h1>
           <p style={{ color: text2, fontSize: '1.0625rem' }}>Help students ace their exams. Earn on your schedule.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0', marginBottom: '2rem' }}>
-          {steps.map((s, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem' }}>
-              <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: i + 1 <= step ? accent : 'rgba(34,85,14,0.1)', color: i + 1 <= step ? 'white' : text2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 700, transition: 'all 0.3s' }}>
-                {i + 1 < step ? '✓' : i + 1}
-              </div>
-              <span style={{ fontSize: '0.6875rem', color: i + 1 === step ? accent : text2, fontWeight: i + 1 === step ? 700 : 400, textAlign: 'center' }}>{s}</span>
-            </div>
-          ))}
+        {/* ── Step indicator ── */}
+        <div style={{ marginBottom: '2.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {steps.map((s, i) => {
+              const n = i + 1
+              const completed = n < step
+              const current = n === step
+              return (
+                <Fragment key={i}>
+                  <div style={{
+                    width: '2.5rem', height: '2.5rem', borderRadius: '50%', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '0.9375rem',
+                    background: completed || current ? GRAD : 'rgba(255,255,255,0.06)',
+                    color: completed || current ? 'white' : 'rgba(255,255,255,0.5)',
+                    border: completed || current ? 'none' : '1.5px solid rgba(99,102,241,0.3)',
+                    boxShadow: current ? '0 0 0 5px rgba(99,102,241,0.2), 0 0 20px rgba(99,102,241,0.5)' : 'none',
+                    transition: 'all 0.3s',
+                  }}>
+                    {completed ? '✓' : n}
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div style={{ flex: 1, height: '2px', margin: '0 0.5rem', borderRadius: '2px', background: n < step ? GRAD : 'rgba(255,255,255,0.1)', transition: 'background 0.4s' }} />
+                  )}
+                </Fragment>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', marginTop: '0.625rem' }}>
+            {steps.map((s, i) => (
+              <div key={i} style={{ flex: 1, textAlign: i === 0 ? 'left' : i === steps.length - 1 ? 'right' : 'center', fontSize: '0.75rem', fontWeight: i + 1 === step ? 700 : 500, color: i + 1 <= step ? 'white' : 'rgba(255,255,255,0.4)' }}>{s}</div>
+            ))}
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '2rem' }}>
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '1rem', padding: '2rem' }}>
           {error && (
-            <div className="alert-error" style={{ marginBottom: '1.5rem' }}>
+            <div className="ta-err" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: 'rgb(248,113,113)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1.5rem' }}>
               <AlertCircle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />{error}
             </div>
           )}
 
-          {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Personal Information</h2>
+          <div key={step} className="ta-step">
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label className="label">Full Legal Name *</label>
-                  <input value={fullName} onChange={e => setFullName(e.target.value)} className="input" placeholder="As on your ID" />
-                </div>
-                <div>
-                  <label className="label">Date of Birth *</label>
-                  <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className="input" />
-                </div>
-              </div>
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Personal Information</h2>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label className="label">Phone Number *</label>
-                  <input value={phone} onChange={e => setPhone(e.target.value)} className="input" placeholder="+1 (555) 000-0000" />
-                </div>
-                <div>
-                  <label className="label">Timezone *</label>
-                  <select value={timezone} onChange={e => setTimezone(e.target.value)} className="input">
-                    {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="label">Languages you can tutor in *</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                  {languages.map(lang => (
-                    <span key={lang} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: accent, fontSize: '0.875rem', fontWeight: 600 }}>
-                      {lang}
-                      <button type="button" onClick={() => toggleLanguage(lang)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: accent, padding: 0, display: 'flex' }}>
-                        <X style={{ width: '0.75rem', height: '0.75rem' }} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
-                  <input value={langSearch} onChange={e => { setLangSearch(e.target.value); setShowLangDropdown(true) }}
-                    onFocus={() => setShowLangDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowLangDropdown(false), 200)}
-                    className="input" placeholder="Search and add languages..." style={{ paddingLeft: '2.25rem' }} />
-                  {showLangDropdown && filteredLangs.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: surfaceBg, border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
-                      {filteredLangs.slice(0, 20).map(lang => (
-                        <button key={lang} type="button" onMouseDown={() => { toggleLanguage(lang); setLangSearch('') }}
-                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,85,14,0.05)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          {lang}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-           <div>
-                <label className="label">
-                  LinkedIn Profile URL
-                  <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem', marginLeft: '0.375rem' }}>(strongly recommended)</span>
-                </label>
-                <input value={linkedIn} onChange={e => setLinkedIn(e.target.value)} className="input" placeholder="https://linkedin.com/in/yourname" />
-                <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)' }}>
-                  <p style={{ fontSize: '0.8125rem', color: 'rgb(37,99,235)', lineHeight: 1.6 }}>
-                    💼 <strong>Tip:</strong> Applicants with a verified LinkedIn profile are <strong>3x more likely to be approved</strong>. Make sure your LinkedIn shows your education and experience clearly.
-                  </p>
-                </div>
-              </div>
-              <div>
-                <label className="label">About You * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(students will see this)</span></label>
-                <textarea value={bio} onChange={e => setBio(e.target.value)} className="input" rows={4} style={{ resize: 'vertical' }}
-                  placeholder="Tell students about your teaching style, experience, and what makes you a great tutor..." />
-              </div>
-
-              <div>
-                <label className="label">Photo ID * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(driver's license or passport — kept confidential)</span></label>
-                {idFile ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.2)' }}>
-                    <span style={{ fontSize: '0.875rem', color: accent, fontWeight: 600, flex: 1 }}>✓ {idFile.name}</span>
-                    <button type="button" onClick={() => setIdFile(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label className="ta-label">Full Legal Name *</label>
+                    <input value={fullName} onChange={e => setFullName(e.target.value)} className="ta-input" placeholder="As on your ID" />
                   </div>
-                ) : (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: surfaceBg }}>
-                    <Upload style={{ width: '1.25rem', height: '1.25rem', color: text2 }} />
-                    <span style={{ fontSize: '0.875rem', color: text2 }}>Upload photo ID (JPG, PNG, PDF)</span>
-                    <input type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display: 'none' }} onChange={e => setIdFile(e.target.files?.[0] ?? null)} />
-                  </label>
-                )}
-              </div>
-
-              <button onClick={() => {
-                if (!fullName || !dateOfBirth || !phone || languages.length === 0 || !bio || !idFile) { setError('Please fill in all required fields.'); return }
-                setError(''); setStep(2)
-              }} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                Continue to Qualifications →
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Qualifications</h2>
-
-              <div>
-                <label className="label">Subjects you can tutor * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(select all that apply)</span></label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  {COMMON_SUBJECTS.map(sub => (
-                    <button key={sub} type="button" onClick={() => toggleSubject(sub)}
-                      style={{ padding: '0.375rem 0.875rem', borderRadius: '9999px', border: `1.5px solid ${subjects.includes(sub) ? accent : 'rgba(34,85,14,0.2)'}`, background: subjects.includes(sub) ? 'rgba(34,85,14,0.08)' : 'white', color: subjects.includes(sub) ? accent : text2, fontSize: '0.8125rem', fontWeight: subjects.includes(sub) ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      {sub}
-                    </button>
-                  ))}
+                  <div>
+                    <label className="ta-label">Date of Birth *</label>
+                    <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className="ta-input" />
+                  </div>
                 </div>
 
-                {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label className="ta-label">Phone Number *</label>
+                    <input value={phone} onChange={e => setPhone(e.target.value)} className="ta-input" placeholder="+1 (555) 000-0000" />
+                  </div>
+                  <div>
+                    <label className="ta-label">Timezone *</label>
+                    <select value={timezone} onChange={e => setTimezone(e.target.value)} className="ta-input ta-select">
+                      {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="ta-label">Languages you can tutor in *</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                    {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).map(sub => (
-                      <span key={sub} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: accent, fontSize: '0.8125rem', fontWeight: 600 }}>
-                        {sub}
-                        <button type="button" onClick={() => toggleSubject(sub)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: accent, padding: 0, display: 'flex' }}>
+                    {languages.map(lang => (
+                      <span key={lang} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.5)', color: 'white', fontSize: '0.875rem', fontWeight: 600 }}>
+                        {lang}
+                        <button type="button" onClick={() => toggleLanguage(lang)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(196,181,253)', padding: 0, display: 'flex' }}>
                           <X style={{ width: '0.75rem', height: '0.75rem' }} />
                         </button>
                       </span>
                     ))}
                   </div>
-                )}
+                  <div style={{ position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
+                    <input value={langSearch} onChange={e => { setLangSearch(e.target.value); setShowLangDropdown(true) }}
+                      onFocus={() => setShowLangDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowLangDropdown(false), 200)}
+                      className="ta-input" placeholder="Search and add languages..." style={{ paddingLeft: '2.25rem' }} />
+                    {showLangDropdown && filteredLangs.length > 0 && (
+                      <div style={dropdownStyle}>
+                        {filteredLangs.slice(0, 20).map(lang => (
+                          <button key={lang} type="button" onMouseDown={() => { toggleLanguage(lang); setLangSearch('') }}
+                            style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.15)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                            {lang}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                <div style={{ position: 'relative' }}>
-                  <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
-                  <input value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); setShowSubjectDropdown(true) }}
-                    onFocus={() => setShowSubjectDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 200)}
-                    className="input" placeholder="Search for other subjects (AP, IB, GMAT, etc.)..." style={{ paddingLeft: '2.25rem' }} />
-                  {showSubjectDropdown && subjectSearch && filteredSubjects.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: surfaceBg, border: '1px solid rgba(34,85,14,0.15)', borderRadius: '0.75rem', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '0.25rem' }}>
-                      {filteredSubjects.slice(0, 20).map(sub => (
-                        <button key={sub} type="button" onMouseDown={() => { toggleSubject(sub); setSubjectSearch('') }}
-                          style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,85,14,0.05)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <div>
+                  <label className="ta-label">
+                    LinkedIn Profile URL
+                    <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem', marginLeft: '0.375rem' }}>(strongly recommended)</span>
+                  </label>
+                  <input value={linkedIn} onChange={e => setLinkedIn(e.target.value)} className="ta-input" placeholder="https://linkedin.com/in/yourname" />
+                  <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                    <p style={{ fontSize: '0.8125rem', color: 'rgb(199,210,254)', lineHeight: 1.6 }}>
+                      💼 <strong>Tip:</strong> Applicants with a verified LinkedIn profile are <strong>3x more likely to be approved</strong>. Make sure your LinkedIn shows your education and experience clearly.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <label className="ta-label">About You * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(students will see this)</span></label>
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} className="ta-input ta-textarea" rows={4} style={{ resize: 'vertical' }}
+                    placeholder="Tell students about your teaching style, experience, and what makes you a great tutor..." />
+                </div>
+
+                <div>
+                  <label className="ta-label">Photo ID * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(driver's license or passport — kept confidential)</span></label>
+                  {idFile ? (
+                    <div style={fileChosen}>
+                      <span style={{ fontSize: '0.875rem', color: SUCCESS, fontWeight: 600, flex: 1 }}>✓ {idFile.name}</span>
+                      <button type="button" onClick={() => setIdFile(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
+                    </div>
+                  ) : (
+                    <label className="ta-upload" style={uploadBox}>
+                      <Upload style={{ width: '1.25rem', height: '1.25rem', color: INDIGO }} />
+                      <span style={{ fontSize: '0.875rem', color: text2 }}>Upload photo ID (JPG, PNG, PDF)</span>
+                      <input type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display: 'none' }} onChange={e => setIdFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                  )}
+                </div>
+
+                <button onClick={() => {
+                  if (!fullName || !dateOfBirth || !phone || languages.length === 0 || !bio || !idFile) { setError('Please fill in all required fields.'); return }
+                  setError(''); setStep(2)
+                }} className="ta-cta" style={{ width: '100%' }}>
+                  Continue to Qualifications →
+                </button>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Qualifications</h2>
+
+                <div>
+                  <label className="ta-label">Subjects you can tutor * <span style={{ fontWeight: 400, color: text2, fontSize: '0.8125rem' }}>(select all that apply)</span></label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    {COMMON_SUBJECTS.map(sub => (
+                      <button key={sub} type="button" onClick={() => toggleSubject(sub)} className="ta-pill" style={pillStyle(subjects.includes(sub))}>
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+
+                  {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                      {subjects.filter(s => !COMMON_SUBJECTS.includes(s)).map(sub => (
+                        <span key={sub} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', borderRadius: '9999px', background: 'rgba(99,102,241,0.22)', border: '1px solid rgba(99,102,241,0.5)', color: 'white', fontSize: '0.8125rem', fontWeight: 600 }}>
                           {sub}
-                        </button>
+                          <button type="button" onClick={() => toggleSubject(sub)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(165,180,252)', padding: 0, display: 'flex' }}>
+                            <X style={{ width: '0.75rem', height: '0.75rem' }} />
+                          </button>
+                        </span>
                       ))}
                     </div>
                   )}
+
+                  <div style={{ position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: text2 }} />
+                    <input value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); setShowSubjectDropdown(true) }}
+                      onFocus={() => setShowSubjectDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 200)}
+                      className="ta-input" placeholder="Search for other subjects (AP, IB, GMAT, etc.)..." style={{ paddingLeft: '2.25rem' }} />
+                    {showSubjectDropdown && subjectSearch && filteredSubjects.length > 0 && (
+                      <div style={dropdownStyle}>
+                        {filteredSubjects.slice(0, 20).map(sub => (
+                          <button key={sub} type="button" onMouseDown={() => { toggleSubject(sub); setSubjectSearch('') }}
+                            style={{ width: '100%', padding: '0.625rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: text1 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.15)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label className="label">Highest Education Level *</label>
-                  <select value={education} onChange={e => setEducation(e.target.value)} className="input">
-                    <option value="">Select...</option>
-                    <option>High School Diploma</option>
-                    <option>Associate's Degree</option>
-                    <option>Bachelor's Degree</option>
-                    <option>Master's Degree</option>
-                    <option>PhD / Doctorate</option>
-                    <option>Professional Degree</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Institution *</label>
-                  <input value={institution} onChange={e => setInstitution(e.target.value)} className="input" placeholder="e.g. MIT, Harvard" />
-                </div>
-              </div>
-
-              <div>
-                <label className="label">Years of tutoring experience *</label>
-                <select value={yearsExp} onChange={e => setYearsExp(e.target.value)} className="input">
-                  <option value="">Select...</option>
-                  <option>Less than 1 year</option>
-                  <option>1-2 years</option>
-                  <option>3-5 years</option>
-                  <option>5-10 years</option>
-                  <option>10+ years</option>
-                </select>
-              </div>
-
-              {[
-                { label: 'Resume / CV *', file: cvFile, setter: setCvFile, accept: '.pdf,.doc,.docx', hint: 'Upload CV/Resume (PDF)' },
-                { label: 'Certifications', file: certFile, setter: setCertFile, accept: '.pdf,.jpg,.jpeg,.png', hint: 'Upload certification (optional)' },
-                { label: '30-60 Second Intro Video *', file: videoFile, setter: setVideoFile, accept: '.mp4,.mov,.avi,.webm', hint: 'Upload intro video (MP4, MOV — max 100MB)' },
-              ].map(item => (
-                <div key={item.label}>
-                  <label className="label">{item.label}</label>
-                  {item.file ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.2)' }}>
-                      <span style={{ fontSize: '0.875rem', color: accent, fontWeight: 600, flex: 1 }}>✓ {item.file.name}</span>
-                      <button type="button" onClick={() => item.setter(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
-                    </div>
-                  ) : (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.75rem', border: '2px dashed rgba(34,85,14,0.2)', cursor: 'pointer', background: surfaceBg }}>
-                      <Upload style={{ width: '1.25rem', height: '1.25rem', color: text2 }} />
-                      <span style={{ fontSize: '0.875rem', color: text2 }}>{item.hint}</span>
-                      <input type="file" accept={item.accept} style={{ display: 'none' }} onChange={e => item.setter(e.target.files?.[0] ?? null)} />
-                    </label>
-                  )}
-                </div>
-              ))}
-
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => { setError(''); setStep(1) }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>← Back</button>
-                <button onClick={() => {
-                  if (subjects.length === 0 || !education || !institution || !yearsExp || !cvFile || !videoFile) { setError('Please fill in all required fields.'); return }
-                  setError(''); setStep(3)
-                }} className="btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-                  Continue to Availability →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Your Availability</h2>
-              <p style={{ fontSize: '0.9375rem', color: text2 }}>Set your weekly availability. Students will book sessions during these times.</p>
-
-              {availability.length === 0 && (
-                <div style={{ padding: '2rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px dashed rgba(34,85,14,0.2)' }}>
-                  <p style={{ color: text2, marginBottom: '1rem' }}>No availability set yet</p>
-                  <button onClick={addAvailability} className="btn-secondary" style={{ fontSize: '0.875rem' }}>+ Add Time Slot</button>
-                </div>
-              )}
-
-              {availability.map((a, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'end', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label className="label">Day</label>
-                    <select value={a.day} onChange={e => updateAvailability(i, 'day', parseInt(e.target.value))} className="input">
-                      {DAYS.map((d, idx) => <option key={d} value={idx}>{d}</option>)}
+                    <label className="ta-label">Highest Education Level *</label>
+                    <select value={education} onChange={e => setEducation(e.target.value)} className="ta-input ta-select">
+                      <option value="">Select...</option>
+                      <option>High School Diploma</option>
+                      <option>Associate's Degree</option>
+                      <option>Bachelor's Degree</option>
+                      <option>Master's Degree</option>
+                      <option>PhD / Doctorate</option>
+                      <option>Professional Degree</option>
                     </select>
                   </div>
                   <div>
-                    <label className="label">From</label>
-                    <input type="time" value={a.start} onChange={e => updateAvailability(i, 'start', e.target.value)} className="input" />
+                    <label className="ta-label">Institution *</label>
+                    <input value={institution} onChange={e => setInstitution(e.target.value)} className="ta-input" placeholder="e.g. MIT, Harvard" />
                   </div>
-                  <div>
-                    <label className="label">To</label>
-                    <input type="time" value={a.end} onChange={e => updateAvailability(i, 'end', e.target.value)} className="input" />
-                  </div>
-                  <button onClick={() => removeAvailability(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(163,45,45)', padding: '0.5rem', alignSelf: 'flex-end' }}>
-                    <X style={{ width: '1.25rem', height: '1.25rem' }} />
-                  </button>
                 </div>
-              ))}
 
-              {availability.length > 0 && (
-                <button onClick={addAvailability} className="btn-secondary" style={{ alignSelf: 'flex-start', fontSize: '0.875rem' }}>+ Add Another Slot</button>
-              )}
-
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => { setError(''); setStep(2) }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>← Back</button>
-                <button onClick={() => {
-                  if (availability.length === 0) { setError('Please add at least one availability slot.'); return }
-                  setError(''); setStep(4)
-                }} className="btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-                  Continue to Agreement →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Payment & Agreement</h2>
-
-              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.04)', border: '1px solid rgba(34,85,14,0.1)' }}>
-                <p style={{ fontSize: '0.875rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>💰 How you get paid</p>
-                <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
-                  You'll receive $30/hr via your preferred payment method within 24 hours after each completed session. Provide at least one payment handle below.
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
-                  <label className="label">Venmo handle</label>
-                  <input value={venmo} onChange={e => setVenmo(e.target.value)} className="input" placeholder="@yourhandle" />
+                  <label className="ta-label">Years of tutoring experience *</label>
+                  <select value={yearsExp} onChange={e => setYearsExp(e.target.value)} className="ta-input ta-select">
+                    <option value="">Select...</option>
+                    <option>Less than 1 year</option>
+                    <option>1-2 years</option>
+                    <option>3-5 years</option>
+                    <option>5-10 years</option>
+                    <option>10+ years</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="label">PayPal email</label>
-                  <input value={paypal} onChange={e => setPaypal(e.target.value)} className="input" placeholder="you@example.com" />
-                </div>
-                <div>
-                  <label className="label">Zelle phone or email</label>
-                  <input value={zelle} onChange={e => setZelle(e.target.value)} className="input" placeholder="Phone or email" />
-                </div>
-              </div>
 
-              <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(232,160,32,0.05)', border: '1px solid rgba(232,160,32,0.2)' }}>
-                <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
-                  🧾 <strong style={{ color: text1 }}>Tax note:</strong> If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We will contact you at that point to collect your tax information securely.
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                 {[
-                  { state: agreedToTerms, setter: setAgreedToTerms, text: "I agree to AceForge's Tutor Terms of Service, including the refund policy, dispute process, and platform fee structure." },
-                  { state: agreedToNoCriminal, setter: setAgreedToNoCriminal, text: 'I declare that I have no criminal history and I am legally eligible to work with students including minors. I understand that providing false information will result in immediate termination and potential legal action.' },
-                  { state: agreedToNoPoaching, setter: setAgreedToNoPoaching, text: 'I agree not to solicit AceForge students to book sessions outside of the AceForge platform for 12 months. Violation of this agreement may result in legal action and a permanent ban.' },
-                  { state: agreedToRecording, setter: setAgreedToRecording, text: 'I consent to all tutoring sessions being recorded for quality assurance and dispute resolution purposes. Recordings are reviewed only in case of a dispute and deleted after 30 days.' },
-                  { state: agreedToTax, setter: setAgreedToTax, text: 'I understand that AceForge is required by US law to issue a 1099-NEC to tutors earning $600 or more in a calendar year. By applying, I agree to provide my tax information (W-9) when requested. I understand that failure to provide this information may result in mandatory 24% backup withholding on my payments as required by the IRS.' },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(34,85,14,0.02)', border: '1px solid rgba(34,85,14,0.08)' }}>
-                    <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
-                      style={{ width: '1.125rem', height: '1.125rem', accentColor: accent, flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
-                    <label style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
-                      {item.text}
-                    </label>
+                  { label: 'Resume / CV *', file: cvFile, setter: setCvFile, accept: '.pdf,.doc,.docx', hint: 'Upload CV/Resume (PDF)' },
+                  { label: 'Certifications', file: certFile, setter: setCertFile, accept: '.pdf,.jpg,.jpeg,.png', hint: 'Upload certification (optional)' },
+                  { label: '30-60 Second Intro Video *', file: videoFile, setter: setVideoFile, accept: '.mp4,.mov,.avi,.webm', hint: 'Upload intro video (MP4, MOV — max 100MB)' },
+                ].map(item => (
+                  <div key={item.label}>
+                    <label className="ta-label">{item.label}</label>
+                    {item.file ? (
+                      <div style={fileChosen}>
+                        <span style={{ fontSize: '0.875rem', color: SUCCESS, fontWeight: 600, flex: 1 }}>✓ {item.file.name}</span>
+                        <button type="button" onClick={() => item.setter(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: text2 }}><X style={{ width: '1rem', height: '1rem' }} /></button>
+                      </div>
+                    ) : (
+                      <label className="ta-upload" style={uploadBox}>
+                        <Upload style={{ width: '1.25rem', height: '1.25rem', color: INDIGO }} />
+                        <span style={{ fontSize: '0.875rem', color: text2 }}>{item.hint}</span>
+                        <input type="file" accept={item.accept} style={{ display: 'none' }} onChange={e => item.setter(e.target.files?.[0] ?? null)} />
+                      </label>
+                    )}
                   </div>
                 ))}
-              </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => { setError(''); setStep(3) }} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>← Back</button>
-                <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-                  {loading ? 'Submitting...' : 'Submit Application 🎓'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button onClick={() => { setError(''); setStep(1) }} className="ta-back" style={{ flex: 1 }}>← Back</button>
+                  <button onClick={() => {
+                    if (subjects.length === 0 || !education || !institution || !yearsExp || !cvFile || !videoFile) { setError('Please fill in all required fields.'); return }
+                    setError(''); setStep(3)
+                  }} className="ta-cta" style={{ flex: 2 }}>
+                    Continue to Availability →
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
+            {step === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Your Availability</h2>
+                <p style={{ fontSize: '0.9375rem', color: text2 }}>Set your weekly availability. Students will book sessions during these times.</p>
+
+                {availability.length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(99,102,241,0.04)', border: '1px dashed rgba(99,102,241,0.3)' }}>
+                    <p style={{ color: text2, marginBottom: '1rem' }}>No availability set yet</p>
+                    <button onClick={addAvailability} className="ta-back" style={{ fontSize: '0.875rem' }}>+ Add Time Slot</button>
+                  </div>
+                )}
+
+                {availability.map((a, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'end', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                    <div>
+                      <label className="ta-label">Day</label>
+                      <select value={a.day} onChange={e => updateAvailability(i, 'day', parseInt(e.target.value))} className="ta-input ta-select">
+                        {DAYS.map((d, idx) => <option key={d} value={idx}>{d}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="ta-label">From</label>
+                      <input type="time" value={a.start} onChange={e => updateAvailability(i, 'start', e.target.value)} className="ta-input" />
+                    </div>
+                    <div>
+                      <label className="ta-label">To</label>
+                      <input type="time" value={a.end} onChange={e => updateAvailability(i, 'end', e.target.value)} className="ta-input" />
+                    </div>
+                    <button onClick={() => removeAvailability(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgb(248,113,113)', padding: '0.5rem', alignSelf: 'flex-end' }}>
+                      <X style={{ width: '1.25rem', height: '1.25rem' }} />
+                    </button>
+                  </div>
+                ))}
+
+                {availability.length > 0 && (
+                  <button onClick={addAvailability} className="ta-back" style={{ alignSelf: 'flex-start', fontSize: '0.875rem' }}>+ Add Another Slot</button>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button onClick={() => { setError(''); setStep(2) }} className="ta-back" style={{ flex: 1 }}>← Back</button>
+                  <button onClick={() => {
+                    if (availability.length === 0) { setError('Please add at least one availability slot.'); return }
+                    setError(''); setStep(4)
+                  }} className="ta-cta" style={{ flex: 2 }}>
+                    Continue to Agreement →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: text1 }}>Payment & Agreement</h2>
+
+                <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, color: text1, marginBottom: '0.5rem' }}>💰 How you get paid</p>
+                  <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
+                    You'll receive $30/hr via your preferred payment method within 24 hours after each completed session. Provide at least one payment handle below.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div>
+                    <label className="ta-label">Venmo handle</label>
+                    <input value={venmo} onChange={e => setVenmo(e.target.value)} className="ta-input" placeholder="@yourhandle" />
+                  </div>
+                  <div>
+                    <label className="ta-label">PayPal email</label>
+                    <input value={paypal} onChange={e => setPaypal(e.target.value)} className="ta-input" placeholder="you@example.com" />
+                  </div>
+                  <div>
+                    <label className="ta-label">Zelle phone or email</label>
+                    <input value={zelle} onChange={e => setZelle(e.target.value)} className="ta-input" placeholder="Phone or email" />
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem', borderRadius: '0.875rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
+                  <p style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6 }}>
+                    🧾 <strong style={{ color: text1 }}>Tax note:</strong> If you earn $600 or more in a calendar year on AceForge, we are required by US law to issue you a 1099-NEC form. We will contact you at that point to collect your tax information securely.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  {[
+                    { state: agreedToTerms, setter: setAgreedToTerms, text: "I agree to AceForge's Tutor Terms of Service, including the refund policy, dispute process, and platform fee structure." },
+                    { state: agreedToNoCriminal, setter: setAgreedToNoCriminal, text: 'I declare that I have no criminal history and I am legally eligible to work with students including minors. I understand that providing false information will result in immediate termination and potential legal action.' },
+                    { state: agreedToNoPoaching, setter: setAgreedToNoPoaching, text: 'I agree not to solicit AceForge students to book sessions outside of the AceForge platform for 12 months. Violation of this agreement may result in legal action and a permanent ban.' },
+                    { state: agreedToRecording, setter: setAgreedToRecording, text: 'I consent to all tutoring sessions being recorded for quality assurance and dispute resolution purposes. Recordings are reviewed only in case of a dispute and deleted after 30 days.' },
+                    { state: agreedToTax, setter: setAgreedToTax, text: 'I understand that AceForge is required by US law to issue a 1099-NEC to tutors earning $600 or more in a calendar year. By applying, I agree to provide my tax information (W-9) when requested. I understand that failure to provide this information may result in mandatory 24% backup withholding on my payments as required by the IRS.' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.03)', border: `1px solid ${item.state ? 'rgba(74,222,128,0.4)' : 'rgba(99,102,241,0.15)'}`, transition: 'border-color 0.2s' }}>
+                      <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)}
+                        style={{ width: '1.125rem', height: '1.125rem', accentColor: SUCCESS, flexShrink: 0, marginTop: '0.125rem', cursor: 'pointer' }} />
+                      <label style={{ fontSize: '0.8125rem', color: text2, lineHeight: 1.6, cursor: 'pointer' }} onClick={() => item.setter(!item.state)}>
+                        {item.text}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button onClick={() => { setError(''); setStep(3) }} className="ta-back" style={{ flex: 1 }}>← Back</button>
+                  <button onClick={handleSubmit} disabled={loading} className="ta-cta" style={{ flex: 2 }}>
+                    {loading ? 'Submitting...' : 'Submit Application 🎓'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
+
+      <style>{taStyles}</style>
     </div>
   )
 }
+
+const taStyles = `
+  @keyframes taFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes taStep { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes taErr { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes taPop { 0% { opacity: 0; transform: scale(0.6); } 60% { transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+  .ta-fade { animation: taFadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+  .ta-step { animation: taStep 0.35s ease both; }
+  .ta-err { animation: taErr 0.3s ease both; }
+  .ta-pop { animation: taPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+  .ta-label { display: block; font-size: 0.8125rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 0.4rem; }
+  .ta-input {
+    width: 100%; box-sizing: border-box; padding: 0 1rem; border-radius: 0.75rem;
+    background: rgba(255,255,255,0.06); border: 1.5px solid rgba(99,102,241,0.25); color: white;
+    font-size: 0.9375rem; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    color-scheme: dark; font-family: inherit;
+  }
+  input.ta-input, select.ta-input { height: 48px; }
+  textarea.ta-input { padding: 0.7rem 1rem; }
+  .ta-input::placeholder { color: rgba(255,255,255,0.35); }
+  .ta-input:focus { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .ta-select option { background: rgb(22,22,38); color: white; }
+  .ta-upload:hover { background: rgba(99,102,241,0.08) !important; }
+  .ta-pill:active { transform: scale(0.95); }
+  .ta-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    padding: 0.875rem 1.25rem; border-radius: 0.75rem; border: none; color: white; font-weight: 700; font-size: 0.9375rem; cursor: pointer;
+    background: linear-gradient(135deg, rgb(99,102,241), rgb(139,92,246));
+    transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .ta-cta:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+  .ta-cta:disabled { cursor: wait; opacity: 0.7; }
+  .ta-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0.875rem 1.25rem; border-radius: 0.75rem; cursor: pointer; font-weight: 700; font-size: 0.9375rem;
+    background: transparent; border: 1px solid rgba(255,255,255,0.15); color: white; transition: background 0.2s ease;
+  }
+  .ta-back:hover { background: rgba(255,255,255,0.05); }
+`

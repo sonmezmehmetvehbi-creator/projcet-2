@@ -37,7 +37,7 @@ export default async function TutorReportPage() {
 
   return (
     <TutorThemeProvider>
-      <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, rgb(10,10,20), rgb(15,15,30), rgb(18,15,35))' }}>
         <TutorNavbar profile={profile} tutorProfile={tutorProfile} />
         <TutorReportClient sessions={sessions} />
       </div>
