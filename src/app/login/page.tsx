@@ -58,13 +58,6 @@ export default function LoginPage() {
 
       {/* ── DECORATIVE PANEL (left) ── */}
       <div className="auth-deco" style={{ flex: '0 0 40%', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgb(20,50,10), rgb(34,85,14))', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '3rem' }}>
-        {/* floating subject cards */}
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {FLOAT_SUBJECTS.map(s => (
-            <span key={s.label} style={{ position: 'absolute', top: s.top, left: s.left, padding: '0.5rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', animation: `authFloat 6s ease-in-out ${s.delay} infinite` }}>{s.label}</span>
-          ))}
-        </div>
-
         <div style={{ position: 'relative', maxWidth: '22rem' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.625rem', marginBottom: '2rem' }}>
             <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -81,6 +74,13 @@ export default function LoginPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* floating subject cards, pinned to the bottom of the panel */}
+        <div aria-hidden style={{ position: 'absolute', bottom: '2rem', left: '1.5rem', right: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.625rem', pointerEvents: 'none' }}>
+          {FLOAT_SUBJECTS.map((s, i) => (
+            <span key={s.label} style={{ padding: '0.5rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', animation: `authFloat 6s ease-in-out ${i * 0.6}s infinite` }}>{s.label}</span>
+          ))}
         </div>
       </div>
 
