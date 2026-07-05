@@ -28,18 +28,25 @@ const SORTS = [
 ]
 
 const GREEN = 'rgb(34,85,14)'
+const INK = 'rgb(26,26,20)'
+const MUTED = 'rgb(107,107,88)'
+const AVATAR_GRADIENT = 'linear-gradient(135deg, rgb(34,85,14), rgb(74,122,40))'
 
 const SELECT_STYLE: React.CSSProperties = {
+  height: '44px',
   fontSize: '0.875rem',
   fontWeight: 600,
-  padding: '0.65rem 0.875rem',
-  borderRadius: '0.875rem',
+  padding: '0 0.875rem',
+  borderRadius: '0.75rem',
   border: '1.5px solid rgba(34,85,14,0.2)',
   background: 'var(--af-card)',
   color: 'var(--af-text)',
   fontFamily: 'Syne, sans-serif',
   cursor: 'pointer',
+  width: '100%',
+  boxSizing: 'border-box',
 }
+const filterLabel: React.CSSProperties = { fontSize: '0.6875rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem', display: 'block' }
 
 export default function TutoringListClient({ tutors, isPremium }: { tutors: any[]; isPremium: boolean }) {
   const [search, setSearch] = useState('')
@@ -79,39 +86,49 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
   return (
     <div className="animate-fade-in tut-list">
 
-      {/* ── HERO ── */}
-      <div style={{ position: 'relative', borderRadius: '1.75rem', padding: '2.5rem 2rem 3rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgb(34,85,14), rgb(59,130,46))', color: 'white', boxShadow: '0 14px 44px rgba(34,85,14,0.28)', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-40px', right: '-20px', fontSize: '10rem', opacity: 0.1, lineHeight: 1 }}>🎓</div>
-        <div style={{ position: 'relative', maxWidth: '40rem' }}>
-          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1.1, marginBottom: '0.5rem' }}>Find Your Perfect Tutor</h1>
-          <p style={{ fontSize: '1.0625rem', color: 'rgba(255,255,255,0.85)', marginBottom: '1.25rem' }}>Expert tutors for every subject — book in minutes</p>
-          <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            <span style={pill}>🟢 Live sessions available</span>
-            <span style={pill}>✓ Verified tutors only</span>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '1.125rem', height: '1.125rem', color: 'rgb(107,107,88)' }} />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by tutor name..."
-              style={{ width: '100%', boxSizing: 'border-box', padding: '0.95rem 1rem 0.95rem 2.75rem', borderRadius: '9999px', border: 'none', outline: 'none', fontSize: '1rem', color: 'rgb(26,26,20)', background: 'white', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }} />
-          </div>
-        </div>
+      {/* ── HEADER ── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.5rem', fontWeight: 700, color: INK, lineHeight: 1.1, marginBottom: '0.375rem' }}>Find Your Tutor</h1>
+        <p style={{ fontSize: '1.0625rem', color: MUTED }}>Browse verified tutors across 80+ subjects</p>
       </div>
 
-      {/* ── FILTER BAR ── */}
-      <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={subject} onChange={e => setSubject(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 200px' }}>
-            {SUBJECTS.map(s => <option key={s} value={s}>{s === 'All Subjects' ? 'Subject: All' : s}</option>)}
-          </select>
-          <select value={language} onChange={e => setLanguage(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 160px' }}>
-            {LANGUAGES.map(l => <option key={l} value={l}>{l === 'All Languages' ? 'Language: All' : l}</option>)}
-          </select>
-          <select value={sort} onChange={e => setSort(e.target.value)} style={{ ...SELECT_STYLE, flex: '1 1 160px' }}>
-            {SORTS.map(s => <option key={s.value} value={s.value}>Sort: {s.label}</option>)}
-          </select>
+      {/* ── SEARCH + FILTER CARD ── */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 4px 24px rgba(34,85,14,0.06)' }}>
+        {/* Search */}
+        <div style={{ position: 'relative', marginBottom: '1rem' }}>
+          <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '1.125rem', height: '1.125rem', color: MUTED, pointerEvents: 'none' }} />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by tutor name..."
+            style={{ width: '100%', boxSizing: 'border-box', height: '48px', padding: '0 1rem 0 2.75rem', borderRadius: '0.875rem', border: '1.5px solid rgba(34,85,14,0.2)', outline: 'none', fontSize: '0.9375rem', color: 'var(--af-text)', background: 'var(--af-card)' }} />
         </div>
-        {activeFilters.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.875rem' }}>
+
+        {/* Filters row */}
+        <div className="tut-filters" style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={filterLabel}>Subject</label>
+            <select value={subject} onChange={e => setSubject(e.target.value)} style={SELECT_STYLE}>
+              {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: '1 1 150px' }}>
+            <label style={filterLabel}>Language</label>
+            <select value={language} onChange={e => setLanguage(e.target.value)} style={SELECT_STYLE}>
+              {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: '1 1 150px' }}>
+            <label style={filterLabel}>Sort</label>
+            <select value={sort} onChange={e => setSort(e.target.value)} style={SELECT_STYLE}>
+              {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Active filters + count */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {activeFilters.length > 0 && (
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: GREEN, color: 'white', fontFamily: 'Syne, sans-serif' }}>{activeFilters.length}</span>
+            )}
             {activeFilters.map(f => (
               <button key={f.label} onClick={f.clear}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.3rem 0.5rem 0.3rem 0.75rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', border: '1px solid rgba(34,85,14,0.25)', color: GREEN, fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -119,13 +136,11 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
               </button>
             ))}
           </div>
-        )}
+          <p style={{ fontSize: '0.9375rem', fontWeight: 800, color: GREEN, fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+            {filtered.length} tutor{filtered.length !== 1 ? 's' : ''} found
+          </p>
+        </div>
       </div>
-
-      {/* Results count */}
-      <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--af-text-muted)', marginBottom: '1.25rem', fontFamily: 'Syne, sans-serif' }}>
-        {filtered.length} tutor{filtered.length !== 1 ? 's' : ''} found
-      </p>
 
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
@@ -135,7 +150,7 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
             <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '1.5rem', height: '0.4rem', background: 'rgba(34,85,14,0.3)', borderRadius: '9999px', transform: 'rotate(45deg)' }} />
           </div>
           <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '0.5rem' }}>
-            No tutors found for your search
+            No tutors match your search
           </h3>
           <p style={{ color: 'var(--af-text-muted)', marginBottom: '1.25rem' }}>Try clearing your filters or searching a different subject.</p>
           <button onClick={() => { setSearch(''); setSubject('All Subjects'); setLanguage('All Languages') }}
@@ -147,37 +162,36 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
             const subjects: string[] = tutor.subjects ?? []
             const extra = subjects.length - 3
             return (
-              <div key={tutor.id} className={`tut-card${i < 6 ? ` animate-stagger-${i + 1}` : ''}`}
-                style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', borderRadius: '1.25rem', background: 'var(--af-card)', border: '1px solid var(--af-border)', boxShadow: '0 4px 24px rgba(34,85,14,0.06)' }}>
+              <div key={tutor.id} className="tut-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', borderRadius: '1.25rem', background: 'var(--af-card)', border: '1px solid var(--af-border)', boxShadow: '0 4px 24px rgba(34,85,14,0.06)', animation: 'cardIn 0.4s ease both', animationDelay: `${Math.min(i, 12) * 0.05}s` }}>
 
                 {/* Header: avatar + rating */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', minWidth: 0 }}>
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       {tutor.avatar_url ? (
-                        <img src={tutor.avatar_url} alt={tutor.display_name} style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }} />
+                        <img className="tut-avatar" src={tutor.avatar_url} alt={tutor.display_name} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', transition: 'box-shadow 0.2s ease' }} />
                       ) : (
-                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.5rem', fontWeight: 700 }}>
+                        <div className="tut-avatar" style={{ width: '56px', height: '56px', borderRadius: '50%', background: AVATAR_GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.375rem', fontWeight: 700, transition: 'box-shadow 0.2s ease' }}>
                           {tutor.display_name?.[0] ?? '?'}
                         </div>
                       )}
-                      {/* online dot */}
-                      <span style={{ position: 'absolute', bottom: '2px', right: '2px', width: '0.875rem', height: '0.875rem', borderRadius: '50%', background: 'rgb(34,197,94)', border: '2.5px solid var(--af-card)' }} />
-                      {/* verified checkmark badge */}
-                      {tutor.credential_verified && (
-                        <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '1.25rem', height: '1.25rem', borderRadius: '50%', background: 'rgb(37,99,235)', border: '2px solid var(--af-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6875rem', fontWeight: 800 }}>✓</span>
-                      )}
+                      <span style={{ position: 'absolute', bottom: '2px', right: '2px', width: '0.8125rem', height: '0.8125rem', borderRadius: '50%', background: 'rgb(34,197,94)', border: '2.5px solid var(--af-card)' }} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.125rem', color: 'var(--af-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tutor.display_name}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)' }}>{tutor.total_sessions ?? 0} sessions</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontWeight: 700, fontSize: '1.0625rem', color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tutor.display_name}</p>
+                        {tutor.credential_verified && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem', fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.1)', color: GREEN, whiteSpace: 'nowrap' }}>✓ Verified</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: MUTED }}>{tutor.total_sessions ?? 0} sessions</p>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     {tutor.rating > 0 ? (
                       <>
-                        <p style={{ fontSize: '0.875rem', color: 'rgb(180,120,10)', whiteSpace: 'nowrap' }}>{'⭐'.repeat(Math.round(tutor.rating))}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--af-text-muted)' }}>{tutor.total_reviews ?? 0} reviews</p>
+                        <p style={{ fontSize: '0.8125rem', color: 'rgb(180,120,10)', fontWeight: 700, whiteSpace: 'nowrap' }}>⭐ {Number(tutor.rating).toFixed(1)}</p>
+                        <p style={{ fontSize: '0.6875rem', color: MUTED }}>({tutor.total_reviews ?? 0})</p>
                       </>
                     ) : (
                       <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: GREEN }}>New</span>
@@ -187,31 +201,35 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
 
                 {/* Subjects */}
                 {subjects.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.625rem' }}>
                     {subjects.slice(0, 3).map(s => (
-                      <span key={s} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.06)', color: GREEN, fontWeight: 600 }}>{s}</span>
+                      <span key={s} style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.08)', color: GREEN, fontWeight: 600 }}>{s}</span>
                     ))}
                     {extra > 0 && (
-                      <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(107,107,88,0.1)', color: 'var(--af-text-muted)', fontWeight: 600 }}>+{extra} more</span>
+                      <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem', borderRadius: '9999px', background: 'rgba(107,107,88,0.1)', color: MUTED, fontWeight: 600 }}>+{extra} more</span>
                     )}
                   </div>
                 )}
 
+                {/* Languages */}
                 {tutor.languages?.length > 0 && (
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--af-text-muted)', marginBottom: '0.875rem' }}>🌐 {tutor.languages.join(', ')}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.875rem' }}>
+                    {tutor.languages.slice(0, 4).map((l: string) => (
+                      <span key={l} style={{ fontSize: '0.6875rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(107,107,88,0.09)', color: MUTED, fontWeight: 600 }}>🌐 {l}</span>
+                    ))}
+                  </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1rem', marginTop: 'auto' }}>
-                  <div>
-                    <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: GREEN }}>${hourlyRate}/hr</span>
-                    <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: isPremium ? GREEN : 'var(--af-text-muted)', marginTop: '0.125rem' }}>
-                      {isPremium ? '⚡ Your premium rate' : 'Save $15/hr with Premium ⚡'}
-                    </p>
-                  </div>
+                <div style={{ marginTop: 'auto', marginBottom: '1rem' }}>
+                  <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: GREEN }}>${hourlyRate}/hr</span>
+                  <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: isPremium ? GREEN : MUTED, marginTop: '0.125rem' }}>
+                    {isPremium ? '⚡ Your premium rate' : 'Save $15/hr with Premium ⚡'}
+                  </p>
                 </div>
 
-                <Link href={`/tutoring/tutor/${tutor.id}`} className="btn-primary" style={{ width: '100%', justifyContent: 'center', display: 'flex', textDecoration: 'none', borderRadius: '0.875rem' }}>
-                  View Profile →
+                <Link href={`/tutoring/tutor/${tutor.id}`} className="tut-view"
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.75rem', borderRadius: '0.875rem', background: GREEN, color: 'white', fontWeight: 700, fontSize: '0.9375rem', textDecoration: 'none' }}>
+                  View Profile <span className="tut-arrow" style={{ display: 'inline-block', transition: 'transform 0.2s ease' }}>→</span>
                 </Link>
               </div>
             )
@@ -220,16 +238,13 @@ export default function TutoringListClient({ tutors, isPremium }: { tutors: any[
       )}
 
       <style>{`
+        @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .tut-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .tut-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(34,85,14,0.14); }
+        .tut-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(34,85,14,0.12); }
+        .tut-card:hover .tut-avatar { box-shadow: 0 0 0 3px rgba(34,85,14,0.25); }
+        .tut-view:hover .tut-arrow { transform: translateX(4px); }
+        @media (max-width: 560px) { .tut-filters > div { flex: 1 1 100% !important; } }
       `}</style>
     </div>
   )
-}
-
-const pill: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-  padding: '0.4rem 0.875rem', borderRadius: '9999px',
-  background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-  fontSize: '0.8125rem', fontWeight: 600,
 }
