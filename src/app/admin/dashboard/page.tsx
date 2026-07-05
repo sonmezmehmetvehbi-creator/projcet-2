@@ -74,7 +74,7 @@ export default async function AdminDashboardPage() {
   }))
 
   return (
-    <div style={{ minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+    <div style={{ minHeight: '100vh', background: 'rgb(18,18,28)' }}>
       <AdminNavbar profile={profile} />
       <AdminDashboardClient
         profile={profile}
