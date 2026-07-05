@@ -53,6 +53,7 @@ const DIFFICULTIES = [
 ]
 
 const QUESTION_COUNT = 22
+const MIXED = 'Mixed — All Topics'
 
 export default function SATClient({ profile, satUsage }: Props) {
   const [subject, setSubject] = useState<'math' | 'rw' | ''>('')
@@ -176,7 +177,7 @@ export default function SATClient({ profile, satUsage }: Props) {
 
         {/* ── SUBJECT CARDS ── */}
         <p style={sectionLabel}>1 · Choose a subject</p>
-        <div className="sat-subjects" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div className="sat-subjects" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
           {SUBJECTS.map((s, i) => {
             const selected = subject === s.id
             const Icon = s.icon
@@ -203,7 +204,17 @@ export default function SATClient({ profile, satUsage }: Props) {
         {subject && (
           <div className="sat-slide" style={{ marginBottom: '2rem' }}>
             <p style={sectionLabel}>2 · Pick a topic</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+              {/* Mixed — All Topics (distinct, first) */}
+              {(() => {
+                const active = topic === MIXED
+                return (
+                  <button type="button" onClick={() => setTopic(MIXED)}
+                    style={{ padding: '0.55rem 1.1rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s ease', background: active ? GREEN : 'rgba(34,85,14,0.1)', color: active ? 'white' : GREEN, border: `1.5px solid ${active ? GREEN : 'rgba(34,85,14,0.35)'}` }}>
+                    ∞ {MIXED}
+                  </button>
+                )
+              })()}
               {TOPICS[subject].map(t => {
                 const active = topic === t
                 const accent = selectedSubject!.color
@@ -312,6 +323,7 @@ export default function SATClient({ profile, satUsage }: Props) {
         .sat-cta { transition: transform 0.2s ease; }
         .sat-cta-ready { animation: satCtaPulse 2.2s ease-in-out infinite; }
         .sat-cta-ready:hover { transform: translateY(-2px); }
+        @media (max-width: 560px) { .sat-subjects { grid-template-columns: 1fr !important; } }
       `}</style>
     </div>
   )

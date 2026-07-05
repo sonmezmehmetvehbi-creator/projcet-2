@@ -133,8 +133,19 @@ For each question:
 Return JSON: { "questions": [...] }`
     }
 
-    // Focus the whole set on the selected topic when one was chosen.
-    if (topic) userPrompt += `\n\nFocus every question specifically on this SAT skill/topic: ${topic}.`
+    // Topic handling: "Mixed — All Topics" spreads across every topic in the
+    // section; otherwise focus the whole set on the one chosen topic.
+    const isMixed = typeof topic === 'string' && topic.trim().toLowerCase().startsWith('mixed')
+    if (isMixed) {
+      const allTopics = isMath
+        ? (isCalc
+            ? 'Heart of Algebra, Passport to Advanced Math, Problem Solving & Data Analysis, Geometry & Trigonometry'
+            : 'Heart of Algebra, Passport to Advanced Math, Problem Solving & Data Analysis, Geometry & Trigonometry (no-calculator questions solvable by hand)')
+        : 'Command of Evidence, Words in Context, Text Structure, Rhetorical Synthesis, Standard English'
+      userPrompt += `\n\nGenerate questions covering ALL topics within this SAT section randomly mixed. Do not focus on any single topic — vary the question topics throughout the set. Cover: ${allTopics}.`
+    } else if (topic) {
+      userPrompt += `\n\nFocus every question specifically on this SAT skill/topic: ${topic}.`
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
