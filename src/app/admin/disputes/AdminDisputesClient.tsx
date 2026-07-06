@@ -41,17 +41,17 @@ export default function AdminDisputesClient({ disputes }: Props) {
 
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'2rem', flexWrap:'wrap', gap:'1rem' }}>
           <div>
-            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(26,26,20)', marginBottom:'0.25rem' }}>
+            <h1 style={{ fontFamily:'Fraunces, Georgia, serif', fontSize:'2rem', fontWeight:700, color:'rgb(240,240,235)', marginBottom:'0.25rem' }}>
               Disputes
             </h1>
-            <p style={{ color:'rgb(107,107,88)' }}>
+            <p style={{ color:'rgba(255,255,255,0.55)' }}>
               {disputes.filter(d => d.dispute_status === 'pending').length} pending review
             </p>
           </div>
           <div style={{ display:'flex', gap:'0.5rem' }}>
             {(['all','pending','resolved'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                style={{ padding:'0.5rem 1rem', borderRadius:'0.75rem', border:`1.5px solid ${filter === f ? 'rgb(163,45,45)' : 'rgba(34,85,14,0.2)'}`, background: filter === f ? 'rgba(163,45,45,0.06)' : 'white', color: filter === f ? 'rgb(163,45,45)' : 'rgb(107,107,88)', fontWeight: filter === f ? 600 : 400, fontSize:'0.875rem', cursor:'pointer', textTransform:'capitalize' }}>
+                style={{ padding:'0.5rem 1rem', borderRadius:'0.75rem', border:`1.5px solid ${filter === f ? 'rgb(248,113,113)' : 'rgba(34,85,14,0.2)'}`, background: filter === f ? 'rgba(163,45,45,0.06)' : 'transparent', color: filter === f ? 'rgb(248,113,113)' : 'rgba(255,255,255,0.55)', fontWeight: filter === f ? 600 : 400, fontSize:'0.875rem', cursor:'pointer', textTransform:'capitalize' }}>
                 {f} {f !== 'all' && `(${disputes.filter(d => f === 'pending' ? d.dispute_status === 'pending' : d.dispute_status === 'resolved').length})`}
               </button>
             ))}
@@ -59,14 +59,14 @@ export default function AdminDisputesClient({ disputes }: Props) {
         </div>
 
         {filtered.length === 0 && (
-          <div className="card" style={{ padding:'3rem', textAlign:'center', color:'rgb(107,107,88)' }}>
+          <div className="card" style={{ padding:'3rem', textAlign:'center', color:'rgba(255,255,255,0.55)' }}>
             No {filter} disputes 🎉
           </div>
         )}
 
         <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
           {filtered.map(d => (
-            <div key={d.id} className="card" style={{ padding:'1.5rem', border: d.dispute_status === 'pending' ? '2px solid rgba(163,45,45,0.2)' : '1px solid rgba(34,85,14,0.08)' }}>
+            <div key={d.id} className="card" style={{ padding:'1.5rem', border: d.dispute_status === 'pending' ? '2px solid rgba(163,45,45,0.2)' : '1px solid rgba(255,255,255,0.08)' }}>
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px,1fr))', gap:'1rem', marginBottom:'1.25rem' }}>
                 {[
@@ -78,17 +78,17 @@ export default function AdminDisputesClient({ disputes }: Props) {
                   { label:'Tutor Payout', value: '$' + d.tutor_payout },
                 ].map(item => (
                   <div key={item.label}>
-                    <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(107,107,88)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>{item.label}</p>
-                    <p style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(26,26,20)' }}>{item.value}</p>
+                    <p style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.25rem' }}>{item.label}</p>
+                    <p style={{ fontSize:'0.875rem', fontWeight:600, color:'rgb(240,240,235)' }}>{item.value}</p>
                   </div>
                 ))}
               </div>
 
               <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'rgba(163,45,45,0.04)', border:'1px solid rgba(163,45,45,0.12)', marginBottom:'1.25rem' }}>
-                <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(163,45,45)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.375rem' }}>
+                <p style={{ fontSize:'0.75rem', fontWeight:700, color:'rgb(248,113,113)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'0.375rem' }}>
                   Dispute Reason
                 </p>
-                <p style={{ fontSize:'0.9375rem', color:'rgb(26,26,20)', lineHeight:1.7 }}>{d.dispute_reason}</p>
+                <p style={{ fontSize:'0.9375rem', color:'rgb(240,240,235)', lineHeight:1.7 }}>{d.dispute_reason}</p>
               </div>
 
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem', flexWrap:'wrap', gap:'0.5rem' }}>
@@ -96,7 +96,7 @@ export default function AdminDisputesClient({ disputes }: Props) {
                   {d.dispute_status === 'pending' ? '⏳ Pending Review' : '✅ Resolved'}
                 </span>
                 {d.dispute_resolved_at && (
-                  <span style={{ fontSize:'0.8125rem', color:'rgb(107,107,88)' }}>
+                  <span style={{ fontSize:'0.8125rem', color:'rgba(255,255,255,0.55)' }}>
                     Resolved {new Date(d.dispute_resolved_at).toLocaleDateString()}
                   </span>
                 )}
@@ -121,7 +121,7 @@ export default function AdminDisputesClient({ disputes }: Props) {
                     <button
                       onClick={() => resolve(d.id, 'no_refund')}
                       disabled={resolving === d.id}
-                      style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', padding:'0.75rem', borderRadius:'0.875rem', background:'rgba(163,45,45,0.06)', border:'2px solid rgba(163,45,45,0.2)', color:'rgb(163,45,45)', fontWeight:700, cursor:'pointer', fontSize:'0.9375rem' }}>
+                      style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', padding:'0.75rem', borderRadius:'0.875rem', background:'rgba(163,45,45,0.06)', border:'2px solid rgba(163,45,45,0.2)', color:'rgb(248,113,113)', fontWeight:700, cursor:'pointer', fontSize:'0.9375rem' }}>
                       ❌ Deny Refund
                     </button>
                   </div>

@@ -23,7 +23,7 @@ export default async function AdminDisputesPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
       <AdminSidebar profile={profile} counts={counts} />
-      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(18,18,28)' }}>
         <AdminDisputesClient disputes={disputes ?? []} />
       </div>
     </div>

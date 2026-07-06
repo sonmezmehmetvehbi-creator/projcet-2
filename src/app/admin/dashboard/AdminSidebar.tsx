@@ -154,6 +154,46 @@ export default function AdminSidebar({ profile, counts }: Props) {
       </aside>
 
       <style>{`
+        /* ── Dark theme for admin page content ── */
+        .admin-content { color: rgb(240,240,235); }
+        .admin-content input, .admin-content select, .admin-content textarea { color-scheme: dark; }
+        .admin-content input::placeholder, .admin-content textarea::placeholder { color: rgba(255,255,255,0.3) !important; opacity: 1; }
+        .admin-content .card {
+          background: rgba(255,255,255,0.04) !important;
+          border: 1px solid rgba(255,255,255,0.08) !important;
+          border-radius: 0.875rem !important;
+          color: rgb(240,240,235) !important;
+          box-shadow: none !important;
+        }
+        .admin-content .input {
+          background: rgba(255,255,255,0.06) !important;
+          border: 1.5px solid rgba(255,255,255,0.12) !important;
+          color: white !important;
+        }
+        .admin-content select.input option { background: rgb(24,24,36); color: white; }
+        .admin-content .label { color: rgba(255,255,255,0.55) !important; }
+        .admin-content .btn-primary {
+          background: linear-gradient(135deg, rgb(34,85,14), rgb(59,130,46)) !important;
+          border: none !important; color: white !important;
+        }
+        .admin-content .btn-secondary {
+          background: rgba(255,255,255,0.08) !important;
+          border: 1px solid rgba(255,255,255,0.12) !important;
+          color: rgb(240,240,235) !important;
+        }
+        .admin-content .btn-ghost { color: rgba(255,255,255,0.6) !important; }
+        .admin-content .alert-error {
+          background: rgba(248,113,113,0.12) !important;
+          border: 1px solid rgba(248,113,113,0.3) !important;
+          color: rgb(248,113,113) !important;
+        }
+        .admin-content .alert-success {
+          background: rgba(74,222,128,0.12) !important;
+          border: 1px solid rgba(74,222,128,0.3) !important;
+          color: rgb(74,222,128) !important;
+        }
+        .admin-content table th, .admin-content table td { border-color: rgba(255,255,255,0.06) !important; }
+
         .admin-hamburger { display: none; }
         @media (max-width: 768px) {
           .admin-hamburger { display: flex; }

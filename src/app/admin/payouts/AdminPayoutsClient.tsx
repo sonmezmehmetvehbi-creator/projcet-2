@@ -99,8 +99,8 @@ const entityLabel = (v: string | null | undefined) =>
   ENTITY_TYPES.find(e => e.value === v)?.label ?? (v || '')
 
 const GREEN = 'rgb(34,85,14)'
-const MUTED = 'rgb(107,107,88)'
-const INK = 'rgb(26,26,20)'
+const MUTED = 'rgba(255,255,255,0.55)'
+const INK = 'rgb(240,240,235)'
 
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const escape = (v: string | number) => {
@@ -162,7 +162,7 @@ export default function AdminPayoutsClient({ payouts: initialPayouts, pendingPay
         <p style={{ color: MUTED, marginBottom: '1.5rem' }}>Manual payout processing, receipts, and 1099 tracking.</p>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0', marginBottom: '2rem', borderBottom: '2px solid rgba(34,85,14,0.08)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0', marginBottom: '2rem', borderBottom: '2px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ padding: '0.625rem 1.25rem', fontSize: '0.9375rem', fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? INK : MUTED, background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: tab === t.id ? `2px solid ${INK}` : '2px solid transparent', marginBottom: '-2px', whiteSpace: 'nowrap' }}>
@@ -196,7 +196,7 @@ function OverviewTab({ payouts, sessions, totalRevenue, totalPaid, totalPending,
     { label: 'Total Revenue', value: totalRevenue, emoji: '💵', color: 'rgb(37,99,235)' },
     { label: 'Total Paid Out', value: totalPaid, emoji: '💸', color: GREEN },
     { label: 'Total Pending', value: totalPending, emoji: '⏳', color: 'rgb(217,119,6)' },
-    { label: 'Platform Profit', value: profit, emoji: '📈', color: profit >= 0 ? GREEN : 'rgb(163,45,45)' },
+    { label: 'Platform Profit', value: profit, emoji: '📈', color: profit >= 0 ? GREEN : 'rgb(248,113,113)' },
   ]
 
   // Last 6 months revenue vs payouts
@@ -341,7 +341,7 @@ function PendingTab({ pendingPayouts }: { pendingPayouts: Payout[] }) {
                 {tutor.venmo && <span style={chip}>Venmo: {tutor.venmo}</span>}
                 {tutor.paypal && <span style={chip}>PayPal: {tutor.paypal}</span>}
                 {tutor.zelle && <span style={chip}>Zelle: {tutor.zelle}</span>}
-                {!tutor.venmo && !tutor.paypal && !tutor.zelle && <span style={{ ...chip, color: 'rgb(163,45,45)' }}>No payment handle</span>}
+                {!tutor.venmo && !tutor.paypal && !tutor.zelle && <span style={{ ...chip, color: 'rgb(248,113,113)' }}>No payment handle</span>}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -423,7 +423,7 @@ function MarkPaidForm({ tutor, pendingPayouts, onCancel, onPaid }: {
   }
 
   return (
-    <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(34,85,14,0.1)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '0.875rem' }}>
+    <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '0.875rem' }}>
       <div>
         <label style={lbl}>Payment method</label>
         <select value={method} onChange={e => setMethod(e.target.value)} style={input}>
@@ -451,7 +451,7 @@ function MarkPaidForm({ tutor, pendingPayouts, onCancel, onPaid }: {
           style={{ padding: '0.625rem 1rem', borderRadius: '0.625rem', background: 'transparent', border: `1px solid ${MUTED}40`, color: MUTED, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
           Cancel
         </button>
-        {error && <span style={{ color: 'rgb(163,45,45)', fontSize: '0.8125rem' }}>{error}</span>}
+        {error && <span style={{ color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{error}</span>}
       </div>
     </div>
   )
@@ -520,7 +520,7 @@ function HistoryTab({ payouts, tutors, thisYear }: { payouts: Payout[]; tutors: 
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                     <td style={td}>{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}</td>
                     <td style={{ ...td, fontWeight: 600, color: INK }}>{p.tutor_name}</td>
                     <td style={{ ...td, fontWeight: 700, color: GREEN }}>${p.amount.toFixed(2)}</td>
@@ -614,8 +614,8 @@ function TaxInfoTab({ tutors, thisYear, taxInfoMap, ytdEarningsMap }: {
   }
 
   // Threshold tiering by YTD earnings.
-  const tierColor = (amt: number) => amt >= 600 ? 'rgb(163,45,45)' : amt >= 400 ? 'rgb(180,99,5)' : GREEN
-  const tierBarBg = (amt: number) => amt >= 600 ? 'rgb(163,45,45)' : amt >= 400 ? 'rgb(217,119,6)' : GREEN
+  const tierColor = (amt: number) => amt >= 600 ? 'rgb(248,113,113)' : amt >= 400 ? 'rgb(180,99,5)' : GREEN
+  const tierBarBg = (amt: number) => amt >= 600 ? 'rgb(248,113,113)' : amt >= 400 ? 'rgb(217,119,6)' : GREEN
   const tierLabel = (amt: number) =>
     amt >= 600 ? '🚨 1099 Required — W-9 needed'
       : amt >= 400 ? '⚠️ Approaching $600 — collect W-9 soon'
@@ -626,7 +626,7 @@ function TaxInfoTab({ tutors, thisYear, taxInfoMap, ytdEarningsMap }: {
       {/* Summary banner */}
       <div style={{ padding: '1.25rem 1.5rem', borderRadius: '0.875rem', background: needsCount > 0 ? 'rgba(163,45,45,0.06)' : 'rgba(34,85,14,0.05)', border: `1px solid ${needsCount > 0 ? 'rgba(163,45,45,0.18)' : 'rgba(34,85,14,0.15)'}`, marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: needsCount > 0 ? 'rgb(163,45,45)' : GREEN }}>
+          <p style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, color: needsCount > 0 ? 'rgb(248,113,113)' : GREEN }}>
             {needsCount} tutor{needsCount !== 1 ? 's' : ''} require 1099 filing this year
           </p>
           <p style={{ fontSize: '0.8125rem', color: MUTED, marginTop: '0.25rem' }}>
@@ -857,7 +857,7 @@ function TaxInfoForm({ tutor, thisYear, ytd, info, onSaved }: {
           {busy ? 'Saving…' : '💾 Save Tax Info'}
         </button>
         {saved && <span style={{ color: GREEN, fontWeight: 600, fontSize: '0.875rem' }}>✅ Saved</span>}
-        {error && <span style={{ color: 'rgb(163,45,45)', fontSize: '0.8125rem' }}>{error}</span>}
+        {error && <span style={{ color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{error}</span>}
       </div>
     </div>
   )
@@ -866,6 +866,6 @@ function TaxInfoForm({ tutor, thisYear, ytd, info, onSaved }: {
 // ---- shared styles ----
 const chip: React.CSSProperties = { fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(34,85,14,0.06)', color: GREEN, fontWeight: 600 }
 const lbl: React.CSSProperties = { display: 'block', fontSize: '0.6875rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }
-const input: React.CSSProperties = { width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: INK, fontSize: '0.875rem', boxSizing: 'border-box' }
-const th: React.CSSProperties = { padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(34,85,14,0.08)', whiteSpace: 'nowrap' }
+const input: React.CSSProperties = { width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: INK, fontSize: '0.875rem', boxSizing: 'border-box' }
+const th: React.CSSProperties = { padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '0.875rem 1rem', fontSize: '0.875rem', color: MUTED }

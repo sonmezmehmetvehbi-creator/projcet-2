@@ -27,10 +27,10 @@ interface Props {
   currentUserId: string
 }
 
-const INK = 'rgb(26,26,20)'
-const MUTED = 'rgb(107,107,88)'
+const INK = 'rgb(240,240,235)'
+const MUTED = 'rgba(255,255,255,0.55)'
 const GREEN = 'rgb(34,85,14)'
-const DANGER = 'rgb(163,45,45)'
+const DANGER = 'rgb(248,113,113)'
 
 const PER_PAGE = 25
 
@@ -83,16 +83,16 @@ function roleBadgeStyle(type: string): React.CSSProperties {
 }
 
 const selectStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)',
-  background: 'white', color: INK, fontSize: '0.875rem', cursor: 'pointer',
+  padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.05)', color: INK, fontSize: '0.875rem', cursor: 'pointer',
 }
 const inputStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)',
-  background: 'white', color: INK, fontSize: '0.875rem', boxSizing: 'border-box',
+  padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.05)', color: INK, fontSize: '0.875rem', boxSizing: 'border-box',
 }
 const th: React.CSSProperties = { padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '0.75rem 1rem', fontSize: '0.875rem', color: INK, verticalAlign: 'middle' }
-const actionCard: React.CSSProperties = { padding: '1rem 1.125rem', borderRadius: '0.875rem', background: 'white', border: '1px solid rgba(34,85,14,0.1)' }
+const actionCard: React.CSSProperties = { padding: '1rem 1.125rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
 const cardTitle: React.CSSProperties = { fontSize: '0.75rem', fontWeight: 800, color: INK, fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }
 const smallLabel: React.CSSProperties = { fontSize: '0.625rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }
 
@@ -100,7 +100,7 @@ function btnStyle(kind: 'primary' | 'neutral' | 'danger', disabled?: boolean): R
   const base: React.CSSProperties = { padding: '0.5rem 1rem', borderRadius: '0.625rem', fontWeight: 600, fontSize: '0.8125rem', cursor: disabled ? 'wait' : 'pointer', whiteSpace: 'nowrap' }
   if (kind === 'primary') return { ...base, background: GREEN, border: 'none', color: 'white' }
   if (kind === 'danger') return { ...base, background: 'rgba(163,45,45,0.08)', border: '1.5px solid rgba(163,45,45,0.3)', color: DANGER }
-  return { ...base, background: 'white', border: '1.5px solid rgba(34,85,14,0.2)', color: INK }
+  return { ...base, background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)', color: INK }
 }
 
 export default function AdminUsersClient({ users: initialUsers, currentUserId }: Props) {
@@ -170,7 +170,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
   }
 
   return (
-    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: 'rgb(250,250,247)' }}>
+    <div className="animate-fade-in" style={{ paddingTop: '5rem', minHeight: '100vh', paddingBottom: '4rem', background: 'rgb(18,18,28)' }}>
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
@@ -187,7 +187,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
         {/* Search */}
         <input value={search} onChange={e => resetPage(setSearch)(e.target.value)}
           placeholder="Search by name or email…"
-          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid rgba(34,85,14,0.2)', background: 'white', color: INK, fontSize: '0.9375rem', boxSizing: 'border-box', marginBottom: '1rem' }} />
+          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: INK, fontSize: '0.9375rem', boxSizing: 'border-box', marginBottom: '1rem' }} />
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -203,7 +203,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
         </div>
 
         {/* Stats bar */}
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', padding: '0.875rem 1.25rem', borderRadius: '0.75rem', background: 'white', border: '1px solid rgba(34,85,14,0.1)', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', padding: '0.875rem 1.25rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.25rem' }}>
           {[
             { label: 'shown', value: counts.shown, suffix: 'users shown' },
             { label: 'premium', value: counts.premium, suffix: 'premium' },
@@ -221,7 +221,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
               <thead>
-                <tr style={{ background: 'rgba(34,85,14,0.03)', borderBottom: '1px solid rgba(34,85,14,0.08)' }}>
+                <tr style={{ background: 'rgba(34,85,14,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <th style={th}></th>
                   <th style={th}>Name</th>
                   <th style={th}>Email</th>
@@ -241,7 +241,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
                   return (
                     <Fragment key={u.id}>
                       <tr onClick={() => setExpanded(open ? null : u.id)}
-                        style={{ borderBottom: open ? 'none' : '1px solid rgba(34,85,14,0.06)', cursor: 'pointer', background: open ? 'rgba(34,85,14,0.02)' : 'transparent' }}>
+                        style={{ borderBottom: open ? 'none' : '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', background: open ? 'rgba(34,85,14,0.02)' : 'transparent' }}>
                         <td style={td}>
                           <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '50%', background: GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.875rem', fontWeight: 700 }}>
                             {(u.display_name?.[0] ?? u.email?.[0] ?? '?').toUpperCase()}
@@ -262,7 +262,7 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
                         </td>
                       </tr>
                       {open && (
-                        <tr style={{ borderBottom: '1px solid rgba(34,85,14,0.06)', background: 'rgba(34,85,14,0.02)' }}>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(34,85,14,0.02)' }}>
                           <td colSpan={8} style={{ padding: '0 1rem 1.5rem' }}>
                             <UserDetailPanel user={u} onPatch={patchUser} />
                           </td>
@@ -283,12 +283,12 @@ export default function AdminUsersClient({ users: initialUsers, currentUserId }:
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0}
-              style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'white', border: '1.5px solid rgba(34,85,14,0.2)', color: safePage === 0 ? MUTED : INK, fontWeight: 600, fontSize: '0.875rem', cursor: safePage === 0 ? 'default' : 'pointer', opacity: safePage === 0 ? 0.5 : 1 }}>
+              style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)', color: safePage === 0 ? MUTED : INK, fontWeight: 600, fontSize: '0.875rem', cursor: safePage === 0 ? 'default' : 'pointer', opacity: safePage === 0 ? 0.5 : 1 }}>
               ← Previous
             </button>
             <span style={{ fontSize: '0.875rem', color: MUTED, padding: '0 0.5rem' }}>Page {safePage + 1} of {pageCount}</span>
             <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1}
-              style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'white', border: '1.5px solid rgba(34,85,14,0.2)', color: safePage >= pageCount - 1 ? MUTED : INK, fontWeight: 600, fontSize: '0.875rem', cursor: safePage >= pageCount - 1 ? 'default' : 'pointer', opacity: safePage >= pageCount - 1 ? 0.5 : 1 }}>
+              style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)', color: safePage >= pageCount - 1 ? MUTED : INK, fontWeight: 600, fontSize: '0.875rem', cursor: safePage >= pageCount - 1 ? 'default' : 'pointer', opacity: safePage >= pageCount - 1 ? 0.5 : 1 }}>
               Next →
             </button>
           </div>
@@ -389,9 +389,9 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
   ] as const
 
   return (
-    <div style={{ borderRadius: '0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(34,85,14,0.1)', overflow: 'hidden' }}>
+    <div style={{ borderRadius: '0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(34,85,14,0.1)', background: 'white' }}>
+      <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.05)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: '0.75rem 1.25rem', fontSize: '0.875rem', fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? INK : MUTED, background: 'transparent', border: 'none', borderBottom: tab === t.id ? `2px solid ${GREEN}` : '2px solid transparent', marginBottom: '-1px', cursor: 'pointer' }}>
@@ -417,7 +417,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
                 { label: 'Joined', value: new Date(user.created_at).toLocaleDateString() },
                 { label: 'Last active', value: user.lastActive ? new Date(user.lastActive).toLocaleDateString() : '—' },
               ].map(item => (
-                <div key={item.label} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'white', border: '1px solid rgba(34,85,14,0.08)' }}>
+                <div key={item.label} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <p style={smallLabel}>{item.label}</p>
                   <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600, wordBreak: 'break-word' }}>{item.value}</p>
                 </div>
@@ -593,7 +593,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
               {notes.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.875rem' }}>
                   {notes.map(n => (
-                    <div key={n.id} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(34,85,14,0.08)' }}>
+                    <div key={n.id} style={{ padding: '0.625rem 0.875rem', borderRadius: '0.625rem', background: 'rgba(34,85,14,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <p style={{ fontSize: '0.875rem', color: INK, lineHeight: 1.5 }}>{n.note}</p>
                       <p style={{ fontSize: '0.6875rem', color: MUTED, marginTop: '0.25rem' }}>{new Date(n.created_at).toLocaleString()}</p>
                     </div>
@@ -614,7 +614,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
               {tickets.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No support tickets.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {tickets.map(t => (
-                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                    <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: '0.875rem', color: INK, fontWeight: 600 }}>{t.subject}</p>
                         <p style={{ fontSize: '0.75rem', color: MUTED }}>{new Date(t.created_at).toLocaleDateString()}</p>
@@ -666,7 +666,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
               {sessions.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No tutoring sessions.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                   {sessions.map(s => (
-                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)', flexWrap: 'wrap' }}>
+                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.875rem', color: INK }}>
                         {s.subject ?? 'Session'} · <span style={{ color: MUTED }}>{s.tutor_profiles?.display_name ?? 'Tutor'}</span>
                       </span>
@@ -684,7 +684,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
               {generations.length === 0 ? <p style={{ fontSize: '0.875rem', color: MUTED }}>No activity in the last 7 days.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                   {generations.map((g, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(34,85,14,0.06)' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                       <span style={{ fontSize: '0.875rem', color: INK }}>{new Date(g.date).toLocaleDateString()}</span>
                       <span style={{ fontSize: '0.8125rem', color: MUTED, whiteSpace: 'nowrap' }}>{g.questions ?? 0} questions · {g.worksheets ?? 0} worksheets</span>
                     </div>
@@ -701,8 +701,8 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
         <div onClick={() => setViewTicket(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: 'white', borderRadius: '1rem', width: '100%', maxWidth: '36rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(34,85,14,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '1rem', width: '100%', maxWidth: '36rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
               <div style={{ minWidth: 0 }}>
                 <p style={{ fontWeight: 700, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewTicket.subject}</p>
                 <p style={{ fontSize: '0.75rem', color: MUTED }}>{viewTicket.status} · {new Date(viewTicket.created_at).toLocaleDateString()}</p>
@@ -717,7 +717,7 @@ function UserDetailPanel({ user, onPatch }: { user: UserRow; onPatch: (id: strin
               ) : ticketMessages.map((m, i) => (
                 <div key={m.id ?? i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.is_admin ? 'flex-end' : 'flex-start' }}>
                   <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: m.is_admin ? GREEN : MUTED, marginBottom: '0.2rem' }}>{m.is_admin ? 'Admin' : 'User'}</p>
-                  <div style={{ maxWidth: '80%', padding: '0.625rem 0.875rem', borderRadius: m.is_admin ? '0.875rem 0.875rem 0.25rem 0.875rem' : '0.875rem 0.875rem 0.875rem 0.25rem', background: m.is_admin ? 'rgb(26,26,20)' : 'rgba(34,85,14,0.08)', color: m.is_admin ? 'white' : INK }}>
+                  <div style={{ maxWidth: '80%', padding: '0.625rem 0.875rem', borderRadius: m.is_admin ? '0.875rem 0.875rem 0.25rem 0.875rem' : '0.875rem 0.875rem 0.875rem 0.25rem', background: m.is_admin ? 'rgba(255,255,255,0.1)' : 'rgb(34,85,14)', color: m.is_admin ? 'rgb(240,240,235)' : 'white', border: m.is_admin ? '1px solid rgba(255,255,255,0.12)' : 'none' }}>
                     {m.image_url && <a href={m.image_url} target="_blank" rel="noopener noreferrer"><img src={m.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '0.5rem', display: 'block', marginBottom: m.message ? '0.375rem' : 0 }} /></a>}
                     {m.message && <p style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>{m.message}</p>}
                   </div>

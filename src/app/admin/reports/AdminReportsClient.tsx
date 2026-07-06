@@ -16,15 +16,15 @@ interface Report {
   created_at: string
 }
 
-const INK = 'rgb(26,26,20)'
-const MUTED = 'rgb(107,107,88)'
+const INK = 'rgb(240,240,235)'
+const MUTED = 'rgba(255,255,255,0.55)'
 const GREEN = 'rgb(34,85,14)'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   pending: { bg: 'rgba(217,119,6,0.12)', color: 'rgb(180,83,9)', label: 'Pending' },
   reviewed: { bg: 'rgba(37,99,235,0.12)', color: 'rgb(37,99,235)', label: 'Reviewed' },
-  action_taken: { bg: 'rgba(34,85,14,0.12)', color: 'rgb(34,85,14)', label: 'Action Taken' },
-  dismissed: { bg: 'rgba(107,107,88,0.15)', color: 'rgb(90,90,72)', label: 'Dismissed' },
+  action_taken: { bg: 'rgba(34,85,14,0.12)', color: 'rgb(122,192,74)', label: 'Action Taken' },
+  dismissed: { bg: 'rgba(107,107,88,0.15)', color: 'rgba(255,255,255,0.55)', label: 'Dismissed' },
 }
 
 const STATUS_ACTIONS = [
@@ -77,7 +77,7 @@ export default function AdminReportsClient({ reports: initial }: { reports: Repo
             return (
               <button key={f} onClick={() => setFilter(f)}
                 style={{ padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                  background: active ? GREEN : 'white', color: active ? 'white' : 'rgb(90,90,72)',
+                  background: active ? GREEN : 'transparent', color: active ? 'white' : 'rgba(255,255,255,0.55)',
                   border: active ? `1px solid ${GREEN}` : '1px solid rgba(34,85,14,0.12)' }}>
                 {f.replace('_', ' ')} ({count})
               </button>
@@ -86,7 +86,7 @@ export default function AdminReportsClient({ reports: initial }: { reports: Repo
         </div>
 
         {visible.length === 0 ? (
-          <div style={{ padding: '3rem', borderRadius: '1rem', background: 'white', border: '1px solid rgba(34,85,14,0.12)', textAlign: 'center', color: MUTED }}>
+          <div style={{ padding: '3rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(34,85,14,0.12)', textAlign: 'center', color: MUTED }}>
             No {filter === 'all' ? '' : filter.replace('_', ' ')} reports.
           </div>
         ) : (
@@ -95,7 +95,7 @@ export default function AdminReportsClient({ reports: initial }: { reports: Repo
               const open = expanded === r.id
               const b = badge(r.status)
               return (
-                <div key={r.id} style={{ borderRadius: '1rem', background: 'white', border: '1px solid rgba(34,85,14,0.12)', overflow: 'hidden' }}>
+                <div key={r.id} style={{ borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(34,85,14,0.12)', overflow: 'hidden' }}>
                   <div onClick={() => setExpanded(open ? null : r.id)} style={{ padding: '1.25rem', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                       <div>
@@ -109,12 +109,12 @@ export default function AdminReportsClient({ reports: initial }: { reports: Repo
                           {r.sessionDate ? ` · Session ${new Date(r.sessionDate).toLocaleDateString()}` : ''}
                         </p>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'rgb(140,140,120)' }}>{open ? '▲ Collapse' : '▼ Details'}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{open ? '▲ Collapse' : '▼ Details'}</span>
                     </div>
                   </div>
 
                   {open && (
-                    <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid rgba(34,85,14,0.08)' }}>
+                    <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ padding: '0.875rem', borderRadius: '0.75rem', background: 'rgba(163,45,45,0.04)', border: '1px solid rgba(163,45,45,0.12)', margin: '1rem 0' }}>
                         <p style={{ fontSize: '0.625rem', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Description</p>
                         <p style={{ fontSize: '0.875rem', color: INK, lineHeight: 1.6 }}>{r.description}</p>
@@ -127,16 +127,16 @@ export default function AdminReportsClient({ reports: initial }: { reports: Repo
                         value={notes[r.id] ?? r.admin_notes ?? ''}
                         onChange={e => setNotes(prev => ({ ...prev, [r.id]: e.target.value }))}
                         rows={2} placeholder="Internal notes about this report…"
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(34,85,14,0.2)', fontSize: '0.875rem', boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.75rem' }} />
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', borderRadius: '0.625rem', border: '1.5px solid rgba(255,255,255,0.12)', fontSize: '0.875rem', boxSizing: 'border-box', resize: 'vertical', marginBottom: '0.75rem' }} />
 
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button onClick={() => update(r.id, undefined, notes[r.id] ?? r.admin_notes ?? '')} disabled={busy === r.id}
-                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'white', border: '1.5px solid rgba(34,85,14,0.25)', color: INK, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                          style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)', color: INK, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
                           💾 Save Note
                         </button>
                         {STATUS_ACTIONS.map(a => (
                           <button key={a.id} onClick={() => update(r.id, a.id, notes[r.id])} disabled={busy === r.id || r.status === a.id}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: r.status === a.id ? 'rgba(34,85,14,0.1)' : GREEN, border: 'none', color: r.status === a.id ? GREEN : 'white', fontWeight: 600, fontSize: '0.8125rem', cursor: r.status === a.id ? 'default' : 'pointer', opacity: busy === r.id ? 0.6 : 1 }}>
+                            style={{ padding: '0.5rem 1rem', borderRadius: '0.625rem', background: r.status === a.id ? 'rgba(34,85,14,0.1)' : GREEN, border: 'none', color: r.status === a.id ? GREEN : 'transparent', fontWeight: 600, fontSize: '0.8125rem', cursor: r.status === a.id ? 'default' : 'pointer', opacity: busy === r.id ? 0.6 : 1 }}>
                             {a.label}
                           </button>
                         ))}

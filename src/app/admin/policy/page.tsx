@@ -16,7 +16,7 @@ export default async function AdminPolicyPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'rgb(18,18,28)' }}>
       <AdminSidebar profile={profile} counts={counts} />
-      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(250,250,247)' }}>
+      <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(18,18,28)' }}>
       <div style={{ paddingTop: '5rem', paddingBottom: '5rem' }}>
         <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '3rem 1.5rem' }}>
 
@@ -24,14 +24,14 @@ export default async function AdminPolicyPage() {
             <Link href="/admin/dashboard" style={{ fontSize: '0.875rem', color: 'rgb(34,85,14)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.375rem', marginBottom: '1.5rem' }}>
               ← Back to Dashboard
             </Link>
-            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 700, color: 'rgb(26,26,20)', marginBottom: '0.75rem' }}>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 700, color: 'rgb(240,240,235)', marginBottom: '0.75rem' }}>
               Admin Policy & Guidelines
             </h1>
-            <p style={{ color: 'rgb(107,107,88)', fontSize: '0.9375rem' }}>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9375rem' }}>
               Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
             <div style={{ marginTop: '1rem', padding: '1rem 1.25rem', borderRadius: '0.875rem', background: 'rgba(163,45,45,0.06)', border: '1px solid rgba(163,45,45,0.2)' }}>
-              <p style={{ fontSize: '0.9375rem', color: 'rgb(163,45,45)', fontWeight: 600 }}>
+              <p style={{ fontSize: '0.9375rem', color: 'rgb(248,113,113)', fontWeight: 600 }}>
                 ⚠️ By accepting an admin role at AceForge, you have agreed to these policies in full. Violations may result in immediate termination and legal action.
               </p>
             </div>
@@ -81,7 +81,7 @@ export default async function AdminPolicyPage() {
             {
               title: '4. Data Handling & Security',
               icon: '🛡️',
-              color: 'rgb(107,107,88)',
+              color: 'rgba(255,255,255,0.55)',
               bg: 'rgba(107,107,88,0.04)',
               border: 'rgba(107,107,88,0.15)',
               content: [
@@ -94,7 +94,7 @@ export default async function AdminPolicyPage() {
             {
               title: '5. Conflict of Interest',
               icon: '🚫',
-              color: 'rgb(163,45,45)',
+              color: 'rgb(248,113,113)',
               bg: 'rgba(163,45,45,0.04)',
               border: 'rgba(163,45,45,0.15)',
               content: [
@@ -106,7 +106,7 @@ export default async function AdminPolicyPage() {
             {
               title: '6. Consequences of Violations',
               icon: '⚡',
-              color: 'rgb(163,45,45)',
+              color: 'rgb(248,113,113)',
               bg: 'rgba(163,45,45,0.04)',
               border: 'rgba(163,45,45,0.15)',
               content: [
@@ -120,18 +120,18 @@ export default async function AdminPolicyPage() {
             <div key={i} style={{ marginBottom: '2rem', padding: '1.75rem', borderRadius: '1rem', background: section.bg, border: `1px solid ${section.border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>{section.icon}</span>
-                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'rgb(26,26,20)' }}>{section.title}</h2>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'rgb(240,240,235)' }}>{section.title}</h2>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                 {section.content.map((para, j) => (
-                  <p key={j} style={{ fontSize: '0.9375rem', color: 'rgb(26,26,20)', lineHeight: 1.8 }}>{para}</p>
+                  <p key={j} style={{ fontSize: '0.9375rem', color: 'rgb(240,240,235)', lineHeight: 1.8 }}>{para}</p>
                 ))}
               </div>
             </div>
           ))}
 
           <div style={{ padding: '1.5rem', borderRadius: '1rem', background: 'rgba(26,26,20,0.04)', border: '1px solid rgba(26,26,20,0.12)', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.9375rem', color: 'rgb(107,107,88)', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0.5rem' }}>
               Questions about these policies?
             </p>
             <a href="mailto:contactinfo21342@gmail.com" style={{ color: 'rgb(34,85,14)', fontWeight: 700, textDecoration: 'none' }}>
