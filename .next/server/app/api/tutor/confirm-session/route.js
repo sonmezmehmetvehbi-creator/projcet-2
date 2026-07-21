@@ -2,7 +2,7 @@
            <p style="color:#1e40af;margin:0;font-size:14px">
              ⏰ <strong>You will receive a reminder 1 hour before your session.</strong>${b>24?" Since your session is more than 24 hours away, we'll also send you reminders as it approaches.":""}
            </p>
-         </div>`:"";return await t.emails.send({from:"AceForge <onboarding@resend.dev>",to:m?.email,subject:"✅ Your tutoring session is confirmed!",html:`
+         </div>`:"";return await t.emails.send({from:"AceForge <noreply@aceforge.app>",to:m?.email,subject:"✅ Your tutoring session is confirmed!",html:`
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#22550e">Your session is confirmed! 🎓</h2>
           <p>Hi ${m?.display_name?.split(" ")[0]},</p>
@@ -37,7 +37,7 @@
             — The AceForge Team
           </p>
         </div>
-      `}),await t.emails.send({from:"AceForge <onboarding@resend.dev>",to:h?.email,subject:`📋 Session confirmed — Next steps for your session with ${m?.display_name?.split(" ")[0]}`,html:`
+      `}),await t.emails.send({from:"AceForge <noreply@aceforge.app>",to:h?.email,subject:`📋 Session confirmed — Next steps for your session with ${m?.display_name?.split(" ")[0]}`,html:`
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#22550e">Session Confirmed ✅</h2>
           <p>You've confirmed a tutoring session. Here's everything you need to know:</p>

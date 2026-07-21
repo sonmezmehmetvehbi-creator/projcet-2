@@ -722,6 +722,14 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                           {(() => {
                             if (!s.expires_at) return null
                             const hoursLeft = Math.max(0, Math.ceil((new Date(s.expires_at).getTime() - Date.now()) / (1000 * 60 * 60)))
+                            const expired = hoursLeft === 0 || new Date(s.expires_at) < new Date()
+                            if (expired) {
+                              return (
+                                <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(220,38,38)', marginBottom: '0.75rem' }}>
+                                  ⚠️ Expired — This request was not accepted in time
+                                </p>
+                              )
+                            }
                             const urgent = hoursLeft < 6
                             return (
                               <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: urgent ? 'rgb(220,38,38)' : 'rgb(217,119,6)', marginBottom: '0.75rem' }}>
