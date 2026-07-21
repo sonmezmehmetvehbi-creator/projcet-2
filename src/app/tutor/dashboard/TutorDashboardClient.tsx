@@ -725,8 +725,8 @@ export default function TutorDashboardClient({ profile, tutorProfile, sessions: 
                             const expired = hoursLeft === 0 || new Date(s.expires_at) < new Date()
                             if (expired) {
                               return (
-                                <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(220,38,38)', marginBottom: '0.75rem' }}>
-                                  ⚠️ Expired — This request was not accepted in time
+                                <p style={{ marginBottom: '0.75rem' }}>
+                                  <span style={{ color: 'rgb(248,113,113)', fontWeight: 700, fontSize: '0.8125rem' }}>❌ Expired — Being auto-refunded</span>
                                 </p>
                               )
                             }

@@ -73,6 +73,14 @@ export async function POST(request: Request) {
       hour: '2-digit', minute: '2-digit',
     })
 
+    // Build an "Add to Google Calendar" link. Google Calendar expects UTC
+    // timestamps in the compact YYYYMMDDTHHMMSSZ form.
+    const gcalFmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+    const startTime = gcalFmt(scheduledAt)
+    const endTime = gcalFmt(new Date(scheduledAt.getTime() + (session.session_length ?? 60) * 60 * 1000))
+    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('AceForge Tutoring: ' + session.subject)}&dates=${startTime}/${endTime}&details=${encodeURIComponent('Join at: ' + meetLink)}&location=${encodeURIComponent(meetLink)}`
+    const gcalButton = `<a href="${gcalUrl}" style="display:inline-block;background:#fff;color:#22550e;border:1px solid #22550e;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">📅 Add to Google Calendar</a>`
+
     // Work out how far away the session is so we can tell both parties when to
     // expect a reminder. The actual reminder emails are dispatched by the cron
     // sweep using the reminder_* due-times persisted above.
@@ -91,7 +99,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'AceForge <noreply@aceforge.app>',
       to: student?.email,
-      subject: '✅ Your tutoring session is confirmed!',
+      subject: '📅 Session confirmed — Add to your calendar',
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#22550e">Your session is confirmed! 🎓</h2>
@@ -114,6 +122,12 @@ export async function POST(request: Request) {
             <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:12px 0 0">Or copy this link: ${meetLink}</p>
           </div>
 
+          <div style="text-align:center">${gcalButton}</div>
+
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:20px 0">
+            <p style="color:#1e40af;margin:0;font-size:14px">⏰ <strong>You'll receive a reminder 1 hour before your session.</strong></p>
+          </div>
+
           ${reminderNote}
 
           <div style="background:#fff8f0;border:1px solid #fde68a;border-radius:12px;padding:16px;margin:20px 0">
@@ -134,11 +148,15 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'AceForge <noreply@aceforge.app>',
       to: tutorUser?.email,
-      subject: `📋 Session confirmed — Next steps for your session with ${student?.display_name?.split(' ')[0]}`,
+      subject: '📅 Session confirmed — Reminder details',
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#22550e">Session Confirmed ✅</h2>
           <p>You've confirmed a tutoring session. Here's everything you need to know:</p>
+
+          <div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:20px 0">
+            <p style="color:#1e40af;margin:0;font-size:14px">💬 <strong>${student?.display_name?.split(' ')[0]}</strong> is your student for this session. Use the <strong>session chat</strong> in your dashboard to coordinate any details before you meet.</p>
+          </div>
 
           <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:20px;margin:20px 0">
             <p style="margin:0 0 8px"><strong>👤 Student:</strong> ${student?.display_name}</p>
@@ -175,6 +193,8 @@ export async function POST(request: Request) {
               ☐ Payout will be sent within 24hrs after completion
             </p>
           </div>
+
+          <div style="text-align:center">${gcalButton}</div>
 
           ${reminderNote}
 

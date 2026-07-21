@@ -62,21 +62,27 @@ export async function POST(request: Request) {
 
     if (sessionError) throw sessionError
 
+    // Fetch tutor's user email
+    const { data: tutorUser } = tutor.user_id
+      ? await adminClient.from('profiles').select('email, display_name').eq('id', tutor.user_id).single()
+      : { data: null }
+    const studentName = profile?.display_name?.split(' ')[0] ?? 'A student'
+
     // Email to tutor
     await resend.emails.send({
       from: 'AceForge <noreply@aceforge.app>',
-      to: tutor.profiles?.email,
-      subject: '📚 New Tutoring Session Request',
+      to: tutorUser?.email ?? tutor.profiles?.email,
+      subject: '🔔 New session request — Respond within 24 hours!',
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
           <h2 style="color:#22550e">New Session Request!</h2>
           <p>Hi ${tutor.display_name},</p>
-          <p>You have a new tutoring session request.</p>
+          <p>You have a new tutoring session request from <strong>${studentName}</strong>.</p>
           <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:20px;margin:20px 0">
             <p><strong>Subject:</strong> ${subject}</p>
             <p><strong>Topic:</strong> ${topic}</p>
             <p><strong>Grade:</strong> ${grade}</p>
-            <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
+            <p><strong>Scheduled:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
             <p><strong>Duration:</strong> ${sessionLength} minutes</p>
             <p><strong>Language:</strong> ${language}</p>
             ${message ? `<p><strong>Student note:</strong> ${message}</p>` : ''}
@@ -89,9 +95,13 @@ export async function POST(request: Request) {
               </div>
             ` : ''}
           </div>
+          <div style="background:#fffbe6;border:1px solid #f0e0a0;border-radius:12px;padding:16px;margin:20px 0">
+            <p style="color:#8a6d00;margin:0;font-size:14px">⚠️ <strong>You must accept or decline within 24 hours</strong> or the request will expire and the student will be automatically refunded.</p>
+          </div>
           <a href="https://aceforge.app/tutor/dashboard" style="display:inline-block;background:#22550e;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px">
-            Go to Dashboard →
+            View Request →
           </a>
+          <p style="color:#22550e;font-size:13px;margin-top:16px;font-weight:600">Quick responses lead to better ratings and more bookings.</p>
           <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
         </div>
       `,
