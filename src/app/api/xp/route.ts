@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
     // ── First-time-per-topic XP gating ────────────────────────────────────
     // Build a unique source_key from the request's subject + topic + type.
-    const sourceType: string = outputType === 'questions' ? 'questions' : 'worksheet'
+    const sourceType: string = outputType === 'questions' ? 'questions' : outputType === 'flashcards' ? 'flashcards' : 'worksheet'
     const sourceKey = `${sourceType}:${(subject ?? '').toLowerCase().trim()}:${(topic ?? '').toLowerCase().trim()}`
 
     // If XP was already earned for this exact content, award nothing.
@@ -217,6 +217,18 @@ export async function POST(request: Request) {
       if (pct >= 90) {
         xpEarned += 25
         breakdown.push({ reason: '90%+ score bonus 🔥', amount: 25 })
+      }
+    } else if (outputType === 'flashcards') {
+      // Flashcard deck reviewed
+      xpEarned += 15
+      breakdown.push({ reason: 'Flashcards completed', amount: 15 })
+
+      // Small bonus for cards marked "Got It" (correctAnswers = gotIt count).
+      const gotIt = correctAnswers ?? 0
+      if (gotIt > 0) {
+        const amount = gotIt * 2
+        xpEarned += amount
+        breakdown.push({ reason: `${gotIt} cards mastered (+2 each)`, amount })
       }
     } else {
       // Worksheet created

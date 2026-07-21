@@ -1,13 +1,13 @@
 'use client'
 import AdSlot from '@/components/ui/AdSlot'
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import { createClient } from '@/lib/supabase'
 import {
   BookOpen, FileText, ChevronDown, AlertCircle, Zap, Upload, X, FileUp,
   Calculator, FlaskConical, PenTool, Landmark, Target, Code, Languages,
-  Palette, Briefcase, HeartPulse, Brain, Sparkles, ArrowLeft, ArrowRight, Check,
+  Palette, Briefcase, HeartPulse, Brain, Sparkles, ArrowLeft, ArrowRight, Check, Layers,
 } from 'lucide-react'
 import LimitReachedModal from '@/components/ui/LimitReachedModal'
 import ReadyScreen from '@/components/ui/ReadyScreen'
@@ -197,6 +197,14 @@ const STEP_LABELS = ['Category', 'Subject', 'Topic', 'Options', 'Generate']
 const CUSTOM = '__custom__'
 
 export default function GeneratePage() {
+  return (
+    <Suspense fallback={null}>
+      <GeneratePageInner />
+    </Suspense>
+  )
+}
+
+function GeneratePageInner() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [subject, setSubject] = useState('')
   const [grade, setGrade] = useState<Grade>('9-10')
@@ -234,6 +242,17 @@ export default function GeneratePage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Pre-fill subject/topic from query params (e.g. arriving from a flashcard
+  // deck's "Generate Questions on This Topic" link).
+  useEffect(() => {
+    const s = searchParams.get('subject')
+    const t = searchParams.get('topic')
+    if (s) setSubject(s)
+    if (t) setTopic(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -253,7 +272,8 @@ export default function GeneratePage() {
   const bonusGenerations = (profile as any)?.bonus_generations ?? 0
   const atLimit = !profile?.is_premium && bonusGenerations <= 0 && (
     (outputType === 'questions' && usage.questions >= 2) ||
-    (outputType === 'worksheet' && usage.worksheets >= 2)
+    (outputType === 'worksheet' && usage.worksheets >= 2) ||
+    (outputType === 'flashcards' && usage.worksheets >= 2)
   )
 
   // ── Step navigation ──
@@ -385,17 +405,22 @@ export default function GeneratePage() {
     setLoading(true)
 
     const minWait = profile?.is_premium ? 15000 : 30000
+    const isFlashcards = outputType === 'flashcards'
 
     try {
       const [data] = await Promise.all([
-        fetch('/api/generate', {
+        fetch(isFlashcards ? '/api/generate-flashcards' : '/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject, grade, topic, focus, outputType,
-            questionCount, questionTypes, difficulty,
-            uploadedText: useUpload ? uploadedText : undefined,
-          }),
+          body: JSON.stringify(
+            isFlashcards
+              ? { subject, grade, topic, uploadedText: useUpload ? uploadedText : undefined }
+              : {
+                  subject, grade, topic, focus, outputType,
+                  questionCount, questionTypes, difficulty,
+                  uploadedText: useUpload ? uploadedText : undefined,
+                }
+          ),
         }).then(res => res.json()),
         new Promise(resolve => setTimeout(resolve, minWait)),
       ])
@@ -421,6 +446,7 @@ export default function GeneratePage() {
         setTimeout(() => {
           router.refresh()
           if (outputType === 'questions') router.push(`/questions/${data.sessionId}`)
+          else if (outputType === 'flashcards') router.push(`/flashcards/${data.sessionId}`)
           else router.push(`/worksheet/${data.sessionId}`)
         }, 2500)
       }, 300)
@@ -457,6 +483,8 @@ export default function GeneratePage() {
   const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
   const summary = outputType === 'questions'
     ? `Generate ${questionCount} ${difficulty} ${subject || 'study'} question${questionCount !== 1 ? 's' : ''}`
+    : outputType === 'flashcards'
+    ? `Generate ${subject || 'study'} flashcards for ${topic || 'this topic'}`
     : `Generate a ${difficulty} ${subject || 'study'} worksheet`
 
   const stepClass = dir === 'back' ? 'slide-from-left' : 'slide-from-right'
@@ -681,15 +709,16 @@ export default function GeneratePage() {
             {step === 4 && (
               <div className="card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <button type="button" onClick={() => goTo(3)} style={backLink}><ArrowLeft style={{ width: '0.875rem', height: '0.875rem' }} /> Topic</button>
-                <h2 style={{ ...stepTitle, marginBottom: 0 }}>Customize your {outputType === 'questions' ? 'questions' : 'worksheet'}</h2>
+                <h2 style={{ ...stepTitle, marginBottom: 0 }}>Customize your {outputType === 'questions' ? 'questions' : outputType === 'flashcards' ? 'flashcards' : 'worksheet'}</h2>
 
                 {/* Output type */}
                 <div>
                   <label className="label">Output type</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     {([
                       { value: 'questions', icon: BookOpen, label: 'Questions', desc: 'MC & free response' },
                       { value: 'worksheet', icon: FileText, label: 'Worksheet', desc: 'Visual study sheet' },
+                      { value: 'flashcards', icon: Layers, label: 'Flashcards', desc: 'Flip cards for quick memorization' },
                     ] as const).map(opt => (
                       <button key={opt.value} type="button" onClick={() => setOutputType(opt.value)}
                         style={{ padding: '1rem', borderRadius: '0.75rem', border: `2px solid ${outputType === opt.value ? GREEN : 'rgba(34,85,14,0.15)'}`, background: outputType === opt.value ? 'rgba(34,85,14,0.04)' : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>

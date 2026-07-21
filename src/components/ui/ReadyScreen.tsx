@@ -12,7 +12,7 @@ export default function ReadyScreen({ subject, topic, outputType }: { subject: s
       dur: 3 + Math.random() * 2,
     }))
   ).current
-  const kind = outputType === 'worksheet' ? 'worksheet' : 'questions'
+  const kind = outputType === 'worksheet' ? 'worksheet' : outputType === 'flashcards' ? 'flashcards' : 'questions'
 
   return (
     <div className="ready-glow" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgb(240,247,234), rgb(228,242,218), rgb(240,247,234))' }}>

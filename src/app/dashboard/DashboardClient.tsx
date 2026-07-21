@@ -51,11 +51,13 @@ const PURPLE = 'rgb(124,58,237)'
 const MUTED = 'var(--af-text-muted)'
 const CARD_SHADOW = '0 4px 24px rgba(34,85,14,0.08)'
 
-function sessionType(s: any): 'questions' | 'worksheets' | 'sat' {
+function sessionType(s: any): 'questions' | 'worksheets' | 'sat' | 'flashcards' {
   if (s.is_sat) return 'sat'
+  if (s.output_type === 'flashcards') return 'flashcards'
   return s.output_type === 'worksheet' ? 'worksheets' : 'questions'
 }
-const TYPE_ACCENT: Record<string, string> = { questions: GREEN, worksheets: BLUE, sat: PURPLE }
+const TEAL = 'rgb(13,148,136)'
+const TYPE_ACCENT: Record<string, string> = { questions: GREEN, worksheets: BLUE, sat: PURPLE, flashcards: TEAL }
 
 // Count-up number animation using requestAnimationFrame.
 function CountUp({ value, duration = 1200 }: { value: number; duration?: number }) {
@@ -517,10 +519,10 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                 {filteredSessions.map((session: any, i: number) => {
                   const type = sessionType(session)
                   const accent = TYPE_ACCENT[type]
-                  const href = `/${session.output_type === 'questions' ? 'questions' : 'worksheet'}/${session.id}`
+                  const href = `/${session.output_type === 'questions' ? 'questions' : session.output_type === 'flashcards' ? 'flashcards' : 'worksheet'}/${session.id}`
                   const typeLabel = session.is_sat
                     ? (session.sat_module === 'math_no_calc' ? '📐 SAT Math (No Calc)' : session.sat_module === 'math_calc' ? '🔢 SAT Math (Calc)' : '📖 SAT R&W')
-                    : session.output_type === 'questions' ? '❓ Questions' : '📄 Worksheet'
+                    : session.output_type === 'questions' ? '❓ Questions' : session.output_type === 'flashcards' ? '🃏 Flashcards' : '📄 Worksheet'
                   return (
                     <div key={session.id} className="sess-card"
                       style={{ padding: '1.25rem 1.25rem 1.25rem 1.5rem', position: 'relative', borderRadius: '1.125rem', background: 'var(--af-card)', border: '1px solid var(--af-border)', borderLeft: `4px solid ${accent}`, boxShadow: CARD_SHADOW, animation: `fadeUp 0.4s ease both`, animationDelay: `${Math.min(i, 10) * 0.05}s` }}>
