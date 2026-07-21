@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const { name, email, subjects, education, institution, linkedIn, idUrl, cvUrl, videoUrl, certUrl } = await request.json()
 
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: 'contactinfo21342@gmail.com',
       subject: `🎓 New Tutor Application — ${name}`,
       html: `
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     })
 
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: email,
       subject: '✅ Tutor Application Received — AceForge',
       html: `

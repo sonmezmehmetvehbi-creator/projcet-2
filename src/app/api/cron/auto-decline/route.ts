@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       try {
         if (student?.email) {
           await resend.emails.send({
-            from: 'AceForge <onboarding@resend.dev>',
+            from: 'AceForge <noreply@aceforge.app>',
             to: student.email,
             subject: 'Your session request was not accepted in time — full refund issued',
             html: `
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
       try {
         if (tutorEmail) {
           await resend.emails.send({
-            from: 'AceForge <onboarding@resend.dev>',
+            from: 'AceForge <noreply@aceforge.app>',
             to: tutorEmail,
             subject: 'A session request expired because it wasn’t accepted within 24 hours',
             html: `

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     try {
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: student?.email,
         subject: '✅ Refund Issued for Your Tutoring Session',
         html: `

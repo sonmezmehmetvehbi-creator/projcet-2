@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
       // Email student
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: session.profiles?.email,
         subject: '⏰ Your tutoring session starts in 15 minutes!',
         html: `
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       // Email tutor
       if (tutorProfile?.email) {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: tutorProfile.email,
           subject: '⏰ Your tutoring session starts in 15 minutes!',
           html: `
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
       const sessionTime = new Date(session.scheduled_at).toLocaleString()
 
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: session.profiles?.email,
         subject: '📅 Reminder: Tutoring session tomorrow',
         html: `
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
 
       if (tutorProfile?.email) {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: tutorProfile.email,
           subject: '📅 Reminder: Tutoring session tomorrow',
           html: `

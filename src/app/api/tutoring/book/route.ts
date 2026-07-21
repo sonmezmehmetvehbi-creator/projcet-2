@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     // Email to tutor
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: tutor.profiles?.email,
       subject: '📚 New Tutoring Session Request',
       html: `
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
     // Email to student
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: profile?.email ?? user.email ?? '',
       subject: '✅ Tutoring Session Requested — AceForge',
       html: `

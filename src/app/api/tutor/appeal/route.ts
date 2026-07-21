@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     })
 
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: 'contactinfo21342@gmail.com',
       subject: `⚖️ Tutor Appeal: ${name}`,
       html: `
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     })
 
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: email,
       subject: 'We received your appeal — AceForge',
       html: `

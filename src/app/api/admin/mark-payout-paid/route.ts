@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     try {
       if (tutorEmail) {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: tutorEmail,
           subject: '💰 Payment Received — AceForge',
           html: `

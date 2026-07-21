@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       }
 
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: email,
         subject: '🎉 Your Appeal Was Approved — Welcome to AceForge!',
         html: `
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       })
     } else {
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: email,
         subject: 'Final Decision on Your AceForge Tutor Appeal',
         html: `

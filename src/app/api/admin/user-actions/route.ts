@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
         const resend = new Resend(process.env.RESEND_API_KEY as string)
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: target.email,
           subject: 'Reset your AceForge password',
           html: `
@@ -157,6 +157,41 @@ export async function POST(request: Request) {
         if (banType === 'full_account_ban') {
           await adminClient.from('profiles').update({ is_banned: true }).eq('id', userId)
         }
+
+        // Notify the banned user by email.
+        try {
+          const { data: banned } = await adminClient.from('profiles').select('email, display_name').eq('id', userId).single()
+          if (banned?.email) {
+            const first = banned.display_name?.split(' ')[0] || 'there'
+            const durationLabel = isPermanent ? 'Permanent' : `${durationDays} day${durationDays === 1 ? '' : 's'}`
+            const resend = new Resend(process.env.RESEND_API_KEY as string)
+            await resend.emails.send({
+              from: 'AceForge <noreply@aceforge.app>',
+              to: banned.email,
+              subject: 'Important: Your AceForge account has been restricted',
+              html: `
+                <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                  <h2 style="color:#a32d2d;font-size:22px">Your AceForge account has been restricted</h2>
+                  <p>Hi ${first}, your account has been restricted by our moderation team.</p>
+                  <div style="background:#fdf6f6;border:1px solid #f0d7d7;border-radius:12px;padding:20px;margin:20px 0">
+                    <p style="margin:0 0 8px"><strong>Restriction type:</strong> ${banType}</p>
+                    <p style="margin:0 0 8px"><strong>Reason:</strong> ${reason}</p>
+                    <p style="margin:0"><strong>Duration:</strong> ${durationLabel}</p>
+                  </div>
+                  <p>If you believe this was a mistake, you may appeal this decision. Reply to this notice or reach out to our support team, and include your account email and any relevant details.</p>
+                  <div style="text-align:center;margin:28px 0">
+                    <a href="mailto:contactinfo21342@gmail.com" style="display:inline-block;background:#22550e;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">
+                      Contact Support →
+                    </a>
+                  </div>
+                  <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
+                </div>`,
+            })
+          }
+        } catch (e: any) {
+          console.error('Ban notification email failed:', e?.message)
+        }
+
         return NextResponse.json({ success: true, ban })
       }
 

@@ -6,10 +6,20 @@ export const dynamic = 'force-dynamic'
 
 const safeMeetLink = (url?: string | null) => (!url ? '' : url.startsWith('http') ? url : 'https://' + url)
 
-function reminderHtml(name: string, minutesLabel: string, session: any, meetLink: string) {
+function reminderHtml(
+  name: string,
+  minutesLabel: string,
+  session: any,
+  meetLink: string,
+  opts: { isTutor: boolean; counterpartName: string }
+) {
   const when = new Date(session.scheduled_at).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   })
+  const counterpartLabel = opts.isTutor ? 'Student' : 'Tutor'
+  const topicRow = session.topic
+    ? `<p style="margin:0 0 8px"><strong>📖 Topic:</strong> ${session.topic}</p>`
+    : ''
   return `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
       <h2 style="color:#22550e">⏰ Your session starts in ${minutesLabel}!</h2>
@@ -17,7 +27,10 @@ function reminderHtml(name: string, minutesLabel: string, session: any, meetLink
       <p>This is a reminder that your <strong>${session.subject}</strong> tutoring session is coming up.</p>
       <div style="background:#f8faf5;border:1px solid #d1e8c7;border-radius:12px;padding:20px;margin:20px 0">
         <p style="margin:0 0 8px"><strong>📅 When:</strong> ${when}</p>
-        <p style="margin:0"><strong>⏱ Duration:</strong> ${session.session_length} minutes</p>
+        <p style="margin:0 0 8px"><strong>📚 Subject:</strong> ${session.subject}</p>
+        ${topicRow}
+        <p style="margin:0 0 8px"><strong>⏱ Duration:</strong> ${session.session_length} minutes</p>
+        <p style="margin:0"><strong>👤 ${counterpartLabel}:</strong> ${opts.counterpartName || 'N/A'}</p>
       </div>
       ${meetLink ? `
       <div style="background:#22550e;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
@@ -25,6 +38,10 @@ function reminderHtml(name: string, minutesLabel: string, session: any, meetLink
           🎥 Join Google Meet →
         </a>
         <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:12px 0 0">Or copy: ${meetLink}</p>
+      </div>` : ''}
+      ${opts.isTutor ? `
+      <div style="background:#fff8e6;border:1px solid #f0e2b8;border-radius:12px;padding:16px;margin:20px 0">
+        <p style="margin:0;color:#8a6d00"><strong>🔴 Reminder:</strong> Please record the session for quality and dispute-resolution purposes.</p>
       </div>` : ''}
       <p style="color:#888;font-size:13px;margin-top:24px">— The AceForge Team</p>
     </div>
@@ -83,20 +100,28 @@ export async function GET() {
           const meetLink = safeMeetLink(session.meet_link)
           const subject = `⏰ Your session starts in ${kind.label}!`
 
+          const tutorName = tutorProfile?.display_name ?? tutorUser?.display_name ?? ''
+
           if (student?.email) {
             await resend.emails.send({
-              from: 'AceForge <onboarding@resend.dev>',
+              from: 'AceForge <noreply@aceforge.app>',
               to: student.email,
               subject,
-              html: reminderHtml(student.display_name, kind.label, session, meetLink),
+              html: reminderHtml(student.display_name, kind.label, session, meetLink, {
+                isTutor: false,
+                counterpartName: tutorName,
+              }),
             })
           }
           if (tutorUser?.email) {
             await resend.emails.send({
-              from: 'AceForge <onboarding@resend.dev>',
+              from: 'AceForge <noreply@aceforge.app>',
               to: tutorUser.email,
               subject,
-              html: reminderHtml(tutorUser.display_name, kind.label, session, meetLink),
+              html: reminderHtml(tutorUser.display_name, kind.label, session, meetLink, {
+                isTutor: true,
+                counterpartName: student?.display_name ?? '',
+              }),
             })
           }
 

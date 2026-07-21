@@ -119,7 +119,7 @@ export async function POST(request: Request) {
 
     // Email student
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: session.profiles?.email,
       subject: decision === 'refund' ? '✅ Dispute Resolved — Refund Approved' : '❌ Dispute Resolved — Refund Denied',
       html: `

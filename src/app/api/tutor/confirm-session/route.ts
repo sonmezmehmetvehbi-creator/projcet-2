@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 
     // Email to STUDENT — confirmation with meet link
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: student?.email,
       subject: '✅ Your tutoring session is confirmed!',
       html: `
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 
     // Email to TUTOR — step by step instructions
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: tutorUser?.email,
       subject: `📋 Session confirmed — Next steps for your session with ${student?.display_name?.split(' ')[0]}`,
       html: `

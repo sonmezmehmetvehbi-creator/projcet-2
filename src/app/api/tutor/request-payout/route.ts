@@ -55,7 +55,7 @@ export async function POST() {
 
     try {
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: ADMIN_EMAIL,
         subject: `Payout Request from ${tutorProfile.display_name}`,
         html: `

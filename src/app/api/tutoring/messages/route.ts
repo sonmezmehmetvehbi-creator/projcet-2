@@ -78,7 +78,7 @@ export async function POST(request: Request) {
           .single()
 
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: student?.email,
           subject: `💬 New message from your tutor — ${session?.tutor_profiles?.display_name}`,
           html: `
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
           .single()
 
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: tutorUser?.email,
           subject: `💬 New message from student — ${student?.display_name}`,
           html: `

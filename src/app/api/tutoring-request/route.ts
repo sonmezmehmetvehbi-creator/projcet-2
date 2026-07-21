@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     // Email to you
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: 'contactinfo21342@gmail.com',
       subject: `📚 New Tutoring Request — ${subject}: ${topic}`,
       html: `
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     // Confirmation email to student
     await resend.emails.send({
-      from: 'AceForge <onboarding@resend.dev>',
+      from: 'AceForge <noreply@aceforge.app>',
       to: profile.email ?? user.email ?? '',
       subject: '✅ Tutoring Request Received — AceForge',
       html: `

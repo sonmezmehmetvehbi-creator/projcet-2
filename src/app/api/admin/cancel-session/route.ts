@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     if (student?.email) {
       try {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: student.email,
           subject: 'Your tutoring session has been cancelled',
           html: `
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     if (tutorUser?.email) {
       try {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: tutorUser.email,
           subject: 'A session has been cancelled',
           html: `

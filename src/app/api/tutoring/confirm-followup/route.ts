@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         .single()
 
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: tutorUser?.email,
         subject: `✅ Follow-up session paid — ${student?.display_name ?? 'a student'}`,
         html: `

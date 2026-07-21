@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     // Notify the admin.
     try {
       await resend.emails.send({
-        from: 'AceForge <onboarding@resend.dev>',
+        from: 'AceForge <noreply@aceforge.app>',
         to: ADMIN_EMAIL,
         subject: `New tutor complaint: ${complaintType}`,
         html: `
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     if (user.email) {
       try {
         await resend.emails.send({
-          from: 'AceForge <onboarding@resend.dev>',
+          from: 'AceForge <noreply@aceforge.app>',
           to: user.email,
           subject: 'Your report has been received',
           html: `
