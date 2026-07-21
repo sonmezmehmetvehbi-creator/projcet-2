@@ -243,3 +243,32 @@
     .card-hover { border-radius: 0.75rem; }
   }
 }
+
+/* ── Landing page (v0) helper utilities ──────────────────────────────
+   Custom classes referenced by the marketing components in
+   src/components/landing/. Additive only — nothing above is changed. */
+.dot-grid {
+  background-image: radial-gradient(rgba(34, 85, 14, 0.14) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.glow-green { box-shadow: 0 18px 50px -12px rgba(34, 85, 14, 0.28); }
+.hover\:glow-green:hover { box-shadow: 0 18px 50px -12px rgba(34, 85, 14, 0.28); }
+
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes afFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+.animate-float { animation: afFloat 6s ease-in-out infinite; }
+.animate-float-slow { animation: afFloat 8s ease-in-out infinite; }
+
+@keyframes afCaretBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.caret {
+  display: inline-block;
+  width: 2px;
+  margin-left: 1px;
+  align-self: center;
+  animation: afCaretBlink 1s step-end infinite;
+}
