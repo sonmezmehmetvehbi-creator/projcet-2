@@ -58,14 +58,22 @@ Variation seed: ${Math.floor(Math.random() * 900000) + 100000}`
     const parsed = JSON.parse(clean)
 
     // Save session
-    const { data: session } = await adminClient.from('sessions').insert({
-      user_id: user.id,
-      subject,
-      topic,
-      grade,
-      output_type: 'flashcards',
-      content: parsed,
-    }).select('id').single()
+    const { data: session, error: sessionError } = await adminClient
+      .from('sessions')
+      .insert({
+        user_id: user.id,
+        subject,
+        topic,
+        grade,
+        output_type: 'flashcards',
+        content: parsed,
+        is_sat: false,
+      })
+      .select('id')
+      .single()
+
+    if (sessionError) throw new Error('DB error: ' + sessionError.message)
+    if (!session?.id) throw new Error('No session ID returned')
 
     // Update daily usage
     const today = new Date().toISOString().split('T')[0]
@@ -75,8 +83,9 @@ Variation seed: ${Math.floor(Math.random() * 900000) + 100000}`
       worksheets: 1,
     }, { onConflict: 'user_id,date', ignoreDuplicates: false })
 
-    return NextResponse.json({ sessionId: session?.id, flashcards: parsed.flashcards })
+    return NextResponse.json({ sessionId: session.id, flashcards: parsed.flashcards })
   } catch (error: any) {
+    console.error('Generate flashcards error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
