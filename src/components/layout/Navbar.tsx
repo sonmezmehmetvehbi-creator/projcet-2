@@ -106,7 +106,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
 
   const NAV_LINKS = [
     { href:'/dashboard', label:'Dashboard' },
-    ...(!bans?.generation ? [{ href:'/generate', label:'Generate' }, { href:'/sat', label:'SAT Prep' }] : []),
+    ...(!bans?.generation ? [{ href:'/generate', label:'Generate' }, { href:'/arena', label:'⚔️ Arena' }, { href:'/sat', label:'SAT Prep' }] : []),
     ...(!bans?.tutoring ? [{ href:'/tutoring/dashboard', label:'Tutoring 🎓' }] : []),
   ]
 

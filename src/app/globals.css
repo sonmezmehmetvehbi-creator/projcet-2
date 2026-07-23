@@ -272,3 +272,13 @@
   align-self: center;
   animation: afCaretBlink 1s step-end infinite;
 }
+
+/* ── Arena (Speed Round) game animations ──────────────────────────────
+   Keyframes referenced by the bolt.new game components via Tailwind
+   arbitrary animation utilities (e.g. animate-[shake_0.5s_ease]). */
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+@keyframes slidein { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+@keyframes slideup { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+@keyframes scorebounce { 0%,100%{transform:scale(1)} 40%{transform:scale(1.4)} }
+@keyframes streakpop { 0%{opacity:0;transform:translate(-50%,20px) scale(0.8)} 100%{opacity:1;transform:translate(-50%,0) scale(1)} }
+@keyframes firepulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }

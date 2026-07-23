@@ -105,6 +105,8 @@ export async function POST(request: Request) {
       isFirstSessionToday,
       subject,
       topic,
+      bestStreak,
+      sessionId,
     } = await request.json()
 
     const { data: profile } = await adminClient
@@ -117,8 +119,12 @@ export async function POST(request: Request) {
 
     // ── First-time-per-topic XP gating ────────────────────────────────────
     // Build a unique source_key from the request's subject + topic + type.
-    const sourceType: string = outputType === 'questions' ? 'questions' : outputType === 'flashcards' ? 'flashcards' : 'worksheet'
-    const sourceKey = `${sourceType}:${(subject ?? '').toLowerCase().trim()}:${(topic ?? '').toLowerCase().trim()}`
+    const sourceType: string = outputType === 'questions' ? 'questions' : outputType === 'flashcards' ? 'flashcards' : outputType === 'arena' ? 'arena' : 'worksheet'
+    // Arena is a replayable game — key each play by its unique sessionId so XP
+    // is awarded every round (not gated to first-completion-per-topic).
+    const sourceKey = sourceType === 'arena'
+      ? `arena:${sessionId ?? crypto.randomUUID()}`
+      : `${sourceType}:${(subject ?? '').toLowerCase().trim()}:${(topic ?? '').toLowerCase().trim()}`
 
     // If XP was already earned for this exact content, award nothing.
     {
@@ -229,6 +235,19 @@ export async function POST(request: Request) {
         const amount = gotIt * 2
         xpEarned += amount
         breakdown.push({ reason: `${gotIt} cards mastered (+2 each)`, amount })
+      }
+    } else if (outputType === 'arena') {
+      // Arena Speed Round: correct answers × 5 + best streak × 10.
+      const correct = correctAnswers ?? 0
+      const streakBonusPts = (bestStreak ?? 0) * 10
+      if (correct > 0) {
+        const amount = correct * 5
+        xpEarned += amount
+        breakdown.push({ reason: `${correct} correct (+5 each)`, amount })
+      }
+      if (streakBonusPts > 0) {
+        xpEarned += streakBonusPts
+        breakdown.push({ reason: `Best streak ×${bestStreak} 🔥`, amount: streakBonusPts })
       }
     } else {
       // Worksheet created
