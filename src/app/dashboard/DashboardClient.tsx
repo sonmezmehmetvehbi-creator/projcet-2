@@ -543,7 +543,12 @@ function DashboardInner({ profile, sessions, usage }: Props) {
                       </div>
                       <Link href={href} style={{ textDecoration: 'none' }}>
                         <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.0625rem', fontWeight: 700, color: 'var(--af-text)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{session.topic}</h3>
-                        <p style={{ fontSize: '0.8125rem', color: MUTED, marginBottom: '0.625rem' }}>{session.subject} · {session.grade}</p>
+                        <p style={{ fontSize: '0.8125rem', color: MUTED, marginBottom: '0.625rem' }}>
+                          {session.subject} · {session.grade}
+                          {session.output_type === 'flashcards' && session.content?.flashcards?.length
+                            ? ` · ${session.content.flashcards.length} cards`
+                            : ''}
+                        </p>
                         <p style={{ fontSize: '0.75rem', color: 'rgba(107,107,88,0.75)' }}>{relativeDate(session.created_at)}</p>
                       </Link>
                     </div>
