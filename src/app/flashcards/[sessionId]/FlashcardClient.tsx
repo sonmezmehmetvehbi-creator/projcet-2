@@ -323,7 +323,7 @@ function CompletionScreen({
   const r = 52
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - pct / 100)
-  const generateHref = `/generate?subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`
+  const generateHref = `/generate?subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}&outputType=questions`
 
   return (
     <div style={{ background: 'white', borderRadius: '1.25rem', border: '1px solid rgba(34,85,14,0.1)', boxShadow: '0 8px 32px rgba(34,85,14,0.1)', padding: '2.5rem 2rem', textAlign: 'center' }}>

@@ -244,15 +244,16 @@ function GeneratePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Pre-fill subject/topic from query params (e.g. arriving from a flashcard
-  // deck's "Generate Questions on This Topic" link).
+  // Pre-fill subject/topic/output type from query params (e.g. arriving from a
+  // flashcard deck's "Generate Questions on This Topic" link).
   useEffect(() => {
     const s = searchParams.get('subject')
     const t = searchParams.get('topic')
+    const ot = searchParams.get('outputType')
     if (s) setSubject(s)
     if (t) setTopic(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (ot === 'questions' || ot === 'worksheet' || ot === 'flashcards') setOutputType(ot as OutputType)
+  }, [searchParams])
 
   useEffect(() => {
     async function load() {
