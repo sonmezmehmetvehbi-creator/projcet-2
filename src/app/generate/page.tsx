@@ -227,8 +227,20 @@ function GeneratePageInner() {
   const [readyOutputType, setReadyOutputType] = useState<string>('')
 
   // Multi-step wizard state.
-  const [step, setStep] = useState(1)
-  const [maxStep, setMaxStep] = useState(1)
+  const [step, setStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('subject') && params.get('topic')) return 4
+    }
+    return 1
+  })
+  const [maxStep, setMaxStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('subject') && params.get('topic')) return 4
+    }
+    return 1
+  })
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
   const [category, setCategory] = useState('')
   const [topicChoice, setTopicChoice] = useState('') // selected topic pill/dropdown value ('' or CUSTOM or a topic)
@@ -253,6 +265,7 @@ function GeneratePageInner() {
     if (s) setSubject(s)
     if (t) setTopic(t)
     if (ot === 'questions' || ot === 'worksheet' || ot === 'flashcards') setOutputType(ot as OutputType)
+    if (s && t) { setStep(4); setMaxStep(m => Math.max(m, 4)) }
   }, [searchParams])
 
   useEffect(() => {
