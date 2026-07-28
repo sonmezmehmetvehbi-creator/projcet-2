@@ -1,12 +1,16 @@
-import { Trophy, RotateCcw, Zap } from 'lucide-react';
+import { Trophy, RotateCcw, Target, Repeat } from 'lucide-react';
 
 interface GameOverScreenProps {
   score: number;
   correct: number;
   attempted: number;
   xp: number;
-  leaderboard: { name: string; score: number }[];
+  isNewBest: boolean;
+  previousBest: { score: number; date: string } | null;
+  challengeResult?: string | null;
   onPlayAgain: () => void;
+  onChallenge: () => void;
+  onChangeSubject: () => void;
 }
 
 export default function GameOverScreen({
@@ -14,8 +18,12 @@ export default function GameOverScreen({
   correct,
   attempted,
   xp,
-  leaderboard,
+  isNewBest,
+  previousBest,
+  challengeResult,
   onPlayAgain,
+  onChallenge,
+  onChangeSubject,
 }: GameOverScreenProps) {
   const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
 
@@ -33,39 +41,36 @@ export default function GameOverScreen({
             {score}
           </div>
 
+          {challengeResult && (
+            <div className="mb-5 w-full rounded-2xl border border-purple-500/40 bg-purple-500/10 px-4 py-3 text-sm font-bold text-purple-200 animate-[slideup_0.5s_ease]">
+              {challengeResult}
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-3 w-full mb-6">
             <Stat label="Correct" value={`${correct}/${attempted}`} />
             <Stat label="Accuracy" value={`${accuracy}%`} />
             <Stat label="XP" value={`+${xp}`} accent />
           </div>
 
+          {/* Your Best */}
           <div className="w-full mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Leaderboard</span>
-              <Zap className="h-3 w-3 text-purple-400" />
-            </div>
-            <div className="space-y-2">
-              {leaderboard.map((entry, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm ${
-                    i === 0
-                      ? 'bg-amber-500/10 border border-amber-500/30'
-                      : 'bg-white/5 border border-white/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`font-bold w-5 ${i === 0 ? 'text-amber-400' : 'text-gray-500'}`}>
-                      {i + 1}
-                    </span>
-                    <span className={i === 0 ? 'text-amber-300 font-semibold' : 'text-gray-300'}>
-                      {entry.name}
-                    </span>
-                  </div>
-                  <span className="font-bold tabular-nums text-gray-200">{entry.score}</span>
+            {isNewBest ? (
+              <div className="flex items-center justify-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 shadow-[0_0_25px_rgba(245,158,11,0.25)]">
+                <Trophy className="h-6 w-6 text-amber-400" />
+                <span className="text-base font-black text-amber-300">🏆 New Personal Best!</span>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center">
+                <div className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold mb-1">Your Best</div>
+                <div className="text-lg font-black tabular-nums text-white">
+                  {previousBest?.score ?? score}
+                  {previousBest?.date && (
+                    <span className="ml-2 text-xs font-semibold text-gray-500">on {previousBest.date}</span>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -74,6 +79,22 @@ export default function GameOverScreen({
           >
             <RotateCcw className="h-5 w-5 transition-transform group-hover:rotate-180 duration-500" />
             Play Again
+          </button>
+
+          <button
+            onClick={onChallenge}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-purple-500/50 bg-transparent px-6 py-3.5 font-bold text-purple-300 transition-all hover:bg-purple-500/10 hover:shadow-[0_0_20px_rgba(124,58,237,0.35)] active:scale-95"
+          >
+            <Target className="h-5 w-5" />
+            Challenge a Friend 🎯
+          </button>
+
+          <button
+            onClick={onChangeSubject}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 px-6 py-3 text-sm font-semibold text-gray-300 transition-all hover:bg-white/10 active:scale-95"
+          >
+            <Repeat className="h-4 w-4" />
+            Change Subject
           </button>
         </div>
       </div>

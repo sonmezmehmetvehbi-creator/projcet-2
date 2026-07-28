@@ -15,5 +15,19 @@ export default async function SpeedRoundPage() {
   const bans = await getUserBans(user.id, adminClient)
   if (bans.generation) redirect('/arena')
 
-  return <SpeedRoundClient profile={profile} />
+  const today = new Date().toISOString().split('T')[0]
+  const { data: usage } = await supabase
+    .from('daily_usage')
+    .select('arena_games')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .maybeSingle()
+
+  return (
+    <SpeedRoundClient
+      profile={profile}
+      isPremium={!!profile?.is_premium}
+      arenaGamesToday={usage?.arena_games ?? 0}
+    />
+  )
 }

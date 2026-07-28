@@ -282,3 +282,6 @@
 @keyframes scorebounce { 0%,100%{transform:scale(1)} 40%{transform:scale(1.4)} }
 @keyframes streakpop { 0%{opacity:0;transform:translate(-50%,20px) scale(0.8)} 100%{opacity:1;transform:translate(-50%,0) scale(1)} }
 @keyframes firepulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+@keyframes flashGreen { 0%,100%{background:transparent} 50%{background:rgba(34,197,94,0.3)} }
+@keyframes flashRed { 0%,100%{background:transparent} 50%{background:rgba(239,68,68,0.3)} }
+@keyframes timerfloat { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-28px)} }

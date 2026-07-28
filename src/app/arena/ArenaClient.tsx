@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Swords, Zap, Brain, Skull, ArrowRight, Lock } from 'lucide-react'
+import { Swords, Zap, Brain, Skull, ArrowRight, Lock, Trophy } from 'lucide-react'
 import { SUBJECTS_BY_CATEGORY, getTopics } from '@/lib/subjects'
 
 const DIFFICULTIES = [
@@ -37,17 +37,39 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '0.5rem',
 }
 
-export default function ArenaClient() {
+export default function ArenaClient({ profile }: { profile?: any }) {
   const router = useRouter()
   const [category, setCategory] = useState('')
   const [subject, setSubject] = useState('')
   const [topic, setTopic] = useState('')
   const [difficulty, setDifficulty] = useState('medium')
+  const [best, setBest] = useState<{ score: number; created_at: string } | null>(null)
+  const [bestLoading, setBestLoading] = useState(false)
 
   const subjects = category ? SUBJECTS_BY_CATEGORY[category] ?? [] : []
   const topics = useMemo(() => (subject ? getTopics(subject) : []), [subject])
 
   const canStart = !!subject && !!topic
+
+  // Fetch the user's personal best for the selected subject + difficulty.
+  useEffect(() => {
+    if (!subject) { setBest(null); return }
+    let cancelled = false
+    setBestLoading(true)
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ subject, difficulty, gameType: 'speed_round' })
+        const res = await fetch(`/api/arena/save-score?${params.toString()}`)
+        const data = await res.json()
+        if (!cancelled) setBest(data.best ?? null)
+      } catch {
+        if (!cancelled) setBest(null)
+      } finally {
+        if (!cancelled) setBestLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [subject, difficulty])
 
   function startGame() {
     if (!canStart) return
@@ -67,7 +89,7 @@ export default function ArenaClient() {
             ⚔️ Arena
           </h1>
           <p style={{ fontSize: '1.125rem', color: 'rgb(148,148,168)', maxWidth: '34rem', margin: '0 auto' }}>
-            Test your knowledge. Beat the clock. Top the leaderboard.
+            Test your knowledge. Beat the clock.
           </p>
         </div>
 
@@ -150,12 +172,36 @@ export default function ArenaClient() {
 
           <button type="button" onClick={startGame} disabled={!canStart}
             style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: canStart ? 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))' : 'rgba(255,255,255,0.06)', color: canStart ? 'white' : 'rgb(120,120,140)', fontWeight: 800, fontSize: '1rem', cursor: canStart ? 'pointer' : 'not-allowed', boxShadow: canStart ? '0 0 30px rgba(124,58,237,0.4)' : 'none', transition: 'all 0.2s' }}>
-            Start Game <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />
+            Start Speed Round <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />
           </button>
           {!canStart && (
             <p style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.8125rem', color: 'rgb(120,120,140)' }}>
               Pick a subject and topic to begin.
             </p>
+          )}
+        </div>
+
+        {/* Your Best Score */}
+        <div style={{ marginTop: '1.25rem', borderRadius: '1.25rem', border: '1px solid rgba(245,158,11,0.28)', background: 'rgba(245,158,11,0.05)', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
+            <Trophy style={{ width: '1.25rem', height: '1.25rem', color: 'rgb(245,158,11)' }} />
+            <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(245,158,11)' }}>
+              Your Best Score
+            </h3>
+          </div>
+          {!subject ? (
+            <p style={{ fontSize: '0.9375rem', color: 'rgb(148,148,168)' }}>Pick a subject to see your best.</p>
+          ) : bestLoading ? (
+            <p style={{ fontSize: '0.9375rem', color: 'rgb(148,148,168)' }}>Loading…</p>
+          ) : best ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
+              <span style={{ fontSize: '2.25rem', fontWeight: 900, color: 'rgb(251,191,36)', lineHeight: 1 }}>{best.score}</span>
+              <span style={{ fontSize: '0.875rem', color: 'rgb(148,148,168)' }}>
+                on {new Date(best.created_at).toLocaleDateString()} · {subject} ({difficulty})
+              </span>
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.9375rem', color: 'rgb(148,148,168)' }}>No scores yet — be the first!</p>
           )}
         </div>
       </div>

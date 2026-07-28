@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, X, Loader2, ArrowLeft } from 'lucide-react'
+import { Check, X, Loader2, ArrowLeft, Copy, Share2 } from 'lucide-react'
 import TimerRing from '@/components/arena/TimerRing'
 import ScoreCounter from '@/components/arena/ScoreCounter'
 import StreakBadge from '@/components/arena/StreakBadge'
 import GameOverScreen from '@/components/arena/GameOverScreen'
 
-const TOTAL_SECONDS = 60
+// Dynamic timer: starts at 30s, correct +5 (cap 60), wrong -2 (floor 0).
+const START_SECONDS = 30
+const MAX_SECONDS = 60
+const CORRECT_BONUS = 5
+const WRONG_PENALTY = 2
 const POINTS_PER = 100
 
 type Question = {
@@ -20,7 +24,13 @@ type Question = {
 }
 
 type AnswerState = 'idle' | 'correct' | 'wrong'
-type LeaderRow = { name: string; score: number; isCurrentUser?: boolean }
+type Float = { id: number; text: string; color: string }
+
+type ChallengerInfo = {
+  challengeId: string
+  name: string
+  score: number
+} | null
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -31,11 +41,20 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-export default function SpeedRoundClient({ profile }: { profile: any }) {
+export default function SpeedRoundClient({
+  profile,
+  isPremium,
+  arenaGamesToday,
+}: {
+  profile: any
+  isPremium: boolean
+  arenaGamesToday: number
+}) {
   const router = useRouter()
 
   const [config, setConfig] = useState<{ subject: string; topic: string; difficulty: string } | null>(null)
-  const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading')
+  const [challenger, setChallenger] = useState<ChallengerInfo>(null)
+  const [status, setStatus] = useState<'loading' | 'playing' | 'error' | 'limit'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
 
   const [deck, setDeck] = useState<Question[]>([])
@@ -45,21 +64,34 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
   const [bestStreak, setBestStreak] = useState(0)
   const [correct, setCorrect] = useState(0)
   const [attempted, setAttempted] = useState(0)
-  const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS)
+  const [secondsLeft, setSecondsLeft] = useState(START_SECONDS)
   const [selected, setSelected] = useState<number | null>(null)
   const [answerState, setAnswerState] = useState<AnswerState>('idle')
   const [scoreBounce, setScoreBounce] = useState(false)
+  const [flash, setFlash] = useState<'green' | 'red' | null>(null)
+  const [floats, setFloats] = useState<Float[]>([])
   const [gameOver, setGameOver] = useState(false)
   const [slideKey, setSlideKey] = useState(0)
-  const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([])
+
+  // Personal-best result returned by save-score at game over.
+  const [isNewBest, setIsNewBest] = useState(false)
+  const [previousBest, setPreviousBest] = useState<{ score: number; date: string } | null>(null)
+
+  // Challenge share modal.
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareLink, setShareLink] = useState('')
+  const [shareText, setShareText] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const savedRef = useRef(false)
   const sessionIdRef = useRef<string>('')
+  const floatIdRef = useRef(0)
 
   const current = deck[qIndex]
 
-  // Read config from the URL and fetch AI questions on mount.
+  // Read config from the URL (not useSearchParams, to avoid the CSR-bailout
+  // Suspense build error) and fetch AI questions on mount.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const subject = params.get('subject') ?? ''
@@ -68,6 +100,22 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
     if (!subject || !topic) { router.replace('/arena'); return }
     setConfig({ subject, topic, difficulty })
     sessionIdRef.current = crypto.randomUUID()
+
+    // Optional challenge context.
+    const challengeId = params.get('challengeId')
+    if (challengeId) {
+      setChallenger({
+        challengeId,
+        name: params.get('challengerName') || 'A friend',
+        score: Number(params.get('challengerScore') ?? 0),
+      })
+    }
+
+    // Daily-limit gate — do NOT fetch questions if the free user is out of games.
+    if (!isPremium && arenaGamesToday >= 2) {
+      setStatus('limit')
+      return
+    }
 
     let cancelled = false
     ;(async () => {
@@ -79,6 +127,7 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
         })
         const data = await res.json()
         if (cancelled) return
+        if (res.status === 429 || data.limitReached) { setStatus('limit'); return }
         if (data.error || !data.questions?.length) throw new Error(data.error || 'No questions')
         setDeck(shuffle(data.questions as Question[]))
         setStatus('playing')
@@ -89,7 +138,7 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
       }
     })()
     return () => { cancelled = true }
-  }, [router])
+  }, [router, isPremium, arenaGamesToday])
 
   const endGame = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -109,6 +158,12 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
     setSlideKey((k) => k + 1)
   }, [deck.length, endGame])
 
+  const spawnFloat = (text: string, color: string) => {
+    const id = ++floatIdRef.current
+    setFloats((f) => [...f, { id, text, color }])
+    setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 800)
+  }
+
   const handleAnswer = (idx: number) => {
     if (selected !== null || gameOver || !current) return
     setSelected(idx)
@@ -125,10 +180,17 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
       })
       setScoreBounce(true)
       setTimeout(() => setScoreBounce(false), 500)
+      setSecondsLeft((s) => Math.min(MAX_SECONDS, s + CORRECT_BONUS))
+      spawnFloat(`+${CORRECT_BONUS}s`, '#4ade80')
+      setFlash('green')
     } else {
       setAnswerState('wrong')
       setStreak(0)
+      setSecondsLeft((s) => Math.max(0, s - WRONG_PENALTY))
+      spawnFloat(`-${WRONG_PENALTY}s`, '#f87171')
+      setFlash('red')
     }
+    setTimeout(() => setFlash(null), 220)
 
     setTimeout(() => nextQuestion(), 1100)
   }
@@ -150,7 +212,7 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
     }
   }, [status, gameOver, endGame])
 
-  // On game over: save score (→ leaderboard) and award XP, once per round.
+  // On game over: save score (→ personal best) and award XP, once per round.
   useEffect(() => {
     if (!gameOver || savedRef.current || !config) return
     savedRef.current = true
@@ -171,7 +233,13 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
           }),
         })
         const data = await res.json()
-        if (data.leaderboard) setLeaderboard(data.leaderboard)
+        setIsNewBest(!!data.isNewBest)
+        if (data.previousBest) {
+          setPreviousBest({
+            score: data.previousBest.score,
+            date: new Date(data.previousBest.created_at).toLocaleDateString(),
+          })
+        }
       } catch {}
 
       try {
@@ -199,24 +267,86 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
   }, [gameOver, config, score, correct, attempted, bestStreak, router])
 
   const resetGame = () => {
-    savedRef.current = false
-    sessionIdRef.current = crypto.randomUUID()
-    setDeck((d) => shuffle(d))
-    setQIndex(0)
-    setScore(0)
-    setStreak(0)
-    setBestStreak(0)
-    setCorrect(0)
-    setAttempted(0)
-    setSecondsLeft(TOTAL_SECONDS)
-    setSelected(null)
-    setAnswerState('idle')
-    setLeaderboard([])
-    setGameOver(false)
-    setSlideKey((k) => k + 1)
+    // Play Again re-fetches a fresh deck via a full navigation so the daily
+    // limit is re-checked server-side and a new game is charged fairly.
+    if (!config) return
+    const params = new URLSearchParams({
+      subject: config.subject,
+      topic: config.topic,
+      difficulty: config.difficulty,
+    })
+    if (challenger) {
+      params.set('challengeId', challenger.challengeId)
+      params.set('challengerName', challenger.name)
+      params.set('challengerScore', String(challenger.score))
+    }
+    window.location.href = `/arena/speed-round?${params.toString()}`
+  }
+
+  const openChallenge = async () => {
+    if (!config) return
+    try {
+      const res = await fetch('/api/arena/create-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengerName: profile?.display_name || 'A friend',
+          subject: config.subject,
+          topic: config.topic,
+          difficulty: config.difficulty,
+          challengerScore: score,
+        }),
+      })
+      const data = await res.json()
+      if (!data.challengeId) throw new Error(data.error || 'Failed to create challenge')
+      const link = `https://aceforge.app/arena/challenge/${data.challengeId}`
+      setShareLink(link)
+      setShareText(
+        `${profile?.display_name || 'A friend'} challenges you to beat ${score} on ${config.subject} ${config.difficulty} Speed Round! Can you top it? 🎯`
+      )
+      setCopied(false)
+      setShareOpen(true)
+    } catch (e: any) {
+      setShareLink('')
+      setShareText(e.message || 'Failed to create challenge')
+      setShareOpen(true)
+    }
+  }
+
+  const copyShare = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${shareLink}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
   }
 
   const xp = correct * 5 + bestStreak * 10
+
+  const challengeResult = challenger
+    ? score > challenger.score
+      ? `You beat ${challenger.name}! 🎉`
+      : `So close! ${challenger.name} scored ${challenger.score}, you scored ${score}`
+    : null
+
+  // ── Daily-limit state ──
+  if (status === 'limit') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-[#0a0a14] px-4 text-center text-white">
+        <div className="text-5xl">⏳</div>
+        <p className="text-2xl font-black">Daily limit reached</p>
+        <p className="max-w-md text-sm text-gray-400">
+          You&apos;ve used your 2 daily Arena sessions. Resets at midnight.
+        </p>
+        <button
+          onClick={() => router.push('/arena')}
+          className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-3 font-bold text-white transition-all hover:shadow-[0_0_30px_rgba(124,58,237,0.6)]"
+        >
+          <ArrowLeft className="h-5 w-5" /> Back to Arena
+        </button>
+      </div>
+    )
+  }
 
   // ── Loading / error states ──
   if (status === 'loading') {
@@ -225,7 +355,9 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
         <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
         <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
         <div>
-          <p className="text-2xl font-black">⚡ Generating your challenge...</p>
+          <p className="text-2xl font-black">
+            ⚡ Generating your {config?.subject ?? ''} challenge...
+          </p>
           <p className="mt-2 text-sm text-gray-500">Crafting 20 questions just for you</p>
         </div>
       </div>
@@ -249,15 +381,20 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
 
   if (!current) return null
 
-  const boardForOverlay: LeaderRow[] = leaderboard.length
-    ? leaderboard
-    : [{ name: profile?.display_name || 'You', score }]
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0a0a14] text-white">
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-900/20 via-[#0a0a14] to-blue-900/20" />
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
+
+      {/* Correct / wrong screen flash */}
+      {flash && (
+        <div
+          className={`pointer-events-none absolute inset-0 z-20 ${
+            flash === 'green' ? 'animate-[flashGreen_0.2s_ease]' : 'animate-[flashRed_0.2s_ease]'
+          }`}
+        />
+      )}
 
       <div className="relative z-10 flex min-h-screen flex-col px-4 py-6 max-w-2xl mx-auto">
         {/* Top bar */}
@@ -266,7 +403,19 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
             {current.subject}
           </div>
           <ScoreCounter value={score} bounce={scoreBounce} />
-          <TimerRing secondsLeft={secondsLeft} totalSeconds={TOTAL_SECONDS} />
+          <div className="relative flex items-center justify-center">
+            <TimerRing secondsLeft={secondsLeft} totalSeconds={MAX_SECONDS} />
+            {/* Floating +5s / -2s near the timer */}
+            {floats.map((f) => (
+              <span
+                key={f.id}
+                className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 text-sm font-black animate-[timerfloat_0.8s_ease-out_forwards]"
+                style={{ color: f.color, textShadow: `0 0 10px ${f.color}80` }}
+              >
+                {f.text}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Question card */}
@@ -334,9 +483,46 @@ export default function SpeedRoundClient({ profile }: { profile: any }) {
           correct={correct}
           attempted={attempted}
           xp={xp}
-          leaderboard={boardForOverlay}
+          isNewBest={isNewBest}
+          previousBest={previousBest}
+          challengeResult={challengeResult}
           onPlayAgain={resetGame}
+          onChallenge={openChallenge}
+          onChangeSubject={() => router.push('/arena')}
         />
+      )}
+
+      {/* Challenge share modal */}
+      {shareOpen && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-purple-500/40 bg-gradient-to-b from-[#13131f] to-[#0a0a14] p-7 shadow-[0_0_60px_rgba(124,58,237,0.35)]">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/15 border border-purple-500/40">
+                <Share2 className="h-5 w-5 text-purple-300" />
+              </div>
+              <h3 className="text-xl font-black text-white">Challenge a Friend 🎯</h3>
+            </div>
+            <p className="mb-4 text-sm text-gray-300">{shareText}</p>
+            {shareLink && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <span className="flex-1 truncate text-sm text-purple-200">{shareLink}</span>
+                <button
+                  onClick={copyShare}
+                  className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-purple-500 active:scale-95"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => setShareOpen(false)}
+              className="w-full rounded-2xl bg-white/5 px-6 py-3 text-sm font-semibold text-gray-300 transition-all hover:bg-white/10 active:scale-95"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -1,6 +1,16 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+
+// DAILY LIMIT: free users get 2 Arena games/day, tracked in daily_usage.arena_games.
+// We increment the counter HERE (once per successful question generation) — each
+// call to this route counts as one game started. The server page also reads the
+// count up front to gate the UI; this is the belt-and-suspenders enforcement.
+//
+// -- ALTER TABLE daily_usage ADD COLUMN IF NOT EXISTS arena_games int DEFAULT 0;
+
+const ARENA_DAILY_LIMIT = 2
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +20,34 @@ export async function POST(request: Request) {
 
     const { subject, topic, difficulty = 'medium', count = 20 } = await request.json()
     if (!subject || !topic) return NextResponse.json({ error: 'Missing subject or topic' }, { status: 400 })
+
+    const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+    // ── Enforce the free-plan daily Arena limit ──
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user.id)
+      .single()
+
+    const isPremium = !!profile?.is_premium
+    const today = new Date().toISOString().split('T')[0]
+
+    if (!isPremium) {
+      const { data: usage } = await adminClient
+        .from('daily_usage')
+        .select('arena_games')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle()
+      const gamesToday = usage?.arena_games ?? 0
+      if (gamesToday >= ARENA_DAILY_LIMIT) {
+        return NextResponse.json(
+          { error: 'daily_limit_reached', limitReached: true },
+          { status: 429 }
+        )
+      }
+    }
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -50,6 +88,20 @@ Variation seed: ${Math.floor(Math.random() * 900000) + 100000}`
       }))
 
     if (questions.length === 0) throw new Error('No questions generated. Please try again.')
+
+    // Count this successful generation as one Arena game for free users.
+    if (!isPremium) {
+      const { data: usage } = await adminClient
+        .from('daily_usage')
+        .select('arena_games')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle()
+      await adminClient.from('daily_usage').upsert(
+        { user_id: user.id, date: today, arena_games: (usage?.arena_games ?? 0) + 1 },
+        { onConflict: 'user_id,date' }
+      )
+    }
 
     return NextResponse.json({ questions })
   } catch (error: any) {
