@@ -24,8 +24,9 @@ export async function GET(_request: Request, { params }: { params: { challengeId
 
     const { data: participants } = await adminClient
       .from('forge_participants')
-      .select('user_id, display_name, avatar_emoji, score, correct, attempted, best_streak, completion_time_seconds, completed')
+      .select('id, user_id, display_name, avatar_emoji, score, correct, attempted, best_streak, completion_time_seconds, completed')
       .eq('challenge_id', params.challengeId)
+      .eq('is_kicked', false)
       .order('score', { ascending: false })
 
     return NextResponse.json({

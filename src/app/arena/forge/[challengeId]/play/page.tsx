@@ -40,6 +40,10 @@ export default async function ForgePlayPage({
     .eq('challenge_id', params.challengeId)
     .eq('user_id', user.id)
     .maybeSingle()
+
+  // Kicked by the creator?
+  if (participant?.is_kicked) redirect(`${lobby}?kicked=true`)
+
   if (participant?.completed) redirect(lobby)
 
   // Max players (new joiners only)?
@@ -48,6 +52,7 @@ export default async function ForgePlayPage({
       .from('forge_participants')
       .select('id', { count: 'exact', head: true })
       .eq('challenge_id', params.challengeId)
+      .eq('is_kicked', false)
     if ((count ?? 0) >= challenge.max_players) redirect(lobby)
   }
 

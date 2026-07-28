@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, Loader2, Users, Clock, Lock } from 'lucide-react'
+import { Copy, Loader2, Users, Clock, Lock, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 type Participant = {
+  id: string
   user_id: string
   display_name: string
   avatar_emoji: string
@@ -44,6 +45,23 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
   const [copied, setCopied] = useState(false)
   const [pwPrompt, setPwPrompt] = useState(false)
   const [pw, setPw] = useState('')
+
+  // Creator moderation (kick) state.
+  const [kickTarget, setKickTarget] = useState<string | null>(null)
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<string | null>(null)
+  const [kickedModal, setKickedModal] = useState(false)
+  const [kickedBanner, setKickedBanner] = useState(false)
+  const currentUserIdRef = useRef('')
+
+  useEffect(() => { currentUserIdRef.current = currentUserId }, [currentUserId])
+
+  // "You've been removed" banner when arriving from a blocked play attempt.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('kicked') === 'true') {
+      setKickedBanner(true)
+    }
+  }, [])
 
   // Always-visible expiry countdown (top-right pill).
   const [timeLeft, setTimeLeft] = useState('')
@@ -90,7 +108,13 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
     const supabase = createClient()
     const channel = supabase
       .channel(`forge_${challengeId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_participants', filter: `challenge_id=eq.${challengeId}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_participants', filter: `challenge_id=eq.${challengeId}` }, (payload: any) => {
+        const row = payload.new
+        if (row && row.is_kicked && row.user_id === currentUserIdRef.current) {
+          setKickedModal(true)
+        }
+        load()
+      })
       .subscribe()
     const poll = setInterval(load, 5000)
     return () => { supabase.removeChannel(channel); clearInterval(poll) }
@@ -103,6 +127,25 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
 
   async function copyLink() {
     try { await navigator.clipboard.writeText(`${shareText}\n${shareLink}`); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
+  }
+
+  async function doKick(p: Participant) {
+    setKickTarget(null)
+    // Optimistic fade-out.
+    setRemovingIds((s) => new Set(s).add(p.id))
+    setToast(`Kicked ${p.display_name}`)
+    setTimeout(() => setToast(null), 2200)
+    try {
+      await fetch('/api/arena/forge/kick-participant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId, participantId: p.id }),
+      })
+    } catch {}
+    setTimeout(() => {
+      setLeaderboard((lb) => lb.filter((x) => x.id !== p.id))
+      setRemovingIds((s) => { const n = new Set(s); n.delete(p.id); return n })
+    }, 320)
   }
 
   const me = leaderboard.find((p) => p.user_id === currentUserId)
@@ -146,6 +189,14 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
         <Clock style={{ width: '0.9rem', height: '0.9rem' }} />
         {urgency === 'ended' ? 'Challenge Ended' : `⏱ Ends in ${timeLeft}`}
       </div>
+
+      {/* Removed-by-creator banner */}
+      {kickedBanner && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '1rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(239,68,68,0.1)', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+          <span style={{ fontSize: '1.35rem' }}>🚫</span>
+          <p style={{ color: 'rgb(252,165,165)', fontWeight: 700, fontSize: '0.9375rem' }}>You have been removed from this challenge by the creator.</p>
+        </div>
+      )}
 
       {/* Banner */}
       <div style={{ borderRadius: '1.5rem', padding: '2rem', marginBottom: '1.5rem', background: `linear-gradient(135deg, ${color}, rgba(19,19,31,0.9))`, border: `1px solid ${color}`, boxShadow: `0 0 50px ${color}40` }}>
@@ -260,8 +311,10 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
                 const rankAmongDone = completedBoard.findIndex((c) => c.user_id === p.user_id)
                 const isMe = p.user_id === currentUserId
                 const isHost = challenge.creator_id === p.user_id
+                const canKick = isCreator && !isMe && p.user_id !== challenge.creator_id
+                const removing = removingIds.has(p.id)
                 return (
-                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.75rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', boxShadow: isMe ? '0 0 20px rgba(124,58,237,0.3)' : 'none', animation: 'slidein 0.3s ease' }}>
+                  <div key={p.id} className="forge-row" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.75rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', boxShadow: isMe ? '0 0 20px rgba(124,58,237,0.3)' : 'none', ...(removing ? { opacity: 0, transform: 'translateX(24px)', transition: 'opacity 0.3s ease, transform 0.3s ease', pointerEvents: 'none' } : { animation: 'slidein 0.3s ease' }) }}>
                     <span style={{ width: '1.75rem', textAlign: 'center', fontWeight: 800, color: 'rgb(180,180,200)' }}>
                       {p.completed && rankAmongDone >= 0 && rankAmongDone < 3 ? MEDALS[rankAmongDone] : p.completed ? rankAmongDone + 1 : '•'}
                     </span>
@@ -277,6 +330,25 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
                       </span>
                     </div>
                     <span style={{ fontWeight: 900, color: p.completed ? 'rgb(251,191,36)' : 'rgb(120,120,140)', fontSize: '1.05rem' }}>{p.completed ? p.score : '—'}</span>
+
+                    {/* Creator kick control */}
+                    {canKick && (
+                      <div style={{ position: 'relative' }}>
+                        <button className="forge-kick" onClick={() => setKickTarget(kickTarget === p.id ? null : p.id)} title={`Kick ${p.display_name}`}
+                          style={{ opacity: kickTarget === p.id ? 1 : undefined, width: '1.75rem', height: '1.75rem', borderRadius: '0.5rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(239,68,68,0.12)', color: 'rgb(248,113,113)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <X style={{ width: '0.9rem', height: '0.9rem' }} />
+                        </button>
+                        {kickTarget === p.id && (
+                          <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 30, width: '14rem', background: 'rgb(20,20,34)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0.75rem', padding: '0.75rem', boxShadow: '0 12px 34px rgba(0,0,0,0.55)', textAlign: 'left' }}>
+                            <p style={{ fontSize: '0.8125rem', color: 'white', marginBottom: '0.625rem', lineHeight: 1.35 }}>Kick <strong>{p.display_name}</strong>? They won&apos;t be able to play.</p>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button onClick={() => doKick(p)} style={{ flex: 1, borderRadius: '0.5rem', border: 'none', background: 'rgb(220,38,38)', color: 'white', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem', cursor: 'pointer' }}>Kick</button>
+                              <button onClick={() => setKickTarget(null)} style={{ flex: 1, borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem', cursor: 'pointer' }}>Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -296,6 +368,27 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
           </div>
         </div>
       )}
+
+      {/* Kick toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 45, background: 'rgb(20,20,34)', color: 'white', padding: '0.625rem 1.25rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)', animation: 'slideup 0.25s ease' }}>
+          {toast}
+        </div>
+      )}
+
+      {/* You've-been-kicked modal (via realtime) */}
+      {kickedModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '100%', maxWidth: '22rem', textAlign: 'center', borderRadius: '1.25rem', border: '1px solid rgba(248,113,113,0.4)', background: 'linear-gradient(135deg, rgb(13,13,25), rgb(24,16,20))', padding: '2rem', boxShadow: '0 0 50px rgba(239,68,68,0.25)' }}>
+            <div style={{ fontSize: '2.75rem', marginBottom: '0.5rem' }}>🚫</div>
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.35rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>You have been removed from this challenge</h2>
+            <p style={{ fontSize: '0.875rem', color: 'rgb(180,180,200)', marginBottom: '1.5rem' }}>The creator removed you from this Forge Challenge.</p>
+            <button onClick={() => router.push('/arena')} style={{ width: '100%', height: '3rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      <style>{`.forge-kick { opacity: 0; transition: opacity 0.15s ease; } .forge-row:hover .forge-kick { opacity: 1; }`}</style>
     </div>
   )
 }

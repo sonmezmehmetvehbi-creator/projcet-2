@@ -6,8 +6,9 @@ import { NextResponse } from 'next/server'
 async function leaderboard(adminClient: any, challengeId: string) {
   const { data } = await adminClient
     .from('forge_participants')
-    .select('user_id, display_name, avatar_emoji, score, correct, attempted, best_streak, completion_time_seconds, completed')
+    .select('id, user_id, display_name, avatar_emoji, score, correct, attempted, best_streak, completion_time_seconds, completed')
     .eq('challenge_id', challengeId)
+    .eq('is_kicked', false)
     .order('score', { ascending: false })
   return data ?? []
 }
@@ -49,6 +50,11 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // Kicked players can't re-join or submit.
+    if (existing?.is_kicked) {
+      return NextResponse.json({ error: 'kicked', kicked: true }, { status: 403 })
+    }
+
     // ── JOIN phase: mark the player as present ("Playing…") ──
     if (phase === 'join') {
       // Enforce max players (new joiners only).
@@ -57,6 +63,7 @@ export async function POST(request: Request) {
           .from('forge_participants')
           .select('id', { count: 'exact', head: true })
           .eq('challenge_id', challengeId)
+          .eq('is_kicked', false)
         if ((count ?? 0) >= challenge.max_players) {
           return NextResponse.json({ error: 'challenge_full', full: true }, { status: 403 })
         }

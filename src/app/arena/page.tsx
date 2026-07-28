@@ -28,6 +28,7 @@ export default async function ArenaPage() {
     .from('forge_participants')
     .select('*, forge_challenges(*)')
     .eq('user_id', user.id)
+    .eq('is_kicked', false)
     .order('started_at', { ascending: false })
     .limit(10)
 
@@ -46,6 +47,7 @@ export default async function ArenaPage() {
       .from('forge_participants')
       .select('challenge_id, user_id, score, completed')
       .in('challenge_id', allIds)
+      .eq('is_kicked', false)
     for (const row of allParts ?? []) {
       const arr = byChallenge.get(row.challenge_id) ?? []
       arr.push(row)
