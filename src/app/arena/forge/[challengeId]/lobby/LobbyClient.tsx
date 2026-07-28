@@ -123,6 +123,37 @@ export default function LobbyClient({ challengeId }: { challengeId: string }) {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8125rem', marginTop: '0.75rem' }}>Hosted by {challenge.creator_name}</p>
       </div>
 
+      {/* Ended banner */}
+      {expired && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '1rem', border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(239,68,68,0.08)', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>🏁</span>
+          <div>
+            <p style={{ color: 'rgb(252,165,165)', fontWeight: 800, fontSize: '0.9375rem' }}>Challenge Ended</p>
+            <p style={{ color: 'rgb(180,150,150)', fontSize: '0.8125rem' }}>Ended {challenge.expires_at ? new Date(challenge.expires_at).toLocaleString() : ''}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Your Result */}
+      {me?.completed && (
+        <div style={{ borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.4)', background: 'rgba(124,58,237,0.08)', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 0 30px rgba(124,58,237,0.15)' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(196,181,253)', marginBottom: '0.875rem' }}>Your Result</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.75rem' }}>
+            {[
+              { label: 'Rank', value: `${myRank <= 3 && myRank > 0 ? ['🥇', '🥈', '🥉'][myRank - 1] : `#${myRank}`} of ${completedBoard.length}` },
+              { label: 'Score', value: `${me?.score}` },
+              { label: 'Correct', value: `${me?.correct}/${me?.attempted}` },
+              { label: 'XP earned', value: `+${(me?.correct ?? 0) * 5 + (me?.best_streak ?? 0) * 10}` },
+            ].map((s) => (
+              <div key={s.label} style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.35rem', fontWeight: 900, color: 'rgb(251,191,36)', lineHeight: 1.1 }}>{s.value}</p>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgb(148,148,168)', marginTop: '0.2rem' }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Details */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
         {[
@@ -189,7 +220,7 @@ export default function LobbyClient({ challengeId }: { challengeId: string }) {
                 const isMe = p.user_id === currentUserId
                 const isHost = challenge.creator_id === p.user_id
                 return (
-                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.75rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', animation: 'slidein 0.3s ease' }}>
+                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.75rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', boxShadow: isMe ? '0 0 20px rgba(124,58,237,0.3)' : 'none', animation: 'slidein 0.3s ease' }}>
                     <span style={{ width: '1.75rem', textAlign: 'center', fontWeight: 800, color: 'rgb(180,180,200)' }}>
                       {p.completed && rankAmongDone >= 0 && rankAmongDone < 3 ? MEDALS[rankAmongDone] : p.completed ? rankAmongDone + 1 : '•'}
                     </span>
