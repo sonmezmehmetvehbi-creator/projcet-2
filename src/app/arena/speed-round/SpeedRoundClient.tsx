@@ -8,8 +8,8 @@ import ScoreCounter from '@/components/arena/ScoreCounter'
 import StreakBadge from '@/components/arena/StreakBadge'
 import GameOverScreen from '@/components/arena/GameOverScreen'
 
-// Dynamic timer: starts at 30s, correct +5 (cap 60), wrong -2 (floor 0).
-const START_SECONDS = 30
+// Dynamic timer: starts at 60s, correct +5 (cap 60), wrong -2 (floor 0).
+const START_SECONDS = 60
 const MAX_SECONDS = 60
 const CORRECT_BONUS = 5
 const WRONG_PENALTY = 2
