@@ -47,23 +47,31 @@ export default function SignupPage() {
     if (!passwordValid) { setError('Password must be 8+ characters with a number and a symbol.'); return }
     setError(''); setLoading(true)
     const supabase = createClient()
+    const challengeId = new URLSearchParams(window.location.search).get('challenge')
+    const next = challengeId ? `/arena/challenge/${challengeId}` : '/dashboard'
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: name, display_name: name, role: 'user' }, emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+      options: { data: { full_name: name, display_name: name, role: 'user' }, emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     })
     if (!error && data.user) {
       await supabase.from('profiles').upsert({ id: data.user.id, display_name: name, email, role: 'user' })
     }
     if (error) { setError(error.message); setLoading(false) }
+    else if (data.session) {
+      // Auto-confirm enabled — session is live, go straight to the challenge.
+      router.push(next); router.refresh()
+    }
     else { setSuccess(true); setLoading(false) }
   }
 
   async function handleGoogleSignup() {
     if (!agreed) { setError('Please agree to the Terms of Service and Privacy Policy first.'); return }
     const supabase = createClient()
+    const challengeId = new URLSearchParams(window.location.search).get('challenge')
+    const next = challengeId ? `/arena/challenge/${challengeId}` : '/dashboard'
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     })
   }
 
