@@ -93,6 +93,28 @@ export default function ArenaClient({ profile }: { profile?: any }) {
           </p>
         </div>
 
+        {/* ⚡ Forge Challenge — create a shareable party tournament */}
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '1.5rem', border: '1px solid rgba(245,158,11,0.4)', background: 'linear-gradient(135deg, rgba(120,53,15,0.35), rgba(19,19,31,0.9))', padding: '2rem', marginBottom: '3rem', boxShadow: '0 0 50px rgba(245,158,11,0.15)' }}>
+          <div style={{ position: 'absolute', top: '-4rem', right: '-4rem', width: '16rem', height: '16rem', borderRadius: '9999px', background: 'rgba(245,158,11,0.12)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+            <div style={{ maxWidth: '32rem' }}>
+              <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+                ⚡ Forge Challenge
+              </h2>
+              <p style={{ fontSize: '0.9375rem', color: 'rgb(214,190,150)', lineHeight: 1.5, marginBottom: '0.5rem' }}>
+                Create a custom challenge, share the link, compete with anyone.
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: 'rgb(180,150,110)' }}>
+                Free users: 1 challenge creation · Unlimited participation
+              </p>
+            </div>
+            <button type="button" onClick={() => router.push('/arena/forge/create')}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', padding: '0 1.75rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(245,158,11,0.45)', whiteSpace: 'nowrap' }}>
+              Create Challenge <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />
+            </button>
+          </div>
+        </div>
+
         {/* Game selector */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '3rem' }}>
           {/* Speed Round — available */}
