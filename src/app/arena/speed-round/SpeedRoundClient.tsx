@@ -91,7 +91,7 @@ export default function SpeedRoundClient({
   const current = deck[qIndex]
 
   // Read config from the URL (not useSearchParams, to avoid the CSR-bailout
-  // Suspense build error) and fetch AI questions on mount.
+  // Suspense build error) and load questions on mount.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const subject = params.get('subject') ?? ''
@@ -111,29 +111,50 @@ export default function SpeedRoundClient({
       })
     }
 
-    // Daily-limit gate — do NOT fetch questions if the free user is out of games.
-    if (!isPremium && arenaGamesToday >= 2) {
-      setStatus('limit')
-      return
+    let cancelled = false
+
+    // Generate a fresh deck via the metered endpoint (normal games).
+    const generateDeck = async () => {
+      const res = await fetch('/api/arena/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, topic, difficulty, count: 20 }),
+      })
+      const data = await res.json()
+      if (cancelled) return
+      if (res.status === 429 || data.limitReached) { setStatus('limit'); return }
+      if (data.error || !data.questions?.length) throw new Error(data.error || 'No questions')
+      setDeck(shuffle(data.questions as Question[]))
+      setStatus('playing')
     }
 
-    let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/arena/generate-questions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject, topic, difficulty, count: 20 }),
-        })
-        const data = await res.json()
-        if (cancelled) return
-        if (res.status === 429 || data.limitReached) { setStatus('limit'); return }
-        if (data.error || !data.questions?.length) throw new Error(data.error || 'No questions')
-        setDeck(shuffle(data.questions as Question[]))
-        setStatus('playing')
+        if (challengeId) {
+          // Challenge game: reuse the challenger's stored questions (same set,
+          // reshuffled) — no regeneration, no daily-limit charge.
+          const res = await fetch(`/api/arena/create-challenge?id=${encodeURIComponent(challengeId)}`)
+          const data = await res.json()
+          if (cancelled) return
+          if (Array.isArray(data.questions) && data.questions.length) {
+            setDeck(shuffle(data.questions as Question[]))
+            setStatus('playing')
+            return
+          }
+          // Legacy challenge without stored questions → fall back to generating.
+          await generateDeck()
+          return
+        }
+
+        // Normal game — enforce the free-plan daily limit before generating.
+        if (!isPremium && arenaGamesToday >= 2) {
+          setStatus('limit')
+          return
+        }
+        await generateDeck()
       } catch (e: any) {
         if (cancelled) return
-        setErrorMsg(e.message || 'Failed to generate questions')
+        setErrorMsg(e.message || 'Failed to load questions')
         setStatus('error')
       }
     })()
@@ -295,6 +316,9 @@ export default function SpeedRoundClient({
           topic: config.topic,
           difficulty: config.difficulty,
           challengerScore: score,
+          // Store the exact questions from this game so the challenger faces the
+          // same set (reshuffled), not a regenerated one.
+          questions: deck,
         }),
       })
       const data = await res.json()
@@ -355,10 +379,21 @@ export default function SpeedRoundClient({
         <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
         <Loader2 className="h-12 w-12 animate-spin text-purple-400" />
         <div>
-          <p className="text-2xl font-black">
-            ⚡ Generating your {config?.subject ?? ''} challenge...
-          </p>
-          <p className="mt-2 text-sm text-gray-500">Crafting 20 questions just for you</p>
+          {challenger ? (
+            <>
+              <p className="text-2xl font-black">
+                ⚡ Loading {challenger.name}&apos;s challenge...
+              </p>
+              <p className="mt-2 text-sm text-gray-500">Same questions — can you top {challenger.score}?</p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-black">
+                ⚡ Generating your {config?.subject ?? ''} challenge...
+              </p>
+              <p className="mt-2 text-sm text-gray-500">Crafting 20 questions just for you</p>
+            </>
+          )}
         </div>
       </div>
     )
