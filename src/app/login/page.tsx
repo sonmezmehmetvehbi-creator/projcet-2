@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, Eye, EyeOff, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
@@ -23,12 +23,31 @@ const FLOAT_SUBJECTS = [
 ]
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  )
+}
+
+function LoginInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Where to send the user after a successful login. Prefer an explicit,
+  // same-origin `next` path; fall back to the legacy `challenge` param.
+  function destination() {
+    const next = searchParams.get('next')
+    if (next && next.startsWith('/')) return next
+    const challengeId = searchParams.get('challenge')
+    if (challengeId) return `/arena/challenge/${challengeId}`
+    return '/dashboard'
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -40,21 +59,16 @@ export default function LoginPage() {
       setError('Invalid email or password. Please try again.')
       setLoading(false)
     } else {
-      const params = new URLSearchParams(window.location.search)
-      const next = params.get('next')
-      const challengeId = params.get('challenge')
-      router.push(next ? next : challengeId ? `/arena/challenge/${challengeId}` : '/dashboard')
+      router.push(destination())
       router.refresh()
     }
   }
 
   async function handleGoogleLogin() {
     const supabase = createClient()
-    const params = new URLSearchParams(window.location.search)
-    const next = params.get('next') || (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination())}` },
     })
   }
 

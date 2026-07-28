@@ -8,12 +8,18 @@ import LobbyClient from './LobbyClient'
 export default async function ForgeLobbyPage({ params }: { params: { challengeId: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/arena/forge/${params.challengeId}/lobby`)
-
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const bans = await getUserBans(user.id, adminClient)
+
+  // The lobby is public so a shared link works for logged-out users. Guests see
+  // the challenge and a "Join Challenge" button that sends them to login.
+  let profile = null
+  let bans = { generation: false, tutoring: false, support: false }
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    profile = data
+    bans = await getUserBans(user.id, adminClient)
+  }
 
   const { data: challenge } = await adminClient
     .from('forge_challenges')
@@ -25,7 +31,7 @@ export default async function ForgeLobbyPage({ params }: { params: { challengeId
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
       <Navbar profile={profile} bans={bans} />
-      <LobbyClient challengeId={params.challengeId} />
+      <LobbyClient challengeId={params.challengeId} isLoggedIn={!!user} />
     </div>
   )
 }

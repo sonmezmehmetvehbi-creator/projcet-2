@@ -8,9 +8,9 @@ import { NextResponse } from 'next/server'
 // realtime events fire.
 export async function GET(_request: Request, { params }: { params: { challengeId: string } }) {
   try {
+    // Public: the lobby is viewable by logged-out users following a share link.
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: { params: { challengeId
     return NextResponse.json({
       challenge,
       leaderboard: participants ?? [],
-      currentUserId: user.id,
+      currentUserId: user?.id ?? null,
     })
   } catch (error: any) {
     console.error('Forge get-challenge error:', error)

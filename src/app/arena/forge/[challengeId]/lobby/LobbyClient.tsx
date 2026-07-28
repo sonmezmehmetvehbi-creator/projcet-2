@@ -35,7 +35,7 @@ function useCountdown(expiresAt?: string) {
   return { expired: false, label }
 }
 
-export default function LobbyClient({ challengeId }: { challengeId: string }) {
+export default function LobbyClient({ challengeId, isLoggedIn = true }: { challengeId: string; isLoggedIn?: boolean }) {
   const router = useRouter()
   const [challenge, setChallenge] = useState<any>(null)
   const [leaderboard, setLeaderboard] = useState<Participant[]>([])
@@ -44,6 +44,30 @@ export default function LobbyClient({ challengeId }: { challengeId: string }) {
   const [copied, setCopied] = useState(false)
   const [pwPrompt, setPwPrompt] = useState(false)
   const [pw, setPw] = useState('')
+
+  // Always-visible expiry countdown (top-right pill).
+  const [timeLeft, setTimeLeft] = useState('')
+  const [urgency, setUrgency] = useState<'green' | 'orange' | 'red' | 'ended'>('green')
+  useEffect(() => {
+    if (!challenge?.expires_at) return
+    const update = () => {
+      const now = new Date()
+      const expiry = new Date(challenge.expires_at)
+      const diff = expiry.getTime() - now.getTime()
+      if (diff <= 0) { setTimeLeft('Ended'); setUrgency('ended'); return }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      if (days > 0) setTimeLeft(`${days}d ${hours}h ${minutes}m`)
+      else if (hours > 0) setTimeLeft(`${hours}h ${minutes}m ${seconds}s`)
+      else setTimeLeft(`${minutes}m ${seconds}s`)
+      setUrgency(diff < 10 * 60 * 1000 ? 'red' : diff < 60 * 60 * 1000 ? 'orange' : 'green')
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [challenge?.expires_at])
 
   const load = useCallback(async () => {
     try {
@@ -109,8 +133,20 @@ export default function LobbyClient({ challengeId }: { challengeId: string }) {
   const color = challenge.banner_color || '#7c3aed'
   const completedBoard = [...leaderboard].filter((p) => p.completed).sort((a, b) => b.score - a.score)
 
+  const urgencyColor =
+    urgency === 'red' ? 'rgb(248,113,113)' :
+    urgency === 'orange' ? 'rgb(251,146,60)' :
+    urgency === 'ended' ? 'rgb(148,148,168)' :
+    'rgb(74,222,128)'
+
   return (
     <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '5.5rem 1.5rem 4rem' }}>
+      {/* Always-visible expiry countdown, floating top-right below the navbar */}
+      <div style={{ position: 'fixed', top: '4.5rem', right: '1.25rem', zIndex: 40, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', borderRadius: '9999px', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(8px)', border: `1px solid ${urgencyColor}66`, color: urgencyColor, fontWeight: 800, fontSize: '0.8125rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+        <Clock style={{ width: '0.9rem', height: '0.9rem' }} />
+        {urgency === 'ended' ? 'Challenge Ended' : `⏱ Ends in ${timeLeft}`}
+      </div>
+
       {/* Banner */}
       <div style={{ borderRadius: '1.5rem', padding: '2rem', marginBottom: '1.5rem', background: `linear-gradient(135deg, ${color}, rgba(19,19,31,0.9))`, border: `1px solid ${color}`, boxShadow: `0 0 50px ${color}40` }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(0,0,0,0.25)', color: 'white', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.75rem' }}>
@@ -179,7 +215,12 @@ export default function LobbyClient({ challengeId }: { challengeId: string }) {
         </div>
 
         <div style={{ minWidth: '12rem' }}>
-          {expired ? (
+          {!isLoggedIn ? (
+            <a href={`/login?next=/arena/forge/${challengeId}/lobby`}
+              style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3rem', borderRadius: '0.875rem', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 24px rgba(124,58,237,0.4)' }}>
+              Join Challenge →
+            </a>
+          ) : expired ? (
             <div style={{ textAlign: 'center', color: 'rgb(248,113,113)', fontWeight: 800 }}>Challenge Ended</div>
           ) : hasPlayed ? (
             <div style={{ textAlign: 'center', borderRadius: '0.875rem', border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', padding: '0.75rem 1rem' }}>

@@ -48,7 +48,10 @@ export default function SignupPage() {
     setError(''); setLoading(true)
     const supabase = createClient()
     const params = new URLSearchParams(window.location.search)
-    const next = params.get('next') || (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
+    const rawNext = params.get('next')
+    const next = (rawNext && rawNext.startsWith('/'))
+      ? rawNext
+      : (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
     const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { data: { full_name: name, display_name: name, role: 'user' }, emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
@@ -68,7 +71,10 @@ export default function SignupPage() {
     if (!agreed) { setError('Please agree to the Terms of Service and Privacy Policy first.'); return }
     const supabase = createClient()
     const params = new URLSearchParams(window.location.search)
-    const next = params.get('next') || (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
+    const rawNext = params.get('next')
+    const next = (rawNext && rawNext.startsWith('/'))
+      ? rawNext
+      : (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
