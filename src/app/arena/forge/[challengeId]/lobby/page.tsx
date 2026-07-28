@@ -8,7 +8,7 @@ import LobbyClient from './LobbyClient'
 export default async function ForgeLobbyPage({ params }: { params: { challengeId: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?challenge_lobby=${params.challengeId}`)
+  if (!user) redirect(`/login?next=/arena/forge/${params.challengeId}/lobby`)
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 

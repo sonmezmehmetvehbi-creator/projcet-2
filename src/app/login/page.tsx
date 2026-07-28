@@ -40,16 +40,18 @@ export default function LoginPage() {
       setError('Invalid email or password. Please try again.')
       setLoading(false)
     } else {
-      const challengeId = new URLSearchParams(window.location.search).get('challenge')
-      router.push(challengeId ? `/arena/challenge/${challengeId}` : '/dashboard')
+      const params = new URLSearchParams(window.location.search)
+      const next = params.get('next')
+      const challengeId = params.get('challenge')
+      router.push(next ? next : challengeId ? `/arena/challenge/${challengeId}` : '/dashboard')
       router.refresh()
     }
   }
 
   async function handleGoogleLogin() {
     const supabase = createClient()
-    const challengeId = new URLSearchParams(window.location.search).get('challenge')
-    const next = challengeId ? `/arena/challenge/${challengeId}` : '/dashboard'
+    const params = new URLSearchParams(window.location.search)
+    const next = params.get('next') || (params.get('challenge') ? `/arena/challenge/${params.get('challenge')}` : '/dashboard')
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
