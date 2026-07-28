@@ -51,17 +51,15 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<string | null>(null)
   const [kickedModal, setKickedModal] = useState(false)
-  const [kickedBanner, setKickedBanner] = useState(false)
+  // Full kicked screen when arriving from a blocked play attempt (?kicked=true).
+  const [kicked] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('kicked') === 'true')
   const currentUserIdRef = useRef('')
 
-  useEffect(() => { currentUserIdRef.current = currentUserId }, [currentUserId])
+  // Creator "end challenge early" state.
+  const [endConfirm, setEndConfirm] = useState(false)
+  const [ending, setEnding] = useState(false)
 
-  // "You've been removed" banner when arriving from a blocked play attempt.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('kicked') === 'true') {
-      setKickedBanner(true)
-    }
-  }, [])
+  useEffect(() => { currentUserIdRef.current = currentUserId }, [currentUserId])
 
   // Always-visible expiry countdown (top-right pill).
   const [timeLeft, setTimeLeft] = useState('')
@@ -120,7 +118,8 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
     return () => { supabase.removeChannel(channel); clearInterval(poll) }
   }, [challengeId, load])
 
-  const { expired, label } = useCountdown(challenge?.expires_at)
+  const { expired: countdownExpired, label } = useCountdown(challenge?.expires_at)
+  const expired = countdownExpired || challenge?.status === 'ended'
 
   const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/arena/forge/${challengeId}/lobby` : ''
   const shareText = challenge ? `${challenge.creator_name} invites you to "${challenge.title}" — a ${challenge.subject} Forge Challenge on AceForge! Can you top the leaderboard? ⚡` : ''
@@ -148,6 +147,22 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
     }, 320)
   }
 
+  async function endChallenge() {
+    setEnding(true)
+    try {
+      await fetch('/api/arena/forge/end-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId }),
+      })
+      // Refetch so the ended state (banner + final leaderboard) shows now; the
+      // 5s poll propagates it to everyone else's lobby.
+      await load()
+    } catch {}
+    setEnding(false)
+    setEndConfirm(false)
+  }
+
   const me = leaderboard.find((p) => p.user_id === currentUserId)
   const hasPlayed = !!me?.completed
   const isCreator = challenge && currentUserId === challenge.creator_id
@@ -162,6 +177,24 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
       return
     }
     router.push(`/arena/forge/${challengeId}/play`)
+  }
+
+  // Full "you've been removed" screen (arrived via ?kicked=true).
+  if (kicked) {
+    return (
+      <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: 'rgb(10,10,20)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)', width: '34rem', height: '20rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.14)', filter: 'blur(120px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', textAlign: 'center', maxWidth: '28rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '0.75rem' }}>🚫</div>
+          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '0.75rem' }}>You&apos;ve been removed</h1>
+          <p style={{ fontSize: '1rem', color: 'rgb(180,180,200)', marginBottom: '2rem' }}>The challenge creator has removed you from this challenge.</p>
+          <button onClick={() => router.push('/arena')}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', padding: '0 2rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(124,58,237,0.45)' }}>
+            Back to Arena →
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -190,14 +223,6 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
         {urgency === 'ended' ? 'Challenge Ended' : `⏱ Ends in ${timeLeft}`}
       </div>
 
-      {/* Removed-by-creator banner */}
-      {kickedBanner && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '1rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(239,68,68,0.1)', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
-          <span style={{ fontSize: '1.35rem' }}>🚫</span>
-          <p style={{ color: 'rgb(252,165,165)', fontWeight: 700, fontSize: '0.9375rem' }}>You have been removed from this challenge by the creator.</p>
-        </div>
-      )}
-
       {/* Banner */}
       <div style={{ borderRadius: '1.5rem', padding: '2rem', marginBottom: '1.5rem', background: `linear-gradient(135deg, ${color}, rgba(19,19,31,0.9))`, border: `1px solid ${color}`, boxShadow: `0 0 50px ${color}40` }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(0,0,0,0.25)', color: 'white', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.75rem' }}>
@@ -208,6 +233,32 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
           <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9375rem' }}>{challenge.welcome_message}</p>
         )}
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8125rem', marginTop: '0.75rem' }}>Hosted by {challenge.creator_name}</p>
+
+        {/* Creator: end the challenge early */}
+        {isCreator && !expired && (
+          <div style={{ marginTop: '1.25rem' }}>
+            {!endConfirm ? (
+              <button onClick={() => setEndConfirm(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', border: '1px solid rgba(248,113,113,0.6)', background: 'rgba(239,68,68,0.12)', color: 'rgb(252,165,165)', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: 'pointer' }}>
+                End Challenge Early
+              </button>
+            ) : (
+              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.625rem', borderRadius: '0.875rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(10,10,20,0.6)', padding: '0.875rem 1rem' }}>
+                <span style={{ color: 'white', fontWeight: 700, fontSize: '0.875rem' }}>End this challenge now? This cannot be undone.</span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={endChallenge} disabled={ending}
+                    style={{ borderRadius: '0.5rem', border: 'none', background: 'rgb(220,38,38)', color: 'white', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: ending ? 'wait' : 'pointer' }}>
+                    {ending ? 'Ending…' : 'Yes, End It'}
+                  </button>
+                  <button onClick={() => setEndConfirm(false)} disabled={ending}
+                    style={{ borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Ended banner */}
