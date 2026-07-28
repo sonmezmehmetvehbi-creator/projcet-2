@@ -8,6 +8,7 @@ const COLUMNS = [
       { label: 'Generate', href: '/generate' },
       { label: 'SAT Prep', href: '/sat' },
       { label: 'Tutoring', href: '/tutoring' },
+      { label: 'Become a Tutor →', href: '/tutor/signup' },
       { label: 'Pricing', href: '/pricing' },
     ],
   },

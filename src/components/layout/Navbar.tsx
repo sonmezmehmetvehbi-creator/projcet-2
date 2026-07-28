@@ -348,6 +348,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
               <Link href="/login" className="btn-ghost" style={{ fontSize:'0.9375rem', padding:'0.5rem 1rem' }}>Log In</Link>
+              <Link href="/tutor/signup" className="btn-secondary" style={{ fontSize:'0.8125rem', padding:'0.45rem 0.9rem', whiteSpace:'nowrap' }}>Become a Tutor</Link>
               <Link href="/signup" className="btn-primary" style={{ fontSize:'0.9375rem', padding:'0.5rem 1.25rem' }}>Sign Up</Link>
             </div>
           )}
