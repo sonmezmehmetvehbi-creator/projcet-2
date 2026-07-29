@@ -23,6 +23,10 @@ const QTYPES = [
   { value: 'slider', label: 'Slider' }, { value: 'fr', label: 'Free Response' },
 ] as const
 const POINTS = [{ v: 0, label: 'No Points (0×)' }, { v: 1, label: 'Normal (1×)' }, { v: 2, label: 'Double (2×)' }]
+const DURATIONS = [
+  { value: '1h', label: '1 hour' }, { value: '6h', label: '6 hours' }, { value: '12h', label: '12 hours' },
+  { value: '24h', label: '24 hours' }, { value: '3d', label: '3 days' }, { value: '7d', label: '7 days' },
+]
 
 type QType = 'mc' | 'tf' | 'slider' | 'fr'
 type Question = {
@@ -101,6 +105,8 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
   const [playMode, setPlayMode] = useState<'self_paced' | 'live'>('self_paced')
   const [timePerQ, setTimePerQ] = useState(20)
   const [maxPlayers, setMaxPlayers] = useState('')
+  const [duration, setDuration] = useState('24h')
+  const [allowReplay, setAllowReplay] = useState(true)
 
   // Step 2
   const [source, setSource] = useState<'manual' | 'ai_topic' | 'ai_pdf' | null>(null)
@@ -213,6 +219,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       const payload = {
         title, welcomeMessage: welcome, bannerColor: banner, playMode,
         timePerQuestion: timePerQ, maxPlayers: maxPlayers ? Number(maxPlayers) : null,
+        duration, allowReplay,
         questions: questions.map((q) => ({
           question_text: q.question_text, question_type: q.question_type,
           options: q.question_type === 'mc' || q.question_type === 'tf' ? q.options : null,
@@ -309,6 +316,24 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               <input style={input} type="number" min={1} value={maxPlayers} onChange={(e) => setMaxPlayers(e.target.value)} placeholder="Unlimited" />
             </div>
           </div>
+
+          {/* Self-paced only: how long the quiz stays open + replay policy */}
+          {playMode === 'self_paced' && (
+            <>
+              <div style={{ marginTop: '1.25rem' }}>
+                <label style={label}>Stays open for</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                  {DURATIONS.map((d) => (
+                    <button key={d.value} type="button" onClick={() => setDuration(d.value)} style={pill(duration === d.value)}>{d.label}</button>
+                  ))}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', marginTop: '1.25rem' }}>
+                <input type="checkbox" checked={allowReplay} onChange={(e) => setAllowReplay(e.target.checked)} style={{ width: '1.1rem', height: '1.1rem', accentColor: 'rgb(124,58,237)' }} />
+                <span style={{ color: 'white', fontSize: '0.9375rem', fontWeight: 600 }}>Allow players to replay after completion</span>
+              </label>
+            </>
+          )}
         </div>
       )}
 

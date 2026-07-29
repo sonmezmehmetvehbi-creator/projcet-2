@@ -20,6 +20,8 @@ import { NextResponse } from 'next/server'
 // --   created_at timestamptz DEFAULT now()
 // -- );
 // -- ALTER TABLE forge_quizzes DISABLE ROW LEVEL SECURITY;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS expires_at timestamptz;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS allow_replay boolean DEFAULT true;
 // --
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_questions (
 // --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
       playMode = 'self_paced', // 'self_paced' | 'live'
       timePerQuestion = 20,
       maxPlayers = null,
+      duration = '24h',
+      allowReplay = true,
       questions = [],
     } = await request.json()
 
@@ -75,6 +79,12 @@ export async function POST(request: Request) {
 
     const isLive = playMode === 'live'
     const code = isLive ? roomCode() : null
+
+    // Self-paced quizzes stay open for a chosen window.
+    const DURATION_HOURS: Record<string, number> = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '3d': 72, '7d': 168 }
+    const expiresAt = isLive
+      ? null
+      : new Date(Date.now() + (DURATION_HOURS[duration] ?? 24) * 60 * 60 * 1000).toISOString()
 
     const { data: quiz, error } = await adminClient
       .from('forge_quizzes')
@@ -90,6 +100,8 @@ export async function POST(request: Request) {
         room_code: code,
         status: isLive ? 'waiting' : 'active',
         question_count: questions.length,
+        expires_at: expiresAt,
+        allow_replay: !!allowReplay,
       })
       .select('id')
       .single()

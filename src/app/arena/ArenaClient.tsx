@@ -2,9 +2,24 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, History, Users } from 'lucide-react'
 
-export default function ArenaClient({ profile }: { profile?: any }) {
+type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean }
+type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number }
+
+function medal(rank: number) {
+  return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
+}
+function timeLeftLabel(expiresAt: string | null): string {
+  if (!expiresAt) return ''
+  const diff = new Date(expiresAt).getTime() - Date.now()
+  if (diff <= 0) return 'Ended'
+  const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000)
+  return d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`
+}
+
+export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoined = [] }: { profile?: any; quizzesCreated?: CreatedQuiz[]; quizzesJoined?: JoinedQuiz[] }) {
   const router = useRouter()
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
@@ -57,6 +72,66 @@ export default function ArenaClient({ profile }: { profile?: any }) {
               </form>
             )}
           </div>
+        </div>
+
+        {/* ── My Quizzes ── */}
+        <div style={{ marginTop: '3rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1.25rem' }}>
+            <History style={{ width: '1.35rem', height: '1.35rem', color: 'rgb(196,181,253)' }} />
+            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>My Quizzes</h2>
+          </div>
+
+          {/* Created */}
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(148,148,168)', marginBottom: '0.875rem' }}>Created by you</h3>
+          {quizzesCreated.length === 0 ? (
+            <div style={{ borderRadius: '1rem', border: '1px dashed rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', marginBottom: '2rem' }}>
+              <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem' }}>You haven&apos;t created a quiz yet. Build one to get started!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {quizzesCreated.map((q) => (
+                <div key={q.id} style={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', borderLeft: `4px solid ${q.banner_color}`, background: 'rgba(19,19,31,0.7)', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '9999px', ...(q.active ? { color: 'rgb(74,222,128)', background: 'rgba(34,197,94,0.14)' } : { color: 'rgb(148,148,168)', background: 'rgba(255,255,255,0.06)' }) }}>{q.active ? 'Active' : 'Ended'}</span>
+                    {q.active && q.expires_at && <span style={{ fontSize: '0.6875rem', color: 'rgb(120,120,140)' }}>{timeLeftLabel(q.expires_at)}</span>}
+                  </div>
+                  <h4 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.0625rem', fontWeight: 700, color: 'white', marginBottom: '0.625rem', lineHeight: 1.25 }}>{q.title}</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'rgb(180,180,200)' }}><Users style={{ width: '0.85rem', height: '0.85rem' }} /> {q.playerCount} players</span>
+                    <Link href={`/arena/forge-quiz/${q.id}/lobby`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(196,181,253)', textDecoration: 'none' }}>
+                      {q.active ? 'Manage' : 'View Results'} <ArrowRight style={{ width: '0.85rem', height: '0.85rem' }} />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Joined */}
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(148,148,168)', marginBottom: '0.875rem' }}>Joined quizzes</h3>
+          {quizzesJoined.length === 0 ? (
+            <div style={{ borderRadius: '1rem', border: '1px dashed rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)', padding: '1.5rem' }}>
+              <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem' }}>You haven&apos;t joined any quizzes yet. Ask a friend for a link or a room code!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+              {quizzesJoined.map((q) => (
+                <div key={q.id} style={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', borderLeft: `4px solid ${q.banner_color}`, background: 'rgba(19,19,31,0.7)', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '9999px', ...(q.active ? { color: 'rgb(74,222,128)', background: 'rgba(34,197,94,0.14)' } : { color: 'rgb(148,148,168)', background: 'rgba(255,255,255,0.06)' }) }}>{q.active ? 'Active' : 'Ended'}</span>
+                    {q.completed && <span style={{ fontSize: '0.9375rem', fontWeight: 900, color: 'rgb(251,191,36)' }}>{medal(q.rank)}</span>}
+                  </div>
+                  <h4 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.0625rem', fontWeight: 700, color: 'white', marginBottom: '0.5rem', lineHeight: 1.25 }}>{q.title}</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'rgb(120,120,140)' }}>{q.completed ? `${q.score} pts · rank ${medal(q.rank)} of ${q.playerCount}` : 'Not finished'}</span>
+                    <Link href={`/arena/forge-quiz/${q.id}/${q.active ? 'lobby' : 'results'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(196,181,253)', textDecoration: 'none' }}>
+                      {q.active ? 'View Leaderboard' : 'View Results'} <ArrowRight style={{ width: '0.85rem', height: '0.85rem' }} />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

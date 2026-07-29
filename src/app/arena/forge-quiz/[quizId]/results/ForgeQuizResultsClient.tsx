@@ -49,6 +49,26 @@ export default function ForgeQuizResultsClient({
   const answerByQ = useMemo(() => new Map(answers.map((a) => [a.question_id, a])), [answers])
   const glow = isTop3 ? MEDAL_COLOR[myRank - 1] : 'rgb(196,181,253)'
 
+  // Render one standings row. `i` is the 0-based rank index.
+  function renderRow(p: Player, i: number) {
+    if (!p) return null
+    const isMe = p.user_id === currentUserId
+    const top3 = i < 3
+    const bg = isMe ? 'rgba(124,58,237,0.14)' : top3 ? MEDAL_TINT[i] : 'rgba(255,255,255,0.03)'
+    const border = isMe ? 'rgba(124,58,237,0.6)' : top3 ? MEDAL_BORDER[i] : 'rgba(255,255,255,0.06)'
+    return (
+      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.7rem 1rem', border: `1px solid ${border}`, background: bg, boxShadow: isMe ? '0 0 22px rgba(124,58,237,0.35)' : 'none', animation: 'slidein 0.4s ease both', animationDelay: `${Math.min(i, 10) * 0.05}s` }}>
+        <span style={{ width: '1.9rem', textAlign: 'center', fontWeight: 800, color: top3 ? MEDAL_COLOR[i] : 'rgb(180,180,200)' }}>{top3 ? MEDALS[i] : `#${i + 1}`}</span>
+        <span style={{ fontSize: '1.3rem' }}>{p.avatar_emoji}</span>
+        <span style={{ flex: 1, minWidth: 0, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {p.display_name}{isMe && <span style={{ marginLeft: '0.4rem', fontSize: '0.625rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>YOU</span>}
+        </span>
+        {isMe && <span style={{ fontSize: '0.75rem', color: 'rgb(148,148,168)' }}>{correctCount}/{totalQ}</span>}
+        <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.05rem' }}>{p.total_score}</span>
+      </div>
+    )
+  }
+
   async function share() {
     const text = `I ranked #${myRank} in ${quiz.title} on AceForge with ${me.total_score} points! 🎯`
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2200) } catch {}
@@ -135,24 +155,13 @@ export default function ForgeQuizResultsClient({
           <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>Final Standings</h2>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {completed.map((p, i) => {
-            const isMe = p.user_id === currentUserId
-            const top3 = i < 3
-            const bg = isMe ? 'rgba(124,58,237,0.14)' : top3 ? MEDAL_TINT[i] : 'rgba(255,255,255,0.03)'
-            const border = isMe ? 'rgba(124,58,237,0.6)' : top3 ? MEDAL_BORDER[i] : 'rgba(255,255,255,0.06)'
-            const acc = totalQ // correct/total shown per player would need their answers; show score-based rank
-            return (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.7rem 1rem', border: `1px solid ${border}`, background: bg, boxShadow: isMe ? '0 0 22px rgba(124,58,237,0.35)' : 'none', animation: 'slidein 0.4s ease both', animationDelay: `${i * 0.05}s` }}>
-                <span style={{ width: '1.75rem', textAlign: 'center', fontWeight: 800, color: top3 ? MEDAL_COLOR[i] : 'rgb(180,180,200)' }}>{top3 ? MEDALS[i] : i + 1}</span>
-                <span style={{ fontSize: '1.3rem' }}>{p.avatar_emoji}</span>
-                <span style={{ flex: 1, minWidth: 0, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.display_name}{isMe && <span style={{ marginLeft: '0.4rem', fontSize: '0.625rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>YOU</span>}
-                </span>
-                {isMe && <span style={{ fontSize: '0.75rem', color: 'rgb(148,148,168)' }}>{correctCount}/{acc}</span>}
-                <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.05rem' }}>{p.total_score}</span>
-              </div>
-            )
-          })}
+          {completed.slice(0, 10).map((p, i) => renderRow(p, i))}
+          {myRank > 10 && (
+            <>
+              <div style={{ textAlign: 'center', color: 'rgb(120,120,140)', fontWeight: 800, letterSpacing: '0.2em', padding: '0.25rem 0' }}>· · ·</div>
+              {renderRow(completed[myRank - 1], myRank - 1)}
+            </>
+          )}
         </div>
       </div>
 

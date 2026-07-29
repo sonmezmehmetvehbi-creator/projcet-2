@@ -28,16 +28,27 @@ export default function ForgeQuizPlayClient({
   quiz,
   questions,
   defaultName,
+  defaultAvatar = '🎓',
+  alreadyCompleted = false,
+  previousScore = 0,
+  myRank = 0,
+  totalPlayers = 0,
 }: {
   quiz: any
   questions: Question[]
   defaultName: string
+  defaultAvatar?: string
+  alreadyCompleted?: boolean
+  previousScore?: number
+  myRank?: number
+  totalPlayers?: number
 }) {
   const router = useRouter()
 
-  const [status, setStatus] = useState<'identity' | 'playing' | 'submitting'>('identity')
+  const [status, setStatus] = useState<'completed' | 'identity' | 'playing' | 'submitting'>(alreadyCompleted ? 'completed' : 'identity')
+  const [practice, setPractice] = useState(false)
   const [name, setName] = useState(defaultName)
-  const [avatar, setAvatar] = useState('🎓')
+  const [avatar, setAvatar] = useState(defaultAvatar)
   const [joining, setJoining] = useState(false)
 
   const [qIndex, setQIndex] = useState(0)
@@ -162,6 +173,34 @@ export default function ForgeQuizPlayClient({
     setStatus('playing')
   }
 
+  // ── Already-completed screen (active quiz, replay allowed) ──
+  if (status === 'completed') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+        <div style={{ width: '100%', maxWidth: '26rem', textAlign: 'center', borderRadius: '1.5rem', border: '1px solid rgba(124,58,237,0.35)', background: 'linear-gradient(135deg, rgb(13,13,25), rgb(18,18,35))', padding: '2.25rem', boxShadow: '0 0 60px rgba(124,58,237,0.22)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✅</div>
+          <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>You&apos;ve completed this quiz!</h2>
+          <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem', marginBottom: '1.5rem' }}>
+            <span style={{ color: 'rgb(251,191,36)', fontWeight: 800 }}>{previousScore} pts</span>
+            {totalPlayers > 0 && <> · Rank <span style={{ color: 'white', fontWeight: 800 }}>#{myRank}</span> of {totalPlayers}</>}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {quiz.allow_replay && (
+              <button onClick={() => { setPractice(true); setStatus('identity') }}
+                style={{ height: '3.25rem', borderRadius: '0.875rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.12)', color: 'rgb(196,181,253)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
+                Practice Again 🔄
+              </button>
+            )}
+            <button onClick={() => router.push(`/arena/forge-quiz/${quiz.id}/results`)}
+              style={{ height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
+              View Leaderboard →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Identity modal ──
   if (status === 'identity') {
     return (
@@ -209,6 +248,12 @@ export default function ForgeQuizPlayClient({
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgb(10,10,20) 55%)', pointerEvents: 'none' }} />
+
+      {practice && (
+        <div style={{ position: 'fixed', top: '3.75rem', left: 0, right: 0, zIndex: 40, textAlign: 'center', background: 'rgba(245,158,11,0.15)', borderBottom: '1px solid rgba(245,158,11,0.35)', color: 'rgb(251,191,36)', fontWeight: 800, fontSize: '0.8125rem', padding: '0.5rem 1rem' }}>
+          🔒 Practice — your leaderboard score is locked
+        </div>
+      )}
 
       <div style={{ position: 'relative', maxWidth: '42rem', margin: '0 auto', padding: '5rem 1.5rem 3rem' }}>
         {/* Progress + score */}

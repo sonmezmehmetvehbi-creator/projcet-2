@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     const { quizId, score = 0, correct = 0, answers = [] } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
 
+    const { data: quiz } = await adminClient.from('forge_quizzes').select('allow_replay').eq('id', quizId).maybeSingle()
+
     // Locate (or create) the player row.
     let { data: player } = await adminClient
       .from('forge_quiz_players')
@@ -36,8 +38,20 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // Already completed → this is a replay. Store answers as practice (if the
+    // creator allows it) but never overwrite the leaderboard score.
     if (player?.completed) {
-      return NextResponse.json({ success: true, finalScore: score, alreadySubmitted: true })
+      if (quiz?.allow_replay === false) {
+        return NextResponse.json({ success: true, finalScore: score, alreadySubmitted: true })
+      }
+      if (Array.isArray(answers) && answers.length) {
+        const rows = answers.map((a: any) => ({
+          quiz_id: quizId, player_id: player!.id, user_id: user.id, question_id: a.question_id,
+          answer: a.answer != null ? String(a.answer) : null, is_correct: !!a.is_correct, points: Number(a.points) || 0,
+        }))
+        await adminClient.from('forge_quiz_answers').insert(rows)
+      }
+      return NextResponse.json({ success: true, practice: true, finalScore: score })
     }
 
     if (!player) {

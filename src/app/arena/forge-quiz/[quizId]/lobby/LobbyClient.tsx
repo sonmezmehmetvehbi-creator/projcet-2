@@ -38,6 +38,29 @@ export default function LobbyClient({
   const me = players.find((p) => p.user_id === currentUserId)
   const hasPlayed = !!me?.completed
 
+  // Self-paced expiry countdown.
+  const [timeLeft, setTimeLeft] = useState('')
+  const [urgency, setUrgency] = useState<'green' | 'orange' | 'red' | 'ended'>('green')
+  useEffect(() => {
+    if (isLive || !quiz.expires_at) return
+    const update = () => {
+      const diff = new Date(quiz.expires_at).getTime() - Date.now()
+      if (diff <= 0) { setTimeLeft('Ended'); setUrgency('ended'); return }
+      const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000)
+      setTimeLeft(d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`)
+      setUrgency(diff < 10 * 60 * 1000 ? 'red' : diff < 60 * 60 * 1000 ? 'orange' : 'green')
+    }
+    update()
+    const t = setInterval(update, 1000)
+    return () => clearInterval(t)
+  }, [isLive, quiz.expires_at])
+
+  const myRank = hasPlayed
+    ? players.filter((p) => p.completed).sort((a, b) => b.total_score - a.total_score).findIndex((p) => p.user_id === currentUserId) + 1
+    : 0
+  const expired = !isLive && quiz.expires_at ? new Date(quiz.expires_at).getTime() <= Date.now() : quiz.status === 'ended'
+
   const refresh = useCallback(async () => {
     try {
       const supabase = createClient()
@@ -92,15 +115,19 @@ export default function LobbyClient({
     }, 300)
   }
 
-  const statusLabel = isLive
-    ? quiz.status === 'playing' ? '🎮 Live' : '⏱ Active'
-    : quiz.status === 'ended' ? 'Ended' : '🔗 Open'
+  // Live rooms show a status; self-paced shows an expiry countdown.
+  const showCountdown = !isLive && !!quiz.expires_at
+  const urgencyColor = urgency === 'red' ? 'rgb(248,113,113)' : urgency === 'orange' ? 'rgb(251,146,60)' : urgency === 'ended' ? 'rgb(148,148,168)' : 'rgb(74,222,128)'
+  const pillColor = showCountdown ? urgencyColor : 'rgb(196,181,253)'
+  const pillText = showCountdown
+    ? (urgency === 'ended' ? 'Ended' : `⏱ Ends in ${timeLeft}`)
+    : isLive ? (quiz.status === 'playing' ? '🎮 Live' : '⏱ Active') : (quiz.status === 'ended' ? 'Ended' : '🔗 Open')
 
   return (
     <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '5.5rem 1.5rem 4rem' }}>
-      {/* Status pill, top-right */}
-      <div style={{ position: 'fixed', top: '4.5rem', right: '1.25rem', zIndex: 40, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', borderRadius: '9999px', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(124,58,237,0.4)', color: 'rgb(196,181,253)', fontWeight: 800, fontSize: '0.8125rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
-        <Clock style={{ width: '0.9rem', height: '0.9rem' }} /> {statusLabel}
+      {/* Status pill / countdown, top-right */}
+      <div style={{ position: 'fixed', top: '4.5rem', right: '1.25rem', zIndex: 40, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', borderRadius: '9999px', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(8px)', border: `1px solid ${pillColor}66`, color: pillColor, fontWeight: 800, fontSize: '0.8125rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+        <Clock style={{ width: '0.9rem', height: '0.9rem' }} /> {pillText}
       </div>
 
       {/* Banner accent + header */}
@@ -180,11 +207,31 @@ export default function LobbyClient({
       {/* ── Self-Paced ── */}
       {!isLive && (
         <>
-          {!hasPlayed && quiz.status !== 'ended' && (
+          {!hasPlayed && !expired && (
             <button type="button" onClick={() => router.push(`/arena/forge-quiz/${quizId}/play`)}
               style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.5rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(124,58,237,0.4)', marginBottom: '1.5rem' }}>
               <Play style={{ width: '1.15rem', height: '1.15rem' }} /> Join &amp; Play →
             </button>
+          )}
+
+          {hasPlayed && (
+            <div style={{ borderRadius: '1.25rem', border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', padding: '1.25rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+              <p style={{ color: 'rgb(251,191,36)', fontWeight: 800, fontSize: '1rem', marginBottom: '0.875rem' }}>
+                You scored {me?.total_score} · Rank #{myRank} of {players.filter((p) => p.completed).length}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
+                {quiz.allow_replay && !expired && (
+                  <button type="button" onClick={() => router.push(`/arena/forge-quiz/${quizId}/play`)}
+                    style={{ flex: '1 1 10rem', height: '3rem', borderRadius: '0.875rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.12)', color: 'rgb(196,181,253)', fontWeight: 800, cursor: 'pointer' }}>
+                    Practice Again 🔄
+                  </button>
+                )}
+                <button type="button" onClick={() => router.push(`/arena/forge-quiz/${quizId}/results`)}
+                  style={{ flex: '1 1 10rem', height: '3rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
+                  View My Results →
+                </button>
+              </div>
+            </div>
           )}
 
           <div style={{ borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem', marginBottom: '1.5rem' }}>
