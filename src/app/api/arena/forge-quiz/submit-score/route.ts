@@ -49,7 +49,12 @@ export async function POST(request: Request) {
           quiz_id: quizId, player_id: player!.id, user_id: user.id, question_id: a.question_id,
           answer: a.answer != null ? String(a.answer) : null, is_correct: !!a.is_correct, points: Number(a.points) || 0,
         }))
-        await adminClient.from('forge_quiz_answers').insert(rows)
+        const { error: answersError } = await adminClient.from('forge_quiz_answers').insert(rows)
+        if (answersError) {
+          console.error('forge_quiz_answers insert error:', answersError)
+        } else {
+          console.log('Inserted', rows.length, 'answers for player', player!.id)
+        }
       }
       return NextResponse.json({ success: true, practice: true, finalScore: score })
     }
@@ -87,7 +92,12 @@ export async function POST(request: Request) {
         is_correct: !!a.is_correct,
         points: Number(a.points) || 0,
       }))
-      await adminClient.from('forge_quiz_answers').insert(rows)
+      const { error: answersError } = await adminClient.from('forge_quiz_answers').insert(rows)
+      if (answersError) {
+        console.error('forge_quiz_answers insert error:', answersError)
+      } else {
+        console.log('Inserted', rows.length, 'answers for player', player!.id)
+      }
     }
 
     // Award XP (5 per correct answer) directly on the profile.
