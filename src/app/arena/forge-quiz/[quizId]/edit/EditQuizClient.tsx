@@ -104,7 +104,7 @@ export default function EditQuizClient({ quiz, initialQuestions }: { quiz: any; 
       })
       const relData = await relRes.json()
       if (!relData.newQuizId) throw new Error(relData.error || 'Relaunch failed')
-      router.push(`/arena/forge-quiz/${relData.newQuizId}/${relData.mode === 'live' ? 'host' : 'lobby'}`)
+      router.push(`/arena/forge-quiz/${relData.newQuizId}/lobby`)
     } catch (e: any) {
       setError(e.message || 'Something went wrong')
       setBusy(false)

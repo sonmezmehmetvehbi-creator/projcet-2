@@ -115,10 +115,13 @@ export default function LobbyClient({
   async function startGame() {
     setStarting(true)
     try {
-      await fetch('/api/arena/forge-quiz/start', {
+      // Live Room: create a live session and enter the host waiting room.
+      const res = await fetch('/api/arena/forge-quiz/live/start-session', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId }),
       })
-      router.push(`/arena/forge-quiz/${quizId}/host`)
+      const data = await res.json()
+      if (!data.sessionId) throw new Error(data.error || 'Failed to start session')
+      router.push(`/arena/forge-quiz/live/${data.sessionId}/host`)
     } catch {
       setStarting(false)
     }
@@ -145,7 +148,7 @@ export default function LobbyClient({
       })
       const data = await res.json()
       if (!data.newQuizId) throw new Error(data.error || 'Relaunch failed')
-      router.push(`/arena/forge-quiz/${data.newQuizId}/${data.mode === 'live' ? 'host' : 'lobby'}`)
+      router.push(`/arena/forge-quiz/${data.newQuizId}/lobby`)
     } catch { setRelaunching(false) }
   }
 

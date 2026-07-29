@@ -246,7 +246,9 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       })
       const data = await res.json()
       if (!data.quizId) throw new Error(data.error || 'Failed to create quiz')
-      router.push(playMode === 'live' ? `/arena/forge-quiz/${data.quizId}/host` : `/arena/forge-quiz/${data.quizId}/lobby`)
+      // Both modes land in the quiz lobby; for Live Room the host starts a live
+      // session from there (which enters the host waiting room).
+      router.push(`/arena/forge-quiz/${data.quizId}/lobby`)
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to create quiz')
       setSubmitting(false)
