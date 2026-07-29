@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Copy, Users, Clock, X, Play, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
@@ -61,29 +61,37 @@ export default function LobbyClient({
     : 0
   const expired = !isLive && quiz.expires_at ? new Date(quiz.expires_at).getTime() <= Date.now() : quiz.status === 'ended'
 
-  const refresh = useCallback(async () => {
-    try {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('forge_quiz_players')
-        .select('id, user_id, display_name, avatar_emoji, total_score, completed')
-        .eq('quiz_id', quizId)
-        .eq('is_kicked', false)
-        .order('joined_at', { ascending: true })
-      if (data) setPlayers(data as Player[])
-    } catch {}
-  }, [quizId])
+  // Seed from the server's initial list once on mount only. We deliberately do
+  // NOT sync initialPlayers on later prop changes — doing so would overwrite
+  // the live, incrementally-updated list.
+  useEffect(() => {
+    if (players.length === 0 && initialPlayers.length > 0) setPlayers(initialPlayers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Realtime + polling fallback so the player list stays live as people join.
+  // Realtime: apply INSERT/UPDATE events incrementally so the list is never
+  // wiped by a full re-fetch (which could momentarily return empty).
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel(`quiz_${quizId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_quiz_players', filter: `quiz_id=eq.${quizId}` }, () => refresh())
+      .channel(`forge-quiz-players-${quizId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_players', filter: `quiz_id=eq.${quizId}` }, (payload) => {
+        const row = payload.new as any
+        if (row.is_kicked) return
+        setPlayers((prev) => (prev.some((p) => p.id === row.id) ? prev : [...prev, row as Player]))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_players', filter: `quiz_id=eq.${quizId}` }, (payload) => {
+        const row = payload.new as any
+        setPlayers((prev) => {
+          // A kick removes the player from the visible list.
+          if (row.is_kicked) return prev.filter((p) => p.id !== row.id)
+          const exists = prev.some((p) => p.id === row.id)
+          return exists ? prev.map((p) => (p.id === row.id ? { ...p, ...row } : p)) : [...prev, row as Player]
+        })
+      })
       .subscribe()
-    const poll = setInterval(refresh, 5000)
-    return () => { supabase.removeChannel(channel); clearInterval(poll) }
-  }, [quizId, refresh])
+    return () => { supabase.removeChannel(channel) }
+  }, [quizId])
 
   const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/arena/forge-quiz/${quizId}/lobby` : ''
   async function copyLink() {
