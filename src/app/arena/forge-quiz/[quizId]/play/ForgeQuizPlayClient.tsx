@@ -102,7 +102,11 @@ export default function ForgeQuizPlayClient({
   }, [quiz.id, router])
 
   const advance = useCallback(() => {
-    if (qIndex + 1 >= questions.length) { finish(); return }
+    if (qIndex + 1 >= questions.length) {
+      // Small delay to ensure the last answer is recorded in the ref.
+      setTimeout(() => finish(), 50)
+      return
+    }
     setQIndex((i) => i + 1)
   }, [qIndex, questions.length, finish])
 
