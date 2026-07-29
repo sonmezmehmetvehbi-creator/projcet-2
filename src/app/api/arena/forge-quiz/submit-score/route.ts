@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     await adminClient
       .from('forge_quiz_players')
-      .update({ score, completed: true, completed_at: new Date().toISOString() })
+      .update({ total_score: score, completed: true, completed_at: new Date().toISOString() })
       .eq('id', player!.id)
 
     // Store each answer.

@@ -94,9 +94,17 @@ export default function ForgeQuizPlayClient({
 
   const reveal = useCallback((answerText: string | null, isCorrect: boolean, rawPts: number) => {
     if (revealed) return
-    const pts = Math.max(0, Math.round(rawPts)) * (q?.points_multiplier ?? 1)
+    // Only correct answers earn points. Wrong answers (and slider guesses
+    // outside the acceptable range, which arrive with isCorrect=false) score 0
+    // regardless of speed. Speed points, the multiplier, and the streak bonus
+    // are applied only when the answer is correct.
+    let pts = 0
+    let bonus = 0
     const newStreak = isCorrect ? streakRef.current + 1 : 0
-    const bonus = isCorrect && newStreak > 0 && newStreak % 3 === 0 ? 200 : 0
+    if (isCorrect) {
+      pts = Math.max(0, Math.round(rawPts)) * (q?.points_multiplier ?? 1)
+      bonus = newStreak > 0 && newStreak % 3 === 0 ? 200 : 0
+    }
     const gain = pts + bonus
     streakRef.current = newStreak
     scoreRef.current += gain
