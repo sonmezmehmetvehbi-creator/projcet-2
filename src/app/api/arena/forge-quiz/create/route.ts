@@ -78,7 +78,8 @@ export async function POST(request: Request) {
     const { data: profile } = await adminClient.from('profiles').select('display_name').eq('id', user.id).single()
 
     const isLive = playMode === 'live'
-    const code = isLive ? roomCode() : null
+    // Every quiz (self-paced and live) gets a shareable join code.
+    const code = roomCode()
 
     // Self-paced quizzes stay open for a chosen window.
     const DURATION_HOURS: Record<string, number> = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '3d': 72, '7d': 168 }

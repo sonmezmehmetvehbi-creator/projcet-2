@@ -23,6 +23,23 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
   const router = useRouter()
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState('')
+
+  async function submitJoinCode() {
+    const code = joinCode.trim().toUpperCase()
+    if (!code || joining) return
+    setJoining(true); setJoinError('')
+    try {
+      const res = await fetch(`/api/arena/forge-quiz/find-by-code?code=${encodeURIComponent(code)}`)
+      const data = await res.json()
+      if (!res.ok || !data.quizId) throw new Error(data.error || 'Invalid or expired code')
+      router.push(`/arena/forge-quiz/${data.quizId}/lobby`)
+    } catch (e: any) {
+      setJoinError(e.message || 'Invalid or expired code')
+      setJoining(false)
+    }
+  }
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -64,12 +81,17 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
             </div>
 
             {showJoin && (
-              <form onSubmit={(e) => { e.preventDefault(); if (joinCode.trim()) router.push(`/arena/forge-quiz/join?code=${encodeURIComponent(joinCode.trim().toUpperCase())}`) }}
-                style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', maxWidth: '22rem' }}>
-                <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Enter room code" maxLength={6} autoFocus
-                  style={{ flex: 1, padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(245,158,11,0.4)', color: 'white', fontSize: '1rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', outline: 'none', boxSizing: 'border-box' }} />
-                <button type="submit" style={{ borderRadius: '0.75rem', border: 'none', background: 'rgb(245,158,11)', color: 'rgb(41,28,4)', fontWeight: 800, padding: '0 1.25rem', cursor: 'pointer' }}>Join</button>
-              </form>
+              <div style={{ marginTop: '1.25rem', maxWidth: '24rem' }}>
+                <form onSubmit={(e) => { e.preventDefault(); submitJoinCode() }} style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input value={joinCode} onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 6)); setJoinError('') }} placeholder="CODE" maxLength={6} autoFocus disabled={joining}
+                    style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(0,0,0,0.35)', border: `1px solid ${joinError ? 'rgba(248,113,113,0.6)' : 'rgba(245,158,11,0.5)'}`, color: 'white', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.4em', textAlign: 'center', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', outline: 'none', boxSizing: 'border-box' }} />
+                  <button type="submit" disabled={joining || joinCode.trim().length < 4}
+                    style={{ borderRadius: '0.75rem', border: 'none', background: joining ? 'rgba(245,158,11,0.5)' : 'rgb(245,158,11)', color: 'rgb(41,28,4)', fontWeight: 800, padding: '0 1.25rem', cursor: joining ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}>
+                    {joining ? 'Finding…' : 'Join →'}
+                  </button>
+                </form>
+                {joinError && <p style={{ marginTop: '0.5rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem', fontWeight: 600 }}>{joinError}</p>}
+              </div>
             )}
           </div>
         </div>

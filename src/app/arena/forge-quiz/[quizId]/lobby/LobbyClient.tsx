@@ -28,6 +28,7 @@ export default function LobbyClient({
   const router = useRouter()
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
   const [copied, setCopied] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
   const [starting, setStarting] = useState(false)
   const [removing, setRemoving] = useState<Set<string>>(new Set())
 
@@ -162,17 +163,24 @@ export default function LobbyClient({
         ))}
       </div>
 
+      {/* Join code — shown for every quiz so anyone can share it verbally */}
+      {quiz.room_code && (
+        <div style={{ textAlign: 'center', borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(19,19,31,0.7)', padding: '2rem', marginBottom: '1.5rem', boxShadow: '0 0 40px rgba(124,58,237,0.25)' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgb(196,181,253)', marginBottom: '0.75rem' }}>Join Code</p>
+          <p style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.25em', color: 'white', lineHeight: 1, textShadow: '0 0 30px rgba(124,58,237,0.8)' }}>{quiz.room_code}</p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginTop: '1rem' }}>
+            <span style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)' }}>Join at the Arena with this code</span>
+            <button onClick={async () => { try { await navigator.clipboard.writeText(quiz.room_code); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) } catch {} }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', background: 'rgb(124,58,237)', color: 'white', border: 'none', padding: '0.4rem 0.75rem', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' }}>
+              <Copy style={{ width: '0.85rem', height: '0.85rem' }} /> {codeCopied ? 'Copied!' : 'Copy code'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Live Room ── */}
       {isLive && (
         <>
-          {quiz.room_code && (
-            <div style={{ textAlign: 'center', borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.4)', background: 'rgba(19,19,31,0.7)', padding: '2rem', marginBottom: '1.5rem', boxShadow: '0 0 40px rgba(124,58,237,0.2)' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgb(196,181,253)', marginBottom: '0.75rem' }}>Join Code</p>
-              <p style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.25em', color: 'white', lineHeight: 1, textShadow: '0 0 30px rgba(124,58,237,0.8)' }}>{quiz.room_code}</p>
-              <p style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)', marginTop: '0.75rem' }}>Players join at the Arena with this code</p>
-            </div>
-          )}
-
           <div style={{ borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
               <Users style={{ width: '1.1rem', height: '1.1rem', color: 'rgb(196,181,253)' }} />
