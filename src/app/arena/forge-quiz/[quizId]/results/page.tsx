@@ -33,11 +33,11 @@ export default async function ForgeQuizResultsPage({ params }: { params: { quizI
 
   const { data: leaderboard } = await adminClient
     .from('forge_quiz_players')
-    .select('id, user_id, display_name, avatar_emoji, score, completed')
+    .select('id, user_id, display_name, avatar_emoji, total_score, completed')
     .eq('quiz_id', params.quizId)
     .eq('completed', true)
     .eq('is_kicked', false)
-    .order('score', { ascending: false })
+    .order('total_score', { ascending: false })
 
   const { data: answers } = await adminClient
     .from('forge_quiz_answers')

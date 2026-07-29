@@ -9,7 +9,7 @@ const MEDAL_COLOR = ['rgb(251,191,36)', 'rgb(203,213,225)', 'rgb(217,119,6)']
 const MEDAL_TINT = ['rgba(251,191,36,0.12)', 'rgba(203,213,225,0.1)', 'rgba(217,119,6,0.1)']
 const MEDAL_BORDER = ['rgba(251,191,36,0.45)', 'rgba(203,213,225,0.4)', 'rgba(217,119,6,0.4)']
 
-type Player = { id: string; user_id: string; display_name: string; avatar_emoji: string; score: number; completed: boolean }
+type Player = { id: string; user_id: string; display_name: string; avatar_emoji: string; total_score: number; completed: boolean }
 type Answer = { question_id: string; answer: string | null; is_correct: boolean; points: number }
 type Question = { id: string; position: number; question_text: string; question_type: string; options: string[] | null; correct_index: number | null; correct_answer: string | null; slider_correct: number | null }
 
@@ -29,7 +29,7 @@ export default function ForgeQuizResultsClient({
   const [showDetails, setShowDetails] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const completed = useMemo(() => [...leaderboard].sort((a, b) => b.score - a.score), [leaderboard])
+  const completed = useMemo(() => [...leaderboard].sort((a, b) => b.total_score - a.total_score), [leaderboard])
   const totalPlayers = completed.length
   const myRank = Math.max(1, completed.findIndex((p) => p.user_id === currentUserId) + 1)
   const isTop3 = myRank <= 3
@@ -50,12 +50,12 @@ export default function ForgeQuizResultsClient({
   const glow = isTop3 ? MEDAL_COLOR[myRank - 1] : 'rgb(196,181,253)'
 
   async function share() {
-    const text = `I ranked #${myRank} in ${quiz.title} on AceForge with ${me.score} points! 🎯`
+    const text = `I ranked #${myRank} in ${quiz.title} on AceForge with ${me.total_score} points! 🎯`
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2200) } catch {}
   }
 
   const stats = [
-    { label: 'Final Score', value: `${me.score}` },
+    { label: 'Final Score', value: `${me.total_score}` },
     { label: 'Correct', value: `${correctCount}/${totalQ}` },
     { label: 'Accuracy', value: `${accuracy}%` },
     { label: 'Best Streak', value: `${bestStreak}` },
@@ -149,7 +149,7 @@ export default function ForgeQuizResultsClient({
                   {p.display_name}{isMe && <span style={{ marginLeft: '0.4rem', fontSize: '0.625rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>YOU</span>}
                 </span>
                 {isMe && <span style={{ fontSize: '0.75rem', color: 'rgb(148,148,168)' }}>{correctCount}/{acc}</span>}
-                <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.05rem' }}>{p.score}</span>
+                <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.05rem' }}>{p.total_score}</span>
               </div>
             )
           })}

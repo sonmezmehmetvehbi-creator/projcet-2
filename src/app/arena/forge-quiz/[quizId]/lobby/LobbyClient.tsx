@@ -10,7 +10,7 @@ type Player = {
   user_id: string
   display_name: string
   avatar_emoji: string
-  score: number
+  total_score: number
   completed: boolean
 }
 
@@ -43,7 +43,7 @@ export default function LobbyClient({
       const supabase = createClient()
       const { data } = await supabase
         .from('forge_quiz_players')
-        .select('id, user_id, display_name, avatar_emoji, score, completed')
+        .select('id, user_id, display_name, avatar_emoji, total_score, completed')
         .eq('quiz_id', quizId)
         .eq('is_kicked', false)
         .order('joined_at', { ascending: true })
@@ -196,14 +196,14 @@ export default function LobbyClient({
               <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem' }}>No one has played yet — be the first!</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {players.filter((p) => p.completed).sort((a, b) => b.score - a.score).map((p, i) => {
+                {players.filter((p) => p.completed).sort((a, b) => b.total_score - a.total_score).map((p, i) => {
                   const isMe = p.user_id === currentUserId
                   return (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.7rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)' }}>
                       <span style={{ width: '1.5rem', textAlign: 'center', fontWeight: 800, color: 'rgb(180,180,200)' }}>{i + 1}</span>
                       <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
                       <span style={{ flex: 1, minWidth: 0, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}{isMe && <span style={{ marginLeft: '0.4rem', fontSize: '0.625rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>YOU</span>}</span>
-                      <span style={{ fontWeight: 900, color: 'rgb(251,191,36)' }}>{p.score}</span>
+                      <span style={{ fontWeight: 900, color: 'rgb(251,191,36)' }}>{p.total_score}</span>
                     </div>
                   )
                 })}

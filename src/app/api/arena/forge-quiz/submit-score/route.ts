@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       player = created
     }
 
+    console.log('Updating player:', player!.id, 'with total_score:', score, 'completed: true')
     await adminClient
       .from('forge_quiz_players')
       .update({ total_score: score, completed: true, completed_at: new Date().toISOString() })

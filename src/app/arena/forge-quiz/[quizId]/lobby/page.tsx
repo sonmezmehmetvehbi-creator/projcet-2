@@ -30,7 +30,7 @@ export default async function ForgeQuizLobbyPage({ params }: { params: { quizId:
 
   const { data: players } = await adminClient
     .from('forge_quiz_players')
-    .select('id, user_id, display_name, avatar_emoji, score, completed')
+    .select('id, user_id, display_name, avatar_emoji, total_score, completed')
     .eq('quiz_id', params.quizId)
     .eq('is_kicked', false)
     .order('joined_at', { ascending: true })
