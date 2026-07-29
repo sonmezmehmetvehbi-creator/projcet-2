@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, X, Loader2 } from 'lucide-react'
+import { sliderPoints } from '@/lib/quizScoring'
 
 const AVATARS = ['🎓', '📚', '⚡', '🔥', '💡', '🧠', '🏆', '🎯', '🚀', '💪', '🦁', '🐯', '🦊', '🐉', '⚔️', '🛡️', '🌟', '👑', '🎮', '🎲']
 
@@ -23,19 +24,6 @@ type Question = {
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
-
-// Graduated partial credit for slider questions. Only answers within 70%
-// closeness continue a streak; closer answers earn more of the base points.
-function sliderPoints(guess: number, correct: number, min: number, max: number, basePts: number): { points: number; isCorrect: boolean } {
-  const range = Math.max(1, max - min)
-  const distance = Math.abs(guess - correct)
-  const closeness = 1 - distance / range
-  if (closeness >= 0.95) return { points: basePts, isCorrect: true }
-  if (closeness >= 0.85) return { points: Math.round(basePts * 0.7), isCorrect: true }
-  if (closeness >= 0.70) return { points: Math.round(basePts * 0.4), isCorrect: true }
-  if (closeness >= 0.50) return { points: Math.round(basePts * 0.15), isCorrect: false }
-  return { points: 0, isCorrect: false }
-}
 
 export default function ForgeQuizPlayClient({
   quiz,

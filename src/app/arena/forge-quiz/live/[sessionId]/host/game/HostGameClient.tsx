@@ -1,0 +1,266 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowRight, ChevronRight, Check, Flame, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import TimerRing from '@/components/arena/TimerRing'
+import { ANSWER_STYLES, AnswerShape } from '@/components/arena/AnswerShapes'
+
+type Question = any
+type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
+
+export default function HostGameClient({
+  sessionId, initialSession, quiz, questions,
+}: {
+  sessionId: string
+  initialSession: SessionState
+  quiz: any
+  questions: Question[]
+}) {
+  const color = quiz.banner_color || '#7c3aed'
+  const [session, setSession] = useState<SessionState>(initialSession)
+  const [now, setNow] = useState(() => Date.now())
+  const [total, setTotal] = useState(0)
+  const [answered, setAnswered] = useState(0)
+  const [reveal, setReveal] = useState<{ counts: number[]; total: number } | null>(null)
+  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; streak: number; gained: number; change: number }[]>([])
+  const [busy, setBusy] = useState(false)
+
+  const supaRef = useRef(createClient())
+  const autoRevealedRef = useRef<Set<number>>(new Set())
+  const prevRanksRef = useRef<Record<string, number>>({})
+
+  const qIndex = session.current_question_index
+  const q = questions[qIndex]
+  const timeLimit = (q?.time_limit || quiz.time_per_question || 20)
+  const total_qs = questions.length
+  const isScreenShare = session.display_mode === 'screen_share'
+  const nOptions = q?.question_type === 'tf' ? 2 : q?.question_type === 'mc' ? Math.min(4, (q.options?.length ?? 4)) : 0
+
+  const elapsed = session.question_started_at ? Math.max(0, (now - new Date(session.question_started_at).getTime()) / 1000) : 0
+  const secondsLeft = Math.max(0, Math.ceil(timeLimit - elapsed))
+
+  // Tick.
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
+
+  const fetchCounts = useCallback(async () => {
+    const supabase = supaRef.current
+    const [{ count: tp }, { count: ac }] = await Promise.all([
+      supabase.from('forge_quiz_live_players').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('is_kicked', false),
+      supabase.from('forge_quiz_live_answers').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('question_index', qIndex),
+    ])
+    if (typeof tp === 'number') setTotal(tp)
+    if (typeof ac === 'number') setAnswered(ac)
+  }, [sessionId, qIndex])
+
+  const fetchReveal = useCallback(async () => {
+    const supabase = supaRef.current
+    const { data } = await supabase.from('forge_quiz_live_answers').select('answer').eq('session_id', sessionId).eq('question_index', qIndex)
+    const counts = Array.from({ length: Math.max(1, nOptions) }, () => 0)
+    for (const a of data ?? []) {
+      const idx = Number(a.answer)
+      if (idx >= 0 && idx < counts.length) counts[idx]++
+    }
+    setReveal({ counts, total: (data ?? []).length })
+  }, [sessionId, qIndex, nOptions])
+
+  const fetchBoard = useCallback(async () => {
+    const supabase = supaRef.current
+    const [{ data: players }, { data: answers }] = await Promise.all([
+      supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false }),
+      supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_index', qIndex),
+    ])
+    const gainedBy: Record<string, number> = {}
+    for (const a of answers ?? []) gainedBy[a.user_id] = (gainedBy[a.user_id] ?? 0) + (a.points ?? 0)
+    const ranked = (players ?? []).map((p, i) => {
+      const prev = prevRanksRef.current[p.user_id]
+      const change = prev != null ? prev - (i + 1) : 0
+      return { ...p, gained: gainedBy[p.user_id] ?? 0, change }
+    })
+    // Record ranks for next comparison.
+    const nextRanks: Record<string, number> = {}
+    ranked.forEach((p, i) => { nextRanks[p.user_id] = i + 1 })
+    prevRanksRef.current = nextRanks
+    setBoard(ranked)
+  }, [sessionId, qIndex])
+
+  // Realtime: session + answers.
+  useEffect(() => {
+    const supabase = supaRef.current
+    const channel = supabase
+      .channel(`live-hostgame-${sessionId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_sessions', filter: `id=eq.${sessionId}` }, (payload: any) => {
+        const s = payload.new
+        setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_answers', filter: `session_id=eq.${sessionId}` }, () => {
+        fetchCounts()
+        if (session.question_state === 'revealed') fetchReveal()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
+
+  // React to state changes.
+  useEffect(() => {
+    if (session.question_state === 'question') { setReveal(null); fetchCounts() }
+    else if (session.question_state === 'revealed') { fetchReveal(); fetchCounts() }
+    else if (session.question_state === 'leaderboard') { fetchBoard() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.question_state, session.current_question_index])
+
+  // Auto-reveal when the timer hits zero.
+  useEffect(() => {
+    if (session.question_state === 'question' && secondsLeft <= 0 && session.question_started_at && !autoRevealedRef.current.has(qIndex)) {
+      autoRevealedRef.current.add(qIndex)
+      revealNow()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, session.question_state, qIndex])
+
+  async function post(endpoint: string, body: any) {
+    setBusy(true)
+    try { await fetch(`/api/arena/forge-quiz/live/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) } catch {}
+    setBusy(false)
+  }
+  const revealNow = () => post('reveal-question', { sessionId, state: 'revealed' })
+  const showLeaderboard = () => post('reveal-question', { sessionId, state: 'leaderboard' })
+  const nextQuestion = () => post('next-question', { sessionId })
+
+  const isLast = qIndex + 1 >= total_qs
+  const correctIdx = q?.correct_index
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ height: '0.5rem', background: color }} />
+      <div style={{ position: 'absolute', top: '2rem', left: '50%', transform: 'translateX(-50%)', width: '48rem', height: '24rem', borderRadius: '9999px', background: `${color}22`, filter: 'blur(140px)', pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', maxWidth: '60rem', margin: '0 auto', padding: '2rem 1.5rem 6rem' }}>
+
+        {/* ── QUESTION ── */}
+        {session.question_state === 'question' && q && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>Question {qIndex + 1} of {total_qs}</span>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>{answered} / {total} answered</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem' }}>
+              <TimerRing secondsLeft={secondsLeft} totalSeconds={timeLimit} />
+              {q.image_url && <img src={q.image_url} alt="" style={{ maxHeight: '14rem', borderRadius: '1rem' }} />}
+              <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 'clamp(1.75rem, 4vw, 3rem)', fontWeight: 800, color: 'white', textAlign: 'center', lineHeight: 1.2 }}>{q.question_text}</h1>
+            </div>
+
+            {(q.question_type === 'mc' || q.question_type === 'tf') ? (
+              <div style={{ display: 'grid', gridTemplateColumns: nOptions <= 2 ? '1fr 1fr' : '1fr 1fr', gap: '1rem' }}>
+                {Array.from({ length: nOptions }).map((_, i) => {
+                  const s = ANSWER_STYLES[i]
+                  const optText = q.question_type === 'tf' ? (i === 0 ? 'True' : 'False') : q.options?.[i]
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', background: s.color, padding: '1.25rem 1.5rem', minHeight: '5rem' }}>
+                      <AnswerShape shape={s.shape} size={40} />
+                      {!isScreenShare && <span style={{ color: 'white', fontWeight: 800, fontSize: '1.35rem' }}>{optText}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'rgb(148,148,168)', fontSize: '1.0625rem' }}>
+                {q.question_type === 'slider' ? `Players choose a value between ${q.slider_min} and ${q.slider_max} on their device.` : 'Players type their answer on their device.'}
+              </div>
+            )}
+
+            <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+              <button onClick={revealNow} disabled={busy}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(245,158,11,0.4)' }}>
+                Skip Timer / Reveal Now <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── REVEALED ── */}
+        {session.question_state === 'revealed' && q && (
+          <>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'white', textAlign: 'center', marginBottom: '2rem' }}>{q.question_text}</h1>
+            {(q.question_type === 'mc' || q.question_type === 'tf') ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {Array.from({ length: nOptions }).map((_, i) => {
+                  const s = ANSWER_STYLES[i]
+                  const cnt = reveal?.counts[i] ?? 0
+                  const pct = reveal && reveal.total > 0 ? Math.round((cnt / reveal.total) * 100) : 0
+                  const isCorrect = i === correctIdx
+                  const optText = q.question_type === 'tf' ? (i === 0 ? 'True' : 'False') : q.options?.[i]
+                  return (
+                    <div key={i} style={{ position: 'relative', borderRadius: '1rem', border: isCorrect ? '2px solid rgb(74,222,128)' : '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', padding: '0.5rem', overflow: 'hidden', boxShadow: isCorrect ? '0 0 24px rgba(34,197,94,0.4)' : 'none', opacity: isCorrect ? 1 : 0.75 }}>
+                      <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: s.color, opacity: 0.85, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem' }}>
+                        <AnswerShape shape={s.shape} size={28} />
+                        <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', flex: 1 }}>{optText}</span>
+                        {isCorrect && <Check style={{ width: '1.5rem', height: '1.5rem', color: 'rgb(134,239,172)' }} />}
+                        <span style={{ color: 'white', fontWeight: 900 }}>{pct}%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', borderRadius: '1rem', border: '2px solid rgb(74,222,128)', background: 'rgba(34,197,94,0.1)', padding: '2rem' }}>
+                <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem', marginBottom: '0.5rem' }}>Correct answer</p>
+                <p style={{ color: 'rgb(134,239,172)', fontWeight: 900, fontSize: '2rem' }}>{q.question_type === 'slider' ? q.slider_correct : q.correct_answer}</p>
+              </div>
+            )}
+            <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+              <button onClick={showLeaderboard} disabled={busy}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}>
+                Show Leaderboard <ChevronRight style={{ width: '1.2rem', height: '1.2rem' }} />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── LEADERBOARD / PODIUM ── */}
+        {session.question_state === 'leaderboard' && (
+          <>
+            <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 800, color: 'white', textAlign: 'center', marginBottom: '2rem' }}>
+              {session.status === 'podium' ? '🏆 Final Results' : 'Leaderboard'}
+            </h1>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '40rem', margin: '0 auto' }}>
+              {board.slice(0, session.status === 'podium' ? 10 : 5).map((p, i) => {
+                const onFire = p.streak >= 3 && i === board.findIndex((x) => x.streak >= 3)
+                return (
+                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', border: i < 3 ? '1px solid rgba(251,191,36,0.4)' : '1px solid rgba(255,255,255,0.08)', background: i < 3 ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.03)', padding: '0.9rem 1.25rem', animation: 'lbSlide 0.4s ease both', animationDelay: `${i * 0.08}s` }}>
+                    <span style={{ width: '2rem', textAlign: 'center', fontWeight: 900, fontSize: '1.25rem', color: i < 3 ? 'rgb(251,191,36)' : 'rgb(180,180,200)' }}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
+                    <span style={{ fontSize: '1.75rem' }}>{p.avatar_emoji}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
+                        {onFire && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.6875rem', fontWeight: 800, color: 'rgb(251,146,60)', background: 'rgba(251,146,60,0.15)', padding: '0.1rem 0.45rem', borderRadius: '9999px' }}><Flame style={{ width: '0.75rem', height: '0.75rem' }} /> On Fire</span>}
+                        {p.change > 0 && <span style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 800 }}>▲{p.change}</span>}
+                        {p.change < 0 && <span style={{ fontSize: '0.75rem', color: 'rgb(248,113,113)', fontWeight: 800 }}>▼{-p.change}</span>}
+                      </div>
+                      {p.gained > 0 && <span style={{ fontSize: '0.8125rem', color: 'rgb(74,222,128)', fontWeight: 700 }}>+{p.gained}</span>}
+                    </div>
+                    <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.35rem' }}>{p.score}</span>
+                  </div>
+                )
+              })}
+              {board.length === 0 && <p style={{ textAlign: 'center', color: 'rgb(148,148,168)' }}>No scores yet.</p>}
+            </div>
+            {session.status !== 'podium' && (
+              <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+                <button onClick={nextQuestion} disabled={busy}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(22,163,74), rgb(34,197,94))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(34,197,94,0.4)' }}>
+                  {busy ? <><Loader2 style={{ width: '1.2rem', height: '1.2rem' }} className="animate-spin" /> …</> : <>{isLast ? 'See Podium' : 'Next Question'} <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} /></>}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <style>{`@keyframes lbSlide { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }`}</style>
+    </div>
+  )
+}

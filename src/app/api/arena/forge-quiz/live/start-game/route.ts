@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     const { error } = await adminClient
       .from('forge_quiz_live_sessions')
-      .update({ status: 'active', current_question_index: 0, question_started_at: new Date().toISOString(), countdown_target_at: null })
+      .update({ status: 'active', current_question_index: 0, question_started_at: new Date().toISOString(), question_state: 'question', countdown_target_at: null })
       .eq('id', sessionId)
     if (error) throw error
 
