@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/generate/page.tsx -> jszip":{"id":57635,"files":["static/chunks/7635.2cff99687bbe7bc8.js"]}}';
+self.__REACT_LOADABLE_MANIFEST='{"app/arena/forge-quiz/create/ForgeQuizCreateClient.tsx -> pdfjs-dist":{"id":27781,"files":["static/chunks/9b0008ae.f2069bd47ccb0bb2.js"]},"app/generate/page.tsx -> jszip":{"id":57635,"files":["static/chunks/7635.2cff99687bbe7bc8.js"]}}';

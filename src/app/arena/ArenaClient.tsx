@@ -68,6 +68,8 @@ export default function ArenaClient({ profile, created = [], joined = [] }: { pr
   const [difficulty, setDifficulty] = useState('medium')
   const [best, setBest] = useState<{ score: number; created_at: string } | null>(null)
   const [bestLoading, setBestLoading] = useState(false)
+  const [showJoin, setShowJoin] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
 
   const subjects = category ? SUBJECTS_BY_CATEGORY[category] ?? [] : []
   const topics = useMemo(() => (subject ? getTopics(subject) : []), [subject])
@@ -135,6 +137,39 @@ export default function ArenaClient({ profile, created = [], joined = [] }: { pr
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', padding: '0 1.75rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(245,158,11,0.45)', whiteSpace: 'nowrap' }}>
               Create Challenge <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />
             </button>
+          </div>
+        </div>
+
+        {/* ⚡ Forge Quiz — Kahoot-style quiz builder */}
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '1.5rem', border: '1px solid rgba(245,158,11,0.4)', background: 'linear-gradient(135deg, rgba(146,64,14,0.4), rgba(19,19,31,0.9))', padding: '2rem', marginBottom: '3rem', boxShadow: '0 0 50px rgba(245,158,11,0.15)' }}>
+          <div style={{ position: 'absolute', top: '-4rem', left: '-4rem', width: '16rem', height: '16rem', borderRadius: '9999px', background: 'rgba(245,158,11,0.12)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+              <div style={{ maxWidth: '34rem' }}>
+                <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>Forge Quiz ⚡</h2>
+                <p style={{ fontSize: '0.9375rem', color: 'rgb(224,200,160)', lineHeight: 1.5 }}>
+                  Create a Kahoot-style quiz. Manual questions or AI-generated. Play live or share a link.
+                </p>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <button type="button" onClick={() => router.push('/arena/forge-quiz/create')}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3rem', padding: '0 1.5rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '0.9375rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 0 26px rgba(245,158,11,0.4)' }}>
+                  Create Quiz <ArrowRight style={{ width: '1.05rem', height: '1.05rem' }} />
+                </button>
+                <button type="button" onClick={() => setShowJoin((s) => !s)}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3rem', padding: '0 1.5rem', borderRadius: '0.875rem', border: '1px solid rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.08)', color: 'rgb(251,191,36)', fontWeight: 800, fontSize: '0.9375rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Join with Code →
+                </button>
+              </div>
+            </div>
+            {showJoin && (
+              <form onSubmit={(e) => { e.preventDefault(); if (joinCode.trim()) router.push(`/arena/forge-quiz/join?code=${encodeURIComponent(joinCode.trim().toUpperCase())}`) }}
+                style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', maxWidth: '22rem' }}>
+                <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Enter room code" maxLength={6}
+                  style={{ flex: 1, padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(245,158,11,0.4)', color: 'white', fontSize: '1rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', outline: 'none', boxSizing: 'border-box' }} />
+                <button type="submit" style={{ borderRadius: '0.75rem', border: 'none', background: 'rgb(245,158,11)', color: 'rgb(41,28,4)', fontWeight: 800, padding: '0 1.1rem', cursor: 'pointer' }}>Join</button>
+              </form>
+            )}
           </div>
         </div>
 
