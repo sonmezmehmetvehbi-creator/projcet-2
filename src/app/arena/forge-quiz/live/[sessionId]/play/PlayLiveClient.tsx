@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { ANSWER_STYLES, AnswerShape } from '@/components/arena/AnswerShapes'
+import PlayerResult from '@/components/arena/PlayerResult'
 
 type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
 type Result = { qIndex: number; isCorrect?: boolean; points?: number; correctAnswer?: string; answer?: any; tooLate?: boolean }
@@ -27,7 +28,7 @@ export default function PlayLiveClient({
   const [sliderVal, setSliderVal] = useState<number | null>(null)
   const [frVal, setFrVal] = useState('')
   const [waitIdx, setWaitIdx] = useState(0)
-  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number }[]>([])
+  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; correct?: number; attempted?: number; best_streak?: number }[]>([])
   const [shake, setShake] = useState(false)
 
   const supaRef = useRef(createClient())
@@ -71,7 +72,7 @@ export default function PlayLiveClient({
 
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
-    const { data } = await supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false })
+    const { data } = await supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, correct, attempted, best_streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false })
     setBoard(data ?? [])
   }, [sessionId])
 
@@ -94,9 +95,9 @@ export default function PlayLiveClient({
   }, [sessionId, userId])
 
   useEffect(() => {
-    if (session.question_state === 'leaderboard' || session.question_state === 'revealed') fetchBoard()
+    if (session.status === 'podium' || session.question_state === 'leaderboard' || session.question_state === 'revealed') fetchBoard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.question_state, session.current_question_index])
+  }, [session.question_state, session.current_question_index, session.status])
 
   async function submit(answer: any) {
     if (submitting || answeredThis) return
@@ -127,6 +128,25 @@ export default function PlayLiveClient({
       `}</style>
     </div>
   )
+
+  // ── PODIUM (final, personalized) ──
+  if (session.status === 'podium') {
+    const meRow = board[myRank] as any
+    return (
+      <PlayerResult
+        rank={myRank >= 0 ? myRank + 1 : board.length + 1}
+        totalPlayers={board.length}
+        score={myScore}
+        correct={meRow?.correct ?? 0}
+        attempted={meRow?.attempted ?? 0}
+        bestStreak={meRow?.best_streak ?? 0}
+        quizTitle={quiz.title}
+        bannerColor={color}
+        playerName={me.display_name}
+        avatar={me.avatar_emoji}
+      />
+    )
+  }
 
   // ── PODIUM / LEADERBOARD ──
   if (session.question_state === 'leaderboard') {

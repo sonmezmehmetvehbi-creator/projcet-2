@@ -34,6 +34,7 @@ export default async function HostGamePage({ params }: { params: { sessionId: st
   return (
     <HostGameClient
       sessionId={params.sessionId}
+      quizId={session.quiz_id}
       initialSession={{
         status: session.status,
         display_mode: session.display_mode,

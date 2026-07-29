@@ -7,9 +7,14 @@ import { ArrowRight, History, Users } from 'lucide-react'
 
 type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean }
 type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number }
+type HostedLive = { id: string; title: string; banner_color: string; date: string; playerCount: number; active: boolean }
+type JoinedLive = { id: string; title: string; banner_color: string; date: string; score: number; rank: number; playerCount: number; active: boolean }
 
 function medal(rank: number) {
   return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
+}
+function liveDate(iso: string) {
+  try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) } catch { return '' }
 }
 function timeLeftLabel(expiresAt: string | null): string {
   if (!expiresAt) return ''
@@ -19,7 +24,7 @@ function timeLeftLabel(expiresAt: string | null): string {
   return d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`
 }
 
-export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoined = [] }: { profile?: any; quizzesCreated?: CreatedQuiz[]; quizzesJoined?: JoinedQuiz[] }) {
+export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoined = [], liveHosted = [], liveJoined = [] }: { profile?: any; quizzesCreated?: CreatedQuiz[]; quizzesJoined?: JoinedQuiz[]; liveHosted?: HostedLive[]; liveJoined?: JoinedLive[] }) {
   const router = useRouter()
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
@@ -141,6 +146,30 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
             </div>
           )}
 
+          {/* Hosted live games */}
+          {liveHosted.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(148,148,168)', marginBottom: '0.875rem' }}>🎮 Live games you hosted</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                {liveHosted.map((s) => (
+                  <div key={s.id} style={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', borderLeft: `4px solid ${s.banner_color}`, background: 'rgba(19,19,31,0.7)', padding: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '9999px', ...(s.active ? { color: 'rgb(74,222,128)', background: 'rgba(34,197,94,0.14)' } : { color: 'rgb(148,148,168)', background: 'rgba(255,255,255,0.06)' }) }}>{s.active ? 'Live' : 'Finished'}</span>
+                      <span style={{ fontSize: '0.6875rem', color: 'rgb(120,120,140)' }}>{liveDate(s.date)}</span>
+                    </div>
+                    <h4 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.0625rem', fontWeight: 700, color: 'white', marginBottom: '0.625rem', lineHeight: 1.25 }}>{s.title}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'rgb(180,180,200)' }}><Users style={{ width: '0.85rem', height: '0.85rem' }} /> {s.playerCount} players</span>
+                      <Link href={s.active ? `/arena/forge-quiz/live/${s.id}/host` : `/arena/forge-quiz/live/${s.id}/results`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(196,181,253)', textDecoration: 'none' }}>
+                        {s.active ? 'Rejoin' : 'View Results'} <ArrowRight style={{ width: '0.85rem', height: '0.85rem' }} />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {/* Joined */}
           <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(148,148,168)', marginBottom: '0.875rem' }}>Joined quizzes</h3>
           {quizzesJoined.length === 0 ? (
@@ -165,6 +194,30 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Live games you joined */}
+          {liveJoined.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgb(148,148,168)', margin: '2rem 0 0.875rem' }}>🎮 Live games you joined</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                {liveJoined.map((s) => (
+                  <div key={s.id} style={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', borderLeft: `4px solid ${s.banner_color}`, background: 'rgba(19,19,31,0.7)', padding: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '9999px', ...(s.active ? { color: 'rgb(74,222,128)', background: 'rgba(34,197,94,0.14)' } : { color: 'rgb(148,148,168)', background: 'rgba(255,255,255,0.06)' }) }}>{s.active ? 'Live' : 'Finished'}</span>
+                      {!s.active && s.rank > 0 && <span style={{ fontSize: '0.9375rem', fontWeight: 900, color: 'rgb(251,191,36)' }}>{medal(s.rank)}</span>}
+                    </div>
+                    <h4 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.0625rem', fontWeight: 700, color: 'white', marginBottom: '0.5rem', lineHeight: 1.25 }}>{s.title}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'rgb(120,120,140)' }}>{s.active ? liveDate(s.date) : `${s.score} pts · rank ${medal(s.rank)} of ${s.playerCount}`}</span>
+                      <Link href={s.active ? `/arena/forge-quiz/live/${s.id}/play` : `/arena/forge-quiz/live/${s.id}/results`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(196,181,253)', textDecoration: 'none' }}>
+                        {s.active ? 'Rejoin' : 'View Results'} <ArrowRight style={{ width: '0.85rem', height: '0.85rem' }} />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

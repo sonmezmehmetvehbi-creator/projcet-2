@@ -1,22 +1,26 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, ChevronRight, Check, Flame, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, ChevronRight, Check, Flame, Loader2, RotateCw, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import TimerRing from '@/components/arena/TimerRing'
 import { ANSWER_STYLES, AnswerShape } from '@/components/arena/AnswerShapes'
+import LivePodium from '@/components/arena/LivePodium'
 
 type Question = any
 type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
 
 export default function HostGameClient({
-  sessionId, initialSession, quiz, questions,
+  sessionId, quizId, initialSession, quiz, questions,
 }: {
   sessionId: string
+  quizId: string
   initialSession: SessionState
   quiz: any
   questions: Question[]
 }) {
+  const router = useRouter()
   const color = quiz.banner_color || '#7c3aed'
   const [session, setSession] = useState<SessionState>(initialSession)
   const [now, setNow] = useState(() => Date.now())
@@ -104,11 +108,12 @@ export default function HostGameClient({
 
   // React to state changes.
   useEffect(() => {
+    if (session.status === 'podium') { fetchBoard(); return }
     if (session.question_state === 'question') { setReveal(null); fetchCounts() }
     else if (session.question_state === 'revealed') { fetchReveal(); fetchCounts() }
     else if (session.question_state === 'leaderboard') { fetchBoard() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.question_state, session.current_question_index])
+  }, [session.question_state, session.current_question_index, session.status])
 
   // Auto-reveal when the timer hits zero.
   useEffect(() => {
@@ -128,8 +133,42 @@ export default function HostGameClient({
   const showLeaderboard = () => post('reveal-question', { sessionId, state: 'leaderboard' })
   const nextQuestion = () => post('next-question', { sessionId })
 
+  async function runAgain() {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/arena/forge-quiz/live/relaunch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) })
+      const data = await res.json()
+      if (res.ok && data.newSessionId) { router.push(`/arena/forge-quiz/live/${data.newSessionId}/host`); return }
+    } catch {}
+    setBusy(false)
+  }
+
   const isLast = qIndex + 1 >= total_qs
   const correctIdx = q?.correct_index
+
+  // ── PODIUM / FINAL RESULTS ──
+  if (session.status === 'podium') {
+    return (
+      <LivePodium
+        players={board}
+        quizTitle={quiz.title}
+        bannerColor={color}
+        animated
+        controls={
+          <>
+            <button onClick={runAgain} disabled={busy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3rem', padding: '0 1.5rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(22,163,74), rgb(34,197,94))', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
+              <RotateCw style={{ width: '1.1rem', height: '1.1rem' }} /> Run Again
+            </button>
+            <button onClick={() => router.push(`/arena/forge-quiz/${quizId}/edit`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3rem', padding: '0 1.5rem', borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
+              <Pencil style={{ width: '1.1rem', height: '1.1rem' }} /> Edit Quiz
+            </button>
+          </>
+        }
+      />
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)', position: 'relative', overflow: 'hidden' }}>

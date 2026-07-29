@@ -30,7 +30,9 @@ export async function POST(request: Request) {
     const nextIndex = (session.current_question_index ?? 0) + 1
 
     if (nextIndex >= (total ?? 0)) {
-      await adminClient.from('forge_quiz_live_sessions').update({ status: 'podium', question_state: 'leaderboard' }).eq('id', sessionId)
+      // Last question just finished — freeze the game at the podium.
+      // -- ALTER TABLE forge_quiz_live_sessions ADD COLUMN IF NOT EXISTS ended_at timestamptz;
+      await adminClient.from('forge_quiz_live_sessions').update({ status: 'podium', question_state: 'leaderboard', ended_at: new Date().toISOString() }).eq('id', sessionId)
       return NextResponse.json({ success: true, podium: true })
     }
 
