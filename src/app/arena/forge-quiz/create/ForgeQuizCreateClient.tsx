@@ -120,6 +120,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [uploadError, setUploadError] = useState('')
 
   const subjects = category ? SUBJECTS_BY_CATEGORY[category] ?? [] : []
   const topics = useMemo(() => (subject ? getTopics(subject) : []), [subject])
@@ -139,14 +140,27 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
     updateQuestion(id, { question_type: t, options: fresh.options, correct_index: 0, correct_answer: '', slider_min: 0, slider_max: 100, slider_correct: 50 })
   }
 
-  async function uploadImage(id: string, file: File) {
+  // Hidden file input per question, keyed by question id, so the button can
+  // reliably trigger the native picker.
+  const imageRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, id: string) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file later
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be under 5MB'); return }
+    setUploadError('')
+    updateQuestion(id, { image_url: '__uploading__' })
     const fd = new FormData()
     fd.append('file', file)
     try {
       const res = await fetch('/api/arena/forge-quiz/upload-image', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.url) updateQuestion(id, { image_url: data.url })
-    } catch {}
+      else { updateQuestion(id, { image_url: null }); setUploadError(data.error || 'Upload failed') }
+    } catch {
+      updateQuestion(id, { image_url: null }); setUploadError('Upload failed')
+    }
   }
 
   async function extractPdf(file: File) {
@@ -207,7 +221,8 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
           slider_min: q.question_type === 'slider' ? q.slider_min : null,
           slider_max: q.question_type === 'slider' ? q.slider_max : null,
           slider_correct: q.question_type === 'slider' ? q.slider_correct : null,
-          points_multiplier: q.points_multiplier, time_limit: q.time_limit, image_url: q.image_url,
+          points_multiplier: q.points_multiplier, time_limit: q.time_limit,
+          image_url: q.image_url && q.image_url !== '__uploading__' ? q.image_url : null,
         })),
       }
       const res = await fetch('/api/arena/forge-quiz/create', {
@@ -376,7 +391,10 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               {questions.map((q, i) => (
                 <QuestionEditor key={q._id} q={q} index={i} total={questions.length}
                   onChange={(patch) => updateQuestion(q._id, patch)} onChangeType={(t) => changeType(q._id, t)}
-                  onRemoveQ={() => removeQuestion(q._id)} onMove={(d) => move(i, d)} onImage={(f) => uploadImage(q._id, f)}
+                  onRemoveQ={() => removeQuestion(q._id)} onMove={(d) => move(i, d)}
+                  registerImageRef={(el) => { imageRefs.current[q._id] = el }}
+                  onImageClick={() => imageRefs.current[q._id]?.click()}
+                  onImageChange={(e) => handleImageUpload(e, q._id)}
                   defaultTime={timePerQ} valid={isValid(q)} />
               ))}
               {questions.length < 50 && (
@@ -441,16 +459,25 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
           </button>
         )}
       </div>
+
+      {uploadError && (
+        <div onClick={() => setUploadError('')} style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 50, background: 'rgb(30,16,20)', color: 'rgb(252,165,165)', border: '1px solid rgba(248,113,113,0.4)', padding: '0.625rem 1.25rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+          {uploadError} · dismiss
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Single-question editor ──
-function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, onMove, onImage, defaultTime, valid }: {
+function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, onMove, registerImageRef, onImageClick, onImageChange, defaultTime, valid }: {
   q: Question; index: number; total: number; onChange: (p: Partial<Question>) => void; onChangeType: (t: QType) => void
-  onRemoveQ: () => void; onMove: (d: -1 | 1) => void; onImage: (f: File) => void; defaultTime: number; valid: boolean
+  onRemoveQ: () => void; onMove: (d: -1 | 1) => void
+  registerImageRef: (el: HTMLInputElement | null) => void
+  onImageClick: () => void
+  onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  defaultTime: number; valid: boolean
 }) {
-  const imgRef = useRef<HTMLInputElement>(null)
   return (
     <div style={{ ...card, borderColor: valid ? 'rgba(124,58,237,0.25)' : 'rgba(248,113,113,0.4)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -466,13 +493,14 @@ function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, on
 
       {/* Image */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <input ref={imgRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onImage(f) }} />
-        <button type="button" onClick={() => imgRef.current?.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(180,180,200)', padding: '0.4rem 0.75rem', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer' }}>
-          <ImageIcon style={{ width: '0.9rem', height: '0.9rem' }} /> {q.image_url ? 'Replace image' : 'Add image'}
+        <input ref={registerImageRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" style={{ display: 'none' }} onChange={onImageChange} />
+        <button type="button" onClick={onImageClick} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(180,180,200)', padding: '0.4rem 0.75rem', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer' }}>
+          <ImageIcon style={{ width: '0.9rem', height: '0.9rem' }} /> 📷 {q.image_url && q.image_url !== '__uploading__' ? 'Replace Image' : 'Add Image'}
         </button>
-        {q.image_url && <button type="button" onClick={() => onChange({ image_url: null })} style={{ fontSize: '0.75rem', color: 'rgb(248,113,113)', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>}
+        {q.image_url === '__uploading__' && <span style={{ fontSize: '0.75rem', color: 'rgb(148,148,168)' }}>Uploading…</span>}
+        {q.image_url && q.image_url !== '__uploading__' && <button type="button" onClick={() => onChange({ image_url: null })} style={{ fontSize: '0.75rem', color: 'rgb(248,113,113)', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>}
       </div>
-      {q.image_url && <img src={q.image_url} alt="" style={{ maxHeight: '9rem', borderRadius: '0.75rem', marginBottom: '0.75rem' }} />}
+      {q.image_url && q.image_url !== '__uploading__' && <img src={q.image_url} alt="" style={{ maxHeight: '9rem', borderRadius: '0.75rem', marginBottom: '0.75rem' }} />}
 
       {/* Type selector */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.875rem' }}>

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 // Uploads a question image to the public 'quiz-images' bucket.
-// In Supabase: create a public storage bucket named 'quiz-images'.
+// -- In Supabase Storage: create bucket 'quiz-images' set to public
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
-    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-      return NextResponse.json({ error: 'Only JPG or PNG images are allowed' }, { status: 400 })
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+      return NextResponse.json({ error: 'Only JPG, PNG, GIF, or WebP images are allowed' }, { status: 400 })
     }
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Max 5MB' }, { status: 400 })
 
