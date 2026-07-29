@@ -66,6 +66,7 @@ export default function ForgeQuizPlayClient({
 
   const scoreRef = useRef(0)
   const streakRef = useRef(0)
+  const bestStreakRef = useRef(0)
   const answersRef = useRef<any[]>([])
   const savedRef = useRef(false)
 
@@ -91,6 +92,8 @@ export default function ForgeQuizPlayClient({
           quizId: quiz.id,
           score: scoreRef.current,
           correct: answersRef.current.filter((a) => a.is_correct).length,
+          attempted: answersRef.current.length,
+          bestStreak: bestStreakRef.current,
           answers: answersRef.current,
         }),
       })
@@ -118,6 +121,7 @@ export default function ForgeQuizPlayClient({
     }
     const gain = pts + bonus
     streakRef.current = newStreak
+    if (newStreak > bestStreakRef.current) bestStreakRef.current = newStreak
     scoreRef.current += gain
     answersRef.current.push({ question_id: q.id, answer: answerText, is_correct: isCorrect, points: gain })
     setStreak(newStreak); setScore(scoreRef.current)

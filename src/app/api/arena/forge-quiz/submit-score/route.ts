@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { quizId, score = 0, correct = 0, answers = [] } = await request.json()
+    const { quizId, score = 0, correct = 0, attempted = 0, bestStreak = 0, answers = [] } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
 
     const { data: quiz } = await adminClient.from('forge_quizzes').select('allow_replay').eq('id', quizId).maybeSingle()
@@ -66,7 +66,14 @@ export async function POST(request: Request) {
     console.log('Updating player:', player!.id, 'with total_score:', score, 'completed: true')
     await adminClient
       .from('forge_quiz_players')
-      .update({ total_score: score, completed: true, completed_at: new Date().toISOString() })
+      .update({
+        total_score: score,
+        completed: true,
+        completed_at: new Date().toISOString(),
+        correct: Number(correct) || 0,
+        attempted: Number(attempted) || 0,
+        best_streak: Number(bestStreak) || 0,
+      })
       .eq('id', player!.id)
 
     // Store each answer.
