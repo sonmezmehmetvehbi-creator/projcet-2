@@ -31,6 +31,14 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
     if (!code || joining) return
     setJoining(true); setJoinError('')
     try {
+      // Live Room sessions share the code space with self-paced quizzes —
+      // check for a live session first, then fall back to a self-paced quiz.
+      const liveRes = await fetch(`/api/arena/forge-quiz/live/find-session?code=${encodeURIComponent(code)}`)
+      const liveData = await liveRes.json()
+      if (liveRes.ok && liveData.sessionId) {
+        router.push(`/arena/forge-quiz/live/${liveData.sessionId}/join`)
+        return
+      }
       const res = await fetch(`/api/arena/forge-quiz/find-by-code?code=${encodeURIComponent(code)}`)
       const data = await res.json()
       if (!res.ok || !data.quizId) throw new Error(data.error || 'Invalid or expired code')
@@ -91,6 +99,10 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
                   </button>
                 </form>
                 {joinError && <p style={{ marginTop: '0.5rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem', fontWeight: 600 }}>{joinError}</p>}
+                <button type="button" onClick={() => router.push('/arena/forge-quiz/live/join')}
+                  style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: 'rgb(196,181,253)', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                  🎮 Joining a live game? Enter the code here →
+                </button>
               </div>
             )}
           </div>
