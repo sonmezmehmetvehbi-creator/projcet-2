@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       timePerQuestion = 20,
       maxPlayers = null,
       duration = '24h',
+      customDurationHours = null,
       allowReplay = true,
       questions = [],
     } = await request.json()
@@ -81,11 +82,10 @@ export async function POST(request: Request) {
     // Every quiz (self-paced and live) gets a shareable join code.
     const code = roomCode()
 
-    // Self-paced quizzes stay open for a chosen window.
+    // Self-paced quizzes stay open for a chosen window (preset or custom hours).
     const DURATION_HOURS: Record<string, number> = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '3d': 72, '7d': 168 }
-    const expiresAt = isLive
-      ? null
-      : new Date(Date.now() + (DURATION_HOURS[duration] ?? 24) * 60 * 60 * 1000).toISOString()
+    const hours = customDurationHours ? Math.max(1, Number(customDurationHours)) : (DURATION_HOURS[duration] ?? 24)
+    const expiresAt = isLive ? null : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
 
     const { data: quiz, error } = await adminClient
       .from('forge_quizzes')

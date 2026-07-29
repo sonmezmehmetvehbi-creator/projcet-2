@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       count = 10,
       questionTypes = ['mc'],
       uploadedText = '',
+      customInstructions = '',
     } = await request.json()
 
     const types: string[] = (Array.isArray(questionTypes) ? questionTypes : ['mc']).filter((t) => VALID_TYPES.includes(t))
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 Only use question types from: ${useTypes.join(', ')}. For "tf" set options to ["True","False"].`
 
     const userPrompt = `${format}
-${uploadedText ? `Base the questions on this source material:\n${String(uploadedText).slice(0, 6000)}\n` : ''}Create ${count} questions on "${topic}" in ${subject} (${difficulty}). Variation seed: ${Math.floor(Math.random() * 900000) + 100000}`
+${uploadedText ? `Base the questions on this source material:\n${String(uploadedText).slice(0, 6000)}\n` : ''}Create ${count} questions on "${topic}" in ${subject} (${difficulty}). Variation seed: ${Math.floor(Math.random() * 900000) + 100000}${customInstructions ? `\n\nAdditional instructions from creator: ${String(customInstructions).slice(0, 400)}` : ''}`
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',

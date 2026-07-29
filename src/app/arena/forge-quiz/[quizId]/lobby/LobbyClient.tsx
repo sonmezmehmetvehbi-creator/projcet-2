@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, Users, Clock, X, Play, Loader2 } from 'lucide-react'
+import { Copy, Users, Clock, X, Play, Loader2, RotateCcw, PencilLine, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { LaunchModePicker, customHours } from '@/app/arena/forge-quiz/create/ForgeQuizCreateClient'
 
 type Player = {
   id: string
@@ -31,6 +32,18 @@ export default function LobbyClient({
   const [codeCopied, setCodeCopied] = useState(false)
   const [starting, setStarting] = useState(false)
   const [removing, setRemoving] = useState<Set<string>>(new Set())
+
+  // Creator: end early + relaunch.
+  const [endConfirm, setEndConfirm] = useState(false)
+  const [ending, setEnding] = useState(false)
+  const [runAgainOpen, setRunAgainOpen] = useState(false)
+  const [relaunching, setRelaunching] = useState(false)
+  const [rlPlayMode, setRlPlayMode] = useState<'self_paced' | 'live'>('self_paced')
+  const [rlDuration, setRlDuration] = useState('24h')
+  const [rlDurationMode, setRlDurationMode] = useState<'preset' | 'custom'>('preset')
+  const [rlCustomValue, setRlCustomValue] = useState(3)
+  const [rlCustomUnit, setRlCustomUnit] = useState<'hours' | 'days'>('hours')
+  const [rlAllowReplay, setRlAllowReplay] = useState(true)
 
   const quizId = quiz.id
   const isLive = quiz.play_mode === 'live'
@@ -111,6 +124,31 @@ export default function LobbyClient({
     }
   }
 
+  async function endQuiz() {
+    setEnding(true)
+    try {
+      await fetch('/api/arena/forge-quiz/end-quiz', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId }),
+      })
+      router.refresh()
+      window.location.reload()
+    } catch { setEnding(false); setEndConfirm(false) }
+  }
+
+  async function runAgain() {
+    setRelaunching(true)
+    try {
+      const customDurationHours = rlPlayMode === 'self_paced' && rlDurationMode === 'custom' ? customHours(rlCustomValue, rlCustomUnit) : null
+      const res = await fetch('/api/arena/forge-quiz/relaunch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalQuizId: quizId, playMode: rlPlayMode, duration: rlDuration, customDurationHours }),
+      })
+      const data = await res.json()
+      if (!data.newQuizId) throw new Error(data.error || 'Relaunch failed')
+      router.push(`/arena/forge-quiz/${data.newQuizId}/${data.mode === 'live' ? 'host' : 'lobby'}`)
+    } catch { setRelaunching(false) }
+  }
+
   async function kick(p: Player) {
     setRemoving((s) => new Set(s).add(p.id))
     try {
@@ -162,6 +200,70 @@ export default function LobbyClient({
           </div>
         ))}
       </div>
+
+      {/* Creator: end early (while active) */}
+      {isCreator && !expired && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          {!endConfirm ? (
+            <button type="button" onClick={() => setEndConfirm(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', border: '1px solid rgba(248,113,113,0.6)', background: 'rgba(239,68,68,0.12)', color: 'rgb(252,165,165)', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: 'pointer' }}>
+              End Quiz Early
+            </button>
+          ) : (
+            <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.625rem', borderRadius: '0.875rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(10,10,20,0.6)', padding: '0.875rem 1rem' }}>
+              <span style={{ color: 'white', fontWeight: 700, fontSize: '0.875rem' }}>End this quiz now? Results will be finalized immediately.</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="button" onClick={endQuiz} disabled={ending}
+                  style={{ borderRadius: '0.5rem', border: 'none', background: 'rgb(220,38,38)', color: 'white', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: ending ? 'wait' : 'pointer' }}>{ending ? 'Ending…' : 'Yes, End It'}</button>
+                <button type="button" onClick={() => setEndConfirm(false)} disabled={ending}
+                  style={{ borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 700, fontSize: '0.8125rem', padding: '0.45rem 0.9rem', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Creator: relaunch options when the quiz has ended */}
+      {isCreator && expired && (
+        <div style={{ borderRadius: '1.25rem', border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.06)', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: 'white', marginBottom: '1rem' }}>This quiz has ended</h2>
+          {!runAgainOpen ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button type="button" onClick={() => setRunAgainOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.75rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '0.875rem', padding: '0.6rem 1rem', cursor: 'pointer' }}>
+                <RotateCcw style={{ width: '0.95rem', height: '0.95rem' }} /> Run Again (Same Questions)
+              </button>
+              <button type="button" onClick={() => router.push(`/arena/forge-quiz/${quizId}/edit`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.75rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.12)', color: 'rgb(196,181,253)', fontWeight: 800, fontSize: '0.875rem', padding: '0.6rem 1rem', cursor: 'pointer' }}>
+                <PencilLine style={{ width: '0.95rem', height: '0.95rem' }} /> Edit &amp; Relaunch
+              </button>
+              <button type="button" onClick={() => router.push(`/arena/forge-quiz/${quizId}/results`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 800, fontSize: '0.875rem', padding: '0.6rem 1rem', cursor: 'pointer' }}>
+                <Trophy style={{ width: '0.95rem', height: '0.95rem' }} /> View Final Results
+              </button>
+            </div>
+          ) : (
+            <>
+              <LaunchModePicker
+                playMode={rlPlayMode} setPlayMode={setRlPlayMode}
+                duration={rlDuration} setDuration={setRlDuration}
+                durationMode={rlDurationMode} setDurationMode={setRlDurationMode}
+                customValue={rlCustomValue} setCustomValue={setRlCustomValue}
+                customUnit={rlCustomUnit} setCustomUnit={setRlCustomUnit}
+                allowReplay={rlAllowReplay} setAllowReplay={setRlAllowReplay}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                <button type="button" onClick={runAgain} disabled={relaunching}
+                  style={{ flex: 1, height: '3rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, cursor: relaunching ? 'wait' : 'pointer' }}>
+                  {relaunching ? 'Relaunching…' : 'Relaunch →'}
+                </button>
+                <button type="button" onClick={() => setRunAgainOpen(false)} disabled={relaunching}
+                  style={{ borderRadius: '0.875rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 700, padding: '0 1.25rem', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Join code — shown for every quiz so anyone can share it verbally */}
       {quiz.room_code && (

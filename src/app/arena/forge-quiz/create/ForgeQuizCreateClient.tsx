@@ -18,18 +18,18 @@ const DIFFICULTIES = [
   { value: 'easy', label: 'Easy', emoji: '🌱' }, { value: 'medium', label: 'Medium', emoji: '📚' },
   { value: 'hard', label: 'Hard', emoji: '🔥' }, { value: 'expert', label: 'Expert', emoji: '⚡' },
 ]
-const QTYPES = [
+export const QTYPES = [
   { value: 'mc', label: 'Multiple Choice' }, { value: 'tf', label: 'True/False' },
   { value: 'slider', label: 'Slider' }, { value: 'fr', label: 'Free Response' },
 ] as const
-const POINTS = [{ v: 0, label: 'No Points (0×)' }, { v: 1, label: 'Normal (1×)' }, { v: 2, label: 'Double (2×)' }]
+export const POINTS = [{ v: 0, label: 'No Points (0×)' }, { v: 1, label: 'Normal (1×)' }, { v: 2, label: 'Double (2×)' }]
 const DURATIONS = [
   { value: '1h', label: '1 hour' }, { value: '6h', label: '6 hours' }, { value: '12h', label: '12 hours' },
   { value: '24h', label: '24 hours' }, { value: '3d', label: '3 days' }, { value: '7d', label: '7 days' },
 ]
 
-type QType = 'mc' | 'tf' | 'slider' | 'fr'
-type Question = {
+export type QType = 'mc' | 'tf' | 'slider' | 'fr'
+export type Question = {
   _id: string
   question_text: string
   question_type: QType
@@ -45,7 +45,7 @@ type Question = {
 }
 
 let idc = 0
-function newQuestion(type: QType = 'mc'): Question {
+export function newQuestion(type: QType = 'mc'): Question {
   return {
     _id: `q${++idc}_${Date.now()}`,
     question_text: '',
@@ -79,13 +79,13 @@ function fromAI(q: any): Question {
 }
 
 // ── Shared styles ──
-const label: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgb(196,181,253)', marginBottom: '0.5rem' }
-const input: React.CSSProperties = { width: '100%', padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.35)', color: 'white', fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }
-const sel: React.CSSProperties = { ...input, colorScheme: 'dark', cursor: 'pointer' }
-const card: React.CSSProperties = { borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem' }
-const pill = (active: boolean): React.CSSProperties => ({ padding: '0.5rem 0.9rem', borderRadius: '9999px', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.12)'}`, background: active ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.03)', color: active ? 'rgb(196,181,253)' : 'rgb(180,180,195)', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' })
+export const label: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgb(196,181,253)', marginBottom: '0.5rem' }
+export const input: React.CSSProperties = { width: '100%', padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.35)', color: 'white', fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }
+export const sel: React.CSSProperties = { ...input, colorScheme: 'dark', cursor: 'pointer' }
+export const card: React.CSSProperties = { borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem' }
+export const pill = (active: boolean): React.CSSProperties => ({ padding: '0.5rem 0.9rem', borderRadius: '9999px', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.12)'}`, background: active ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.03)', color: active ? 'rgb(196,181,253)' : 'rgb(180,180,195)', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' })
 
-function isValid(q: Question): boolean {
+export function isValid(q: Question): boolean {
   if (!q.question_text.trim()) return false
   if (q.question_type === 'mc') return q.options.filter((o) => o.trim()).length >= 2 && !!q.options[q.correct_index]?.trim()
   if (q.question_type === 'tf') return true
@@ -105,8 +105,14 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
   const [playMode, setPlayMode] = useState<'self_paced' | 'live'>('self_paced')
   const [timePerQ, setTimePerQ] = useState(20)
   const [maxPlayers, setMaxPlayers] = useState('')
+
+  // Launch step
   const [duration, setDuration] = useState('24h')
+  const [durationMode, setDurationMode] = useState<'preset' | 'custom'>('preset')
+  const [customValue, setCustomValue] = useState(3)
+  const [customUnit, setCustomUnit] = useState<'hours' | 'days'>('hours')
   const [allowReplay, setAllowReplay] = useState(true)
+  const [customInstructions, setCustomInstructions] = useState('')
 
   // Step 2
   const [source, setSource] = useState<'manual' | 'ai_topic' | 'ai_pdf' | null>(null)
@@ -201,7 +207,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       const res = await fetch('/api/arena/forge-quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, topic, difficulty, count: aiCount, questionTypes: aiTypes, uploadedText: fromPdf ? pdfText : '' }),
+        body: JSON.stringify({ subject, topic, difficulty, count: aiCount, questionTypes: aiTypes, uploadedText: fromPdf ? pdfText : '', customInstructions }),
       })
       const data = await res.json()
       if (data.error || !data.questions?.length) throw new Error(data.error || 'No questions generated')
@@ -216,10 +222,13 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
   async function submit() {
     setSubmitError(''); setSubmitting(true)
     try {
+      const customDurationHours = durationMode === 'custom'
+        ? Math.max(1, Math.round(customValue * (customUnit === 'days' ? 24 : 1)))
+        : null
       const payload = {
         title, welcomeMessage: welcome, bannerColor: banner, playMode,
         timePerQuestion: timePerQ, maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-        duration, allowReplay,
+        duration, customDurationHours, allowReplay,
         questions: questions.map((q) => ({
           question_text: q.question_text, question_type: q.question_type,
           options: q.question_type === 'mc' || q.question_type === 'tf' ? q.options : null,
@@ -287,25 +296,6 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               ))}
             </div>
           </div>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={label}>Play mode</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-              {([
-                { v: 'self_paced', icon: Link2, title: 'Self-Paced 🔗', desc: 'Players join via link, play at their own pace, see the leaderboard after.' },
-                { v: 'live', icon: Gamepad2, title: 'Live Room 🎮', desc: 'Players join with a code; the host controls the game like Kahoot.' },
-              ] as const).map((m) => {
-                const active = playMode === m.v
-                return (
-                  <button key={m.v} type="button" onClick={() => setPlayMode(m.v)}
-                    style={{ textAlign: 'left', borderRadius: '1rem', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.1)'}`, background: active ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)', padding: '1.1rem', cursor: 'pointer' }}>
-                    <m.icon style={{ width: '1.4rem', height: '1.4rem', color: active ? 'rgb(196,181,253)' : 'rgb(160,160,180)', marginBottom: '0.5rem' }} />
-                    <p style={{ color: 'white', fontWeight: 800, marginBottom: '0.25rem' }}>{m.title}</p>
-                    <p style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)', lineHeight: 1.4 }}>{m.desc}</p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={label}>Time per question: {timePerQ}s</label>
@@ -316,24 +306,6 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               <input style={input} type="number" min={1} value={maxPlayers} onChange={(e) => setMaxPlayers(e.target.value)} placeholder="Unlimited" />
             </div>
           </div>
-
-          {/* Self-paced only: how long the quiz stays open + replay policy */}
-          {playMode === 'self_paced' && (
-            <>
-              <div style={{ marginTop: '1.25rem' }}>
-                <label style={label}>Stays open for</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                  {DURATIONS.map((d) => (
-                    <button key={d.value} type="button" onClick={() => setDuration(d.value)} style={pill(duration === d.value)}>{d.label}</button>
-                  ))}
-                </div>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', marginTop: '1.25rem' }}>
-                <input type="checkbox" checked={allowReplay} onChange={(e) => setAllowReplay(e.target.checked)} style={{ width: '1.1rem', height: '1.1rem', accentColor: 'rgb(124,58,237)' }} />
-                <span style={{ color: 'white', fontSize: '0.9375rem', fontWeight: 600 }}>Allow players to replay after completion</span>
-              </label>
-            </>
-          )}
         </div>
       )}
 
@@ -400,6 +372,9 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
                   return <button key={t.value} type="button" onClick={() => setAiTypes((a) => active ? (a.length > 1 ? a.filter((x) => x !== t.value) : a) : [...a, t.value])} style={pill(active)}>{t.label}</button>
                 })}
               </div>
+              <label style={label}>Additional instructions (optional)</label>
+              <textarea style={{ ...input, minHeight: '3.5rem', resize: 'vertical', fontFamily: 'inherit', marginBottom: '1rem' }} value={customInstructions} onChange={(e) => setCustomInstructions(e.target.value)}
+                placeholder="e.g. Focus on causes of WW2, make questions harder, include more calculation-based problems" maxLength={400} />
               <label style={label}>Number of questions: {aiCount}</label>
               <input type="range" min={5} max={20} value={aiCount} onChange={(e) => setAiCount(Number(e.target.value))} style={{ width: '100%', accentColor: 'rgb(124,58,237)', marginBottom: '1rem' }} />
               <button type="button" onClick={() => generate(source === 'ai_pdf')} disabled={generating}
@@ -461,12 +436,22 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
         <div style={card}>
           <div style={{ borderRadius: '1rem', border: `1px solid ${banner}`, background: `linear-gradient(135deg, ${banner}, rgba(19,19,31,0.9))`, padding: '1.5rem', marginBottom: '1.25rem' }}>
             <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>{title || 'Untitled quiz'}</h2>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>{questions.length} questions · {timePerQ}s each · {playMode === 'live' ? 'Live Room 🎮' : 'Self-Paced 🔗'}</p>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>{questions.length} questions · {timePerQ}s each</p>
           </div>
-          {submitError && <p style={{ marginBottom: '0.75rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{submitError}</p>}
+
+          <LaunchModePicker
+            playMode={playMode} setPlayMode={setPlayMode}
+            duration={duration} setDuration={setDuration}
+            durationMode={durationMode} setDurationMode={setDurationMode}
+            customValue={customValue} setCustomValue={setCustomValue}
+            customUnit={customUnit} setCustomUnit={setCustomUnit}
+            allowReplay={allowReplay} setAllowReplay={setAllowReplay}
+          />
+
+          {submitError && <p style={{ margin: '1rem 0 0.75rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{submitError}</p>}
           <button type="button" onClick={submit} disabled={submitting || validQuestions.length < 1}
-            style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: submitting ? 'wait' : 'pointer', opacity: validQuestions.length < 1 ? 0.5 : 1 }}>
-            {submitting ? <><Loader2 style={{ width: '1.1rem', height: '1.1rem' }} className="animate-spin" /> Creating…</> : playMode === 'live' ? 'Create Room →' : 'Create & Get Link →'}
+            style={{ width: '100%', marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: submitting ? 'wait' : 'pointer', opacity: validQuestions.length < 1 ? 0.5 : 1 }}>
+            {submitting ? <><Loader2 style={{ width: '1.1rem', height: '1.1rem' }} className="animate-spin" /> Launching…</> : 'Launch Quiz →'}
           </button>
         </div>
       )}
@@ -495,7 +480,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
 }
 
 // ── Single-question editor ──
-function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, onMove, registerImageRef, onImageClick, onImageChange, defaultTime, valid }: {
+export function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, onMove, registerImageRef, onImageClick, onImageChange, defaultTime, valid }: {
   q: Question; index: number; total: number; onChange: (p: Partial<Question>) => void; onChangeType: (t: QType) => void
   onRemoveQ: () => void; onMove: (d: -1 | 1) => void
   registerImageRef: (el: HTMLInputElement | null) => void
@@ -573,6 +558,71 @@ function QuestionEditor({ q, index, total, onChange, onChangeType, onRemoveQ, on
         {POINTS.map((p) => <button key={p.v} type="button" onClick={() => onChange({ points_multiplier: p.v })} style={{ ...pill(q.points_multiplier === p.v), fontSize: '0.75rem' }}>{p.label}</button>)}
         <input style={{ ...input, width: '9rem', marginLeft: 'auto' }} type="number" min={5} max={120} value={q.time_limit ?? ''} onChange={(e) => onChange({ time_limit: e.target.value ? Number(e.target.value) : null })} placeholder={`Time: ${defaultTime}s`} />
       </div>
+    </div>
+  )
+}
+
+// Compute the total hours for a custom duration.
+export function customHours(value: number, unit: 'hours' | 'days'): number {
+  return Math.max(1, Math.round(value * (unit === 'days' ? 24 : 1)))
+}
+
+// ── Reusable launch-mode picker (used by create + edit/relaunch) ──
+export function LaunchModePicker({
+  playMode, setPlayMode, duration, setDuration, durationMode, setDurationMode,
+  customValue, setCustomValue, customUnit, setCustomUnit, allowReplay, setAllowReplay,
+}: {
+  playMode: 'self_paced' | 'live'; setPlayMode: (m: 'self_paced' | 'live') => void
+  duration: string; setDuration: (d: string) => void
+  durationMode: 'preset' | 'custom'; setDurationMode: (m: 'preset' | 'custom') => void
+  customValue: number; setCustomValue: (n: number) => void
+  customUnit: 'hours' | 'days'; setCustomUnit: (u: 'hours' | 'days') => void
+  allowReplay: boolean; setAllowReplay: (b: boolean) => void
+}) {
+  return (
+    <div>
+      <label style={label}>Launch mode</label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        {([
+          { v: 'self_paced', icon: Link2, title: 'Self-Paced 🔗', desc: 'Players join via link, play at their own pace, see the leaderboard after.' },
+          { v: 'live', icon: Gamepad2, title: 'Live Room 🎮', desc: 'Players join with a code; the host controls the game like Kahoot.' },
+        ] as const).map((m) => {
+          const active = playMode === m.v
+          return (
+            <button key={m.v} type="button" onClick={() => setPlayMode(m.v)}
+              style={{ textAlign: 'left', borderRadius: '1rem', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.1)'}`, background: active ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)', padding: '1.1rem', cursor: 'pointer' }}>
+              <m.icon style={{ width: '1.4rem', height: '1.4rem', color: active ? 'rgb(196,181,253)' : 'rgb(160,160,180)', marginBottom: '0.5rem' }} />
+              <p style={{ color: 'white', fontWeight: 800, marginBottom: '0.25rem' }}>{m.title}</p>
+              <p style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)', lineHeight: 1.4 }}>{m.desc}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {playMode === 'self_paced' && (
+        <>
+          <label style={label}>Stays open for</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            {DURATIONS.map((d) => (
+              <button key={d.value} type="button" onClick={() => { setDurationMode('preset'); setDuration(d.value) }} style={pill(durationMode === 'preset' && duration === d.value)}>{d.label}</button>
+            ))}
+            <button type="button" onClick={() => setDurationMode('custom')} style={pill(durationMode === 'custom')}>Custom…</button>
+          </div>
+          {durationMode === 'custom' && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', maxWidth: '20rem' }}>
+              <input style={input} type="number" min={1} value={customValue} onChange={(e) => setCustomValue(Math.max(1, Number(e.target.value) || 1))} />
+              <select style={{ ...sel, maxWidth: '9rem' }} value={customUnit} onChange={(e) => setCustomUnit(e.target.value as 'hours' | 'days')}>
+                <option value="hours">hours</option>
+                <option value="days">days</option>
+              </select>
+            </div>
+          )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', marginTop: '0.5rem' }}>
+            <input type="checkbox" checked={allowReplay} onChange={(e) => setAllowReplay(e.target.checked)} style={{ width: '1.1rem', height: '1.1rem', accentColor: 'rgb(124,58,237)' }} />
+            <span style={{ color: 'white', fontSize: '0.9375rem', fontWeight: 600 }}>Allow players to replay after completion</span>
+          </label>
+        </>
+      )}
     </div>
   )
 }

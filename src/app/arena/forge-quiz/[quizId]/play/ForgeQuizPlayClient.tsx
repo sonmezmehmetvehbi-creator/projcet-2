@@ -24,6 +24,19 @@ type Question = {
 
 const norm = (s: string) => s.trim().toLowerCase()
 
+// Graduated partial credit for slider questions. Only answers within 70%
+// closeness continue a streak; closer answers earn more of the base points.
+function sliderPoints(guess: number, correct: number, min: number, max: number, basePts: number): { points: number; isCorrect: boolean } {
+  const range = Math.max(1, max - min)
+  const distance = Math.abs(guess - correct)
+  const closeness = 1 - distance / range
+  if (closeness >= 0.95) return { points: basePts, isCorrect: true }
+  if (closeness >= 0.85) return { points: Math.round(basePts * 0.7), isCorrect: true }
+  if (closeness >= 0.70) return { points: Math.round(basePts * 0.4), isCorrect: true }
+  if (closeness >= 0.50) return { points: Math.round(basePts * 0.15), isCorrect: false }
+  return { points: 0, isCorrect: false }
+}
+
 export default function ForgeQuizPlayClient({
   quiz,
   questions,
@@ -112,17 +125,13 @@ export default function ForgeQuizPlayClient({
 
   const reveal = useCallback((answerText: string | null, isCorrect: boolean, rawPts: number) => {
     if (revealed) return
-    // Only correct answers earn points. Wrong answers (and slider guesses
-    // outside the acceptable range, which arrive with isCorrect=false) score 0
-    // regardless of speed. Speed points, the multiplier, and the streak bonus
-    // are applied only when the answer is correct.
-    let pts = 0
-    let bonus = 0
+    // Callers pass the raw points to award: 0 for wrong MC/TF/FR, or graduated
+    // partial credit for sliders (which can be > 0 even when isCorrect is
+    // false). The multiplier always applies to whatever points were earned;
+    // only the streak (and its bonus) is gated on isCorrect.
+    const pts = Math.max(0, Math.round(rawPts)) * (q?.points_multiplier ?? 1)
     const newStreak = isCorrect ? streakRef.current + 1 : 0
-    if (isCorrect) {
-      pts = Math.max(0, Math.round(rawPts)) * (q?.points_multiplier ?? 1)
-      bonus = newStreak > 0 && newStreak % 3 === 0 ? 200 : 0
-    }
+    const bonus = isCorrect && newStreak > 0 && newStreak % 3 === 0 ? 200 : 0
     const gain = pts + bonus
     streakRef.current = newStreak
     if (newStreak > bestStreakRef.current) bestStreakRef.current = newStreak
@@ -147,25 +156,24 @@ export default function ForgeQuizPlayClient({
   function answerMC(idx: number) {
     if (revealed) return
     setSelected(idx)
-    reveal(q.options?.[idx] ?? String(idx), idx === q.correct_index, basePts())
+    const ok = idx === q.correct_index
+    reveal(q.options?.[idx] ?? String(idx), ok, ok ? basePts() : 0)
   }
   function answerTF(idx: number) {
     if (revealed) return
     setSelected(idx)
-    reveal(idx === 0 ? 'True' : 'False', idx === q.correct_index, basePts())
+    const ok = idx === q.correct_index
+    reveal(idx === 0 ? 'True' : 'False', ok, ok ? basePts() : 0)
   }
   function submitSlider() {
     if (revealed) return
-    const min = q.slider_min ?? 0, max = q.slider_max ?? 100, correct = q.slider_correct ?? 0
-    const range = Math.max(1, max - min)
-    const dist = Math.abs(sliderVal - correct)
-    const closeness = Math.max(0, 1 - dist / range)
-    reveal(String(sliderVal), closeness >= 0.9, basePts() * closeness)
+    const { points, isCorrect } = sliderPoints(sliderVal, q.slider_correct ?? 0, q.slider_min ?? 0, q.slider_max ?? 100, basePts())
+    reveal(String(sliderVal), isCorrect, points)
   }
   function submitFR() {
     if (revealed) return
     const correct = norm(frText) === norm(q.correct_answer ?? '') && frText.trim().length > 0
-    reveal(frText, correct, basePts())
+    reveal(frText, correct, correct ? basePts() : 0)
   }
 
   async function startGame() {
