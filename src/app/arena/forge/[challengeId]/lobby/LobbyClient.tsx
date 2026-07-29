@@ -323,10 +323,23 @@ export default function LobbyClient({ challengeId, isLoggedIn = true }: { challe
               Join Challenge →
             </a>
           ) : expired ? (
-            <div style={{ textAlign: 'center', color: 'rgb(248,113,113)', fontWeight: 800 }}>Challenge Ended</div>
+            hasPlayed ? (
+              <a href={`/arena/forge/${challengeId}/results`}
+                style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3rem', borderRadius: '0.875rem', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 24px rgba(245,158,11,0.45)' }}>
+                🏆 View Your Results →
+              </a>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'rgb(248,113,113)', fontWeight: 800 }}>Challenge Ended</div>
+            )
           ) : hasPlayed ? (
-            <div style={{ textAlign: 'center', borderRadius: '0.875rem', border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', padding: '0.75rem 1rem' }}>
-              <span style={{ color: 'rgb(251,191,36)', fontWeight: 800 }}>Your score: {me?.score} · Rank #{myRank}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ textAlign: 'center', borderRadius: '0.875rem', border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', padding: '0.6rem 1rem' }}>
+                <span style={{ color: 'rgb(251,191,36)', fontWeight: 800 }}>Your score: {me?.score} · Rank #{myRank}</span>
+              </div>
+              <a href={`/arena/forge/${challengeId}/results`}
+                style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '2.75rem', borderRadius: '0.875rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(124,58,237,0.12)', color: 'rgb(196,181,253)', fontWeight: 800, textDecoration: 'none' }}>
+                View My Results →
+              </a>
             </div>
           ) : isFull ? (
             <div style={{ textAlign: 'center', color: 'rgb(148,148,168)', fontWeight: 800 }}>Challenge Full</div>

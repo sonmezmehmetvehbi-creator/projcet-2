@@ -30,7 +30,6 @@ export default function ForgeGameClient({
   defaultAvatar: string
 }) {
   const router = useRouter()
-  const lobby = `/arena/forge/${challenge.id}/lobby`
   const startSeconds: number = challenge.total_time_seconds ?? 60
   const correctBonus: number = challenge.correct_bonus_seconds ?? 5
   const wrongPenalty: number = challenge.wrong_penalty_seconds ?? 2
@@ -151,7 +150,7 @@ export default function ForgeGameClient({
           }),
         })
       } catch {}
-      router.push(lobby)
+      router.push(`/arena/forge/${challenge.id}/results`)
     })()
   }, [gameOver]) // eslint-disable-line react-hooks/exhaustive-deps
 
