@@ -18,6 +18,14 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     if (session.host_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+    // Never start an empty game — require at least one non-kicked player.
+    const { count: playerCount } = await adminClient
+      .from('forge_quiz_live_players')
+      .select('id', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('is_kicked', false)
+    if ((playerCount ?? 0) < 1) return NextResponse.json({ error: 'Need at least 1 player to start', noPlayers: true }, { status: 400 })
+
     const { error } = await adminClient
       .from('forge_quiz_live_sessions')
       .update({ status: 'active', current_question_index: 0, question_started_at: new Date().toISOString(), question_state: 'question', countdown_target_at: null })

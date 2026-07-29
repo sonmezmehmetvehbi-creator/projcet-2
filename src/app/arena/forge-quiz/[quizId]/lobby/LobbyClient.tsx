@@ -268,8 +268,9 @@ export default function LobbyClient({
         </div>
       )}
 
-      {/* Join code — shown for every quiz so anyone can share it verbally */}
-      {quiz.room_code && (
+      {/* Join code — self-paced only. Live Room quizzes use their live session's
+          code (this component isn't reached for them, but guard defensively). */}
+      {!isLive && quiz.room_code && (
         <div style={{ textAlign: 'center', borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.5)', background: 'rgba(19,19,31,0.7)', padding: '2rem', marginBottom: '1.5rem', boxShadow: '0 0 40px rgba(124,58,237,0.25)' }}>
           <p style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgb(196,181,253)', marginBottom: '0.75rem' }}>Join Code</p>
           <p style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.25em', color: 'white', lineHeight: 1, textShadow: '0 0 30px rgba(124,58,237,0.8)' }}>{quiz.room_code}</p>

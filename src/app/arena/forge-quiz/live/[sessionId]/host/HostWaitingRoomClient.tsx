@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { X, Play, Timer, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
+// NOTE: live player events require the table to be in the realtime publication:
+// -- ALTER PUBLICATION supabase_realtime ADD TABLE forge_quiz_live_players;
+
 type Player = { id: string; user_id: string | null; display_name: string; avatar_emoji: string }
 
 export default function HostWaitingRoomClient({
@@ -25,6 +28,7 @@ export default function HostWaitingRoomClient({
   const [cdMin, setCdMin] = useState(0)
   const [cdSec, setCdSec] = useState(30)
   const [starting, setStarting] = useState(false)
+  const [cdCancelled, setCdCancelled] = useState(false)
 
   const startedRef = useRef(false)
 
@@ -49,8 +53,10 @@ export default function HostWaitingRoomClient({
     const channel = supabase
       .channel(`live-host-${sessionId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
+        console.log('[Realtime] new live player:', payload.new)
         const row = payload.new
         if (row.is_kicked) return
+        setCdCancelled(false)
         setPlayers((prev) => (prev.some((p) => p.id === row.id) ? prev : [...prev, row as Player]))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
@@ -83,13 +89,19 @@ export default function HostWaitingRoomClient({
 
   const remaining = targetAt ? Math.max(0, Math.ceil((new Date(targetAt).getTime() - now) / 1000)) : null
 
-  // Auto-start when the countdown hits zero.
+  // Auto-start when the countdown hits zero — unless nobody has joined, in
+  // which case cancel the countdown rather than start an empty game.
   useEffect(() => {
     if (remaining === 0 && targetAt && !startedRef.current) {
+      if (count < 1) {
+        setCdCancelled(true)
+        setCountdown(0)
+        return
+      }
       startGame()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, targetAt])
+  }, [remaining, targetAt, count])
 
   async function setCountdown(seconds: number) {
     setTargetAt(seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : null)
@@ -101,12 +113,13 @@ export default function HostWaitingRoomClient({
   }
 
   async function startGame() {
-    if (starting || startedRef.current) return
+    if (starting || startedRef.current || count < 1) return
     setStarting(true)
     try {
-      await fetch('/api/arena/forge-quiz/live/start-game', {
+      const res = await fetch('/api/arena/forge-quiz/live/start-game', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }),
       })
+      if (!res.ok) { setStarting(false); return }
       goToGame()
     } catch { setStarting(false) }
   }
@@ -155,8 +168,11 @@ export default function HostWaitingRoomClient({
               <span style={{ color: 'rgb(148,148,168)', fontWeight: 800 }}>:</span>
               <input type="number" min={0} max={59} value={cdSec} onChange={(e) => setCdSec(Math.min(59, Math.max(0, Number(e.target.value) || 0)))} style={cdInput} />
             </div>
-            <button onClick={() => setCountdown(cdMin * 60 + cdSec)} disabled={cdMin * 60 + cdSec <= 0}
-              style={{ width: '100%', borderRadius: '0.5rem', border: 'none', background: 'rgb(124,58,237)', color: 'white', fontWeight: 800, fontSize: '0.8125rem', padding: '0.5rem', cursor: 'pointer', opacity: cdMin * 60 + cdSec <= 0 ? 0.5 : 1 }}>Set Countdown</button>
+            <button onClick={() => setCountdown(cdMin * 60 + cdSec)} disabled={cdMin * 60 + cdSec <= 0 || count < 1}
+              title={count < 1 ? 'Waiting for at least 1 player to join' : ''}
+              style={{ width: '100%', borderRadius: '0.5rem', border: 'none', background: 'rgb(124,58,237)', color: 'white', fontWeight: 800, fontSize: '0.8125rem', padding: '0.5rem', cursor: count < 1 ? 'not-allowed' : 'pointer', opacity: (cdMin * 60 + cdSec <= 0 || count < 1) ? 0.5 : 1 }}>Set Countdown</button>
+            {count < 1 && <p style={{ marginTop: '0.5rem', fontSize: '0.6875rem', color: 'rgb(148,148,168)', textAlign: 'center' }}>Waiting for at least 1 player to join</p>}
+            {cdCancelled && <p style={{ marginTop: '0.5rem', fontSize: '0.6875rem', color: 'rgb(252,165,165)', textAlign: 'center', fontWeight: 700 }}>Countdown cancelled — no players joined</p>}
           </>
         )}
       </div>
@@ -199,12 +215,13 @@ export default function HostWaitingRoomClient({
       </div>
 
       {/* Start button, bottom center */}
-      <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+      <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
         <button onClick={startGame} disabled={count < 1 || starting}
-          title={count < 1 ? 'Need at least 1 player' : ''}
+          title={count < 1 ? 'Waiting for at least 1 player to join' : ''}
           style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.75rem', padding: '0 3rem', borderRadius: '9999px', border: 'none', background: count < 1 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(90deg, rgb(22,163,74), rgb(34,197,94))', color: count < 1 ? 'rgb(120,120,140)' : 'white', fontWeight: 900, fontSize: '1.25rem', cursor: count < 1 ? 'not-allowed' : 'pointer', boxShadow: count < 1 ? 'none' : '0 0 40px rgba(34,197,94,0.45)' }}>
           {starting ? <><Loader2 style={{ width: '1.35rem', height: '1.35rem' }} className="animate-spin" /> Starting…</> : <><Play style={{ width: '1.35rem', height: '1.35rem' }} /> Start Game →</>}
         </button>
+        {count < 1 && <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'rgb(148,148,168)' }}>Waiting for at least 1 player to join</span>}
       </div>
 
       <style>{`

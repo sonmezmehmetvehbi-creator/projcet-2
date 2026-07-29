@@ -22,6 +22,25 @@ export default async function ForgeQuizLobbyPage({ params }: { params: { quizId:
     .maybeSingle()
   if (!quiz) redirect('/arena')
 
+  // Live Room quizzes never use this self-paced lobby (nor its room_code). Route
+  // to the real live waiting room / code-join flow instead.
+  if (quiz.play_mode === 'live' || quiz.play_mode === 'live_room') {
+    const { data: liveSession } = await adminClient
+      .from('forge_quiz_live_sessions')
+      .select('id, host_id, status')
+      .eq('quiz_id', params.quizId)
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (liveSession) {
+      if (liveSession.host_id === user.id) redirect(`/arena/forge-quiz/live/${liveSession.id}/host`)
+      redirect(`/arena/forge-quiz/live/${liveSession.id}/join`)
+    }
+    // No open session — the host relaunches from the Arena; nothing to join here.
+    redirect('/arena')
+  }
+
   const { data: questions } = await adminClient
     .from('forge_quiz_questions')
     .select('id, position, question_type')
