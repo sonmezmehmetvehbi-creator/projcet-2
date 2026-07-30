@@ -50,8 +50,10 @@ export default function HostGameClient({
   // CURRENT question index / state rather than the values captured at mount.
   const qIndexRef = useRef(qIndex)
   const qStateRef = useRef(session.question_state)
+  const qIdRef = useRef<string | undefined>(q?.id)
   qIndexRef.current = qIndex
   qStateRef.current = session.question_state
+  qIdRef.current = q?.id
 
   // Tick.
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
@@ -63,10 +65,12 @@ export default function HostGameClient({
   // reveal option bars, the active-player total, and auto-reveal.
   const fetchStats = useCallback(async () => {
     const i = qIndexRef.current
+    const questionId = questions[i]?.id
+    if (!questionId) return
     try {
       const res = await fetch('/api/arena/forge-quiz/live/answer-stats', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, questionIndex: i }),
+        body: JSON.stringify({ sessionId, questionId }),
       })
       const data = await res.json().catch(() => ({}))
       // Raw rows BEFORE aggregating: 0 rows here (with the row confirmed in the
@@ -105,10 +109,16 @@ export default function HostGameClient({
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
     const i = qIndexRef.current
+    const questionId = questions[i]?.id
+    // Answers keyed by question_id (uuid); filtering by a numeric question_index
+    // 400s because that column does not exist on forge_quiz_live_answers.
     const [{ data: players }, { data: answers }] = await Promise.all([
       supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false }),
-      supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_index', i),
+      questionId
+        ? supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_id', questionId)
+        : Promise.resolve({ data: [] as any[] }),
     ])
+    console.error('[Leaderboard] fetched successfully:', { players, answers })
     const gainedBy: Record<string, number> = {}
     for (const a of answers ?? []) gainedBy[a.user_id] = (gainedBy[a.user_id] ?? 0) + (a.points ?? 0)
     const ranked = (players ?? []).map((p, i) => {
@@ -122,7 +132,7 @@ export default function HostGameClient({
     prevRanksRef.current = nextRanks
     console.log('Leaderboard players fetched:', { rawPlayers: players, ranked })
     setBoard(ranked)
-  }, [sessionId, qIndex])
+  }, [sessionId, qIndex, questions])
 
   // Realtime: session (state/status) + answers (live counter + reveal bars) +
   // players (live leaderboard scores). Handlers merge into local state and read
@@ -141,7 +151,8 @@ export default function HostGameClient({
         // (May be silent under RLS; the players-UPDATE trigger below is the
         // reliable path since scoring updates the player row on every answer.)
         console.error('[Live/host] answer event received:', payload.new)
-        if (payload.new?.question_index !== qIndexRef.current) return
+        // Answer rows are keyed by question_id (uuid); ignore other questions.
+        if (payload.new?.question_id !== qIdRef.current) return
         fetchStats()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, () => {

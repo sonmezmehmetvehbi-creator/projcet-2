@@ -10,7 +10,7 @@ import { scoreAnswer, correctAnswerText } from '@/lib/quizScoring'
 // --   session_id uuid REFERENCES forge_quiz_live_sessions(id),
 // --   player_id uuid REFERENCES forge_quiz_live_players(id),
 // --   user_id uuid REFERENCES profiles(id),
-// --   question_index int,
+// --   question_id uuid REFERENCES forge_quiz_questions(id),
 // --   answer text,
 // --   is_correct boolean,
 // --   points int DEFAULT 0,
@@ -56,15 +56,9 @@ export async function POST(request: Request) {
     if (!player) return NextResponse.json({ error: 'Not a player in this game' }, { status: 403 })
     if (player.is_kicked) return NextResponse.json({ error: 'kicked' }, { status: 403 })
 
-    // One answer per question.
-    const { data: existingAns } = await adminClient
-      .from('forge_quiz_live_answers')
-      .select('id, is_correct, points')
-      .eq('session_id', sessionId)
-      .eq('player_id', player.id)
-      .eq('question_index', questionIndex)
-      .maybeSingle()
-
+    // Resolve the current question (by its position within the quiz) FIRST, so we
+    // can key the answer by its uuid. forge_quiz_live_answers stores question_id
+    // (uuid → forge_quiz_questions.id), NOT a numeric index.
     const { data: question } = await adminClient
       .from('forge_quiz_questions')
       .select('*')
@@ -74,6 +68,15 @@ export async function POST(request: Request) {
     if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 })
 
     const correctAnswer = correctAnswerText(question)
+
+    // One answer per question (keyed by question_id).
+    const { data: existingAns } = await adminClient
+      .from('forge_quiz_live_answers')
+      .select('id, is_correct, points')
+      .eq('session_id', sessionId)
+      .eq('player_id', player.id)
+      .eq('question_id', question.id)
+      .maybeSingle()
 
     if (existingAns) {
       return NextResponse.json({ isCorrect: existingAns.is_correct, points: existingAns.points, correctAnswer, alreadyAnswered: true })
@@ -91,12 +94,12 @@ export async function POST(request: Request) {
     const gained = basePoints + bonus
     const newBest = Math.max(player.best_streak ?? 0, newStreak)
 
-    // NOTE: the live answers table keys answers by (session_id, question_index) —
-    // there is no separate question_id column. question_index === the session's
-    // current_question_index, which is exactly what the host queries against, so
-    // there's no id/session mismatch here (verified against fetchReveal/fetchCounts).
+    // The live answers table keys answers by (session_id, question_id) where
+    // question_id is the question's uuid — there is NO question_index column
+    // (inserting one 400s and the row is silently dropped, which is what left
+    // the host counter/reveal stuck at 0).
     const { error: insertError } = await adminClient.from('forge_quiz_live_answers').insert({
-      session_id: sessionId, player_id: player.id, user_id: user.id, question_index: questionIndex,
+      session_id: sessionId, player_id: player.id, user_id: user.id, question_id: question.id,
       answer: answer != null ? String(answer) : null, is_correct: isCorrect, points: gained, answer_time_ms: elapsedMs,
     })
     // IMPORTANT: an answer-count insert failure must NOT block the player's UI.
@@ -105,7 +108,7 @@ export async function POST(request: Request) {
     // loudly for diagnostics, but still fall through to score + return 200 so the
     // player always reaches the "Answer locked in!" screen.
     if (insertError) console.error('[Live] answer insert failed (continuing so the player is not blocked):', insertError)
-    else console.log('[Live] answer inserted for session:', sessionId, 'question_index:', questionIndex)
+    else console.log('[Live] answer inserted for session:', sessionId, 'question_id:', question.id)
 
     await adminClient.from('forge_quiz_live_players').update({
       score: (player.score ?? 0) + gained,
