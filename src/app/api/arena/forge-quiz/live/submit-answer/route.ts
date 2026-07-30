@@ -99,11 +99,13 @@ export async function POST(request: Request) {
       session_id: sessionId, player_id: player.id, user_id: user.id, question_index: questionIndex,
       answer: answer != null ? String(answer) : null, is_correct: isCorrect, points: gained, answer_time_ms: elapsedMs,
     })
-    if (insertError) {
-      console.error('[Live] answer insert failed:', insertError)
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
-    }
-    console.log('[Live] answer inserted for session:', sessionId, 'question_index:', questionIndex)
+    // IMPORTANT: an answer-count insert failure must NOT block the player's UI.
+    // Returning 500 here was the regression that left players stuck on the
+    // question screen (res.ok was false, so the client never advanced). Log it
+    // loudly for diagnostics, but still fall through to score + return 200 so the
+    // player always reaches the "Answer locked in!" screen.
+    if (insertError) console.error('[Live] answer insert failed (continuing so the player is not blocked):', insertError)
+    else console.log('[Live] answer inserted for session:', sessionId, 'question_index:', questionIndex)
 
     await adminClient.from('forge_quiz_live_players').update({
       score: (player.score ?? 0) + gained,

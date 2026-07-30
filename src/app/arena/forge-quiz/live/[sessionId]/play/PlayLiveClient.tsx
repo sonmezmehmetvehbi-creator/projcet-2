@@ -46,9 +46,13 @@ export default function PlayLiveClient({
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 200); return () => clearInterval(t) }, [])
 
-  // Reset per-question local input when the question changes.
+  // Reset per-question local input when the question changes. Use a FUNCTIONAL
+  // update and compare against the CURRENT qIndex so a freshly-submitted answer
+  // for the current question can never be cleared (only a stale result from a
+  // previous question is). This runs only on qIndex change, but the functional
+  // check removes any stale-closure race with submit()'s setResult.
   useEffect(() => {
-    if (result && result.qIndex !== qIndex) setResult(null)
+    setResult((prev) => (prev && prev.qIndex !== qIndex ? null : prev))
     setSliderVal(q?.question_type === 'slider' ? Math.round(((q.slider_min ?? 0) + (q.slider_max ?? 100)) / 2) : null)
     setFrVal('')
     setShake(false)
@@ -114,13 +118,25 @@ export default function PlayLiveClient({
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, questionIndex: qIndex, answer }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       // Transition to the "waiting for others" screen immediately on success —
       // don't wait for any realtime echo.
-      if (res.ok) { console.log('[Live/play] answer accepted:', data); setResult({ qIndex, isCorrect: data.isCorrect, points: data.points, correctAnswer: data.correctAnswer, answer }) }
-      else if (data.tooLate) { console.log('[Live/play] answer too late'); setResult({ qIndex, tooLate: true }) }
-      else console.warn('[Live/play] submit failed:', data)
-    } catch (e) { console.warn('[Live/play] submit error:', e) }
+      if (res.ok) {
+        console.error('[Live/play] submit OK — BEFORE setResult:', { qIndex, data })
+        setResult({ qIndex, isCorrect: data.isCorrect, points: data.points, correctAnswer: data.correctAnswer, answer })
+        console.error('[Live/play] submit OK — AFTER setResult for qIndex:', qIndex)
+      } else if (data?.tooLate || res.status === 409) {
+        console.error('[Live/play] answer too late (409) — locking in as too-late, qIndex:', qIndex)
+        setResult({ qIndex, tooLate: true })
+      } else if (res.status >= 500) {
+        // Server hiccup — never strand the player on the question. Lock them in
+        // (correctness unknown) so the UI advances; the answer may not be scored.
+        console.error('[Live/play] submit 5xx — locking player in anyway:', { status: res.status, data, qIndex })
+        setResult({ qIndex, answer })
+      } else {
+        console.error('[Live/play] submit rejected (not advancing):', { status: res.status, data })
+      }
+    } catch (e) { console.error('[Live/play] submit threw:', e) }
     setSubmitting(false)
   }
 
@@ -206,6 +222,8 @@ export default function PlayLiveClient({
   }
 
   // ── QUESTION: already answered → waiting ──
+  // Diagnostic: trace exactly why the waiting screen does/doesn't render.
+  console.error('[Live/play] render gate (answered→waiting):', { answeredThis, result, qIndex, question_state: session.question_state })
   if (answeredThis || result?.tooLate) {
     return shell(
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', padding: '2rem', textAlign: 'center' }}>
