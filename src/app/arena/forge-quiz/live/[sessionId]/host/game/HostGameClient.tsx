@@ -108,23 +108,22 @@ export default function HostGameClient({
 
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
-    const i = qIndexRef.current
-    const questionId = questions[i]?.id
-    // Answers keyed by question_id (uuid); filtering by a numeric question_index
-    // 400s because that column does not exist on forge_quiz_live_answers.
-    const [{ data: players }, { data: answers }] = await Promise.all([
-      supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false }),
-      questionId
-        ? supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_id', questionId)
-        : Promise.resolve({ data: [] as any[] }),
-    ])
-    console.error('[Leaderboard] fetched successfully:', { players, answers })
-    const gainedBy: Record<string, number> = {}
-    for (const a of answers ?? []) gainedBy[a.user_id] = (gainedBy[a.user_id] ?? 0) + (a.points ?? 0)
+    // The leaderboard only needs cumulative per-player stats from
+    // forge_quiz_live_players (score/streak/best_streak) sorted by score. It does
+    // NOT need per-question answer rows — that's the reveal bar chart's concern,
+    // handled server-side by answer-stats. (The old forge_quiz_live_answers query
+    // also 400'd: it selected user_id, a column that doesn't exist there.)
+    const { data: players } = await supabase
+      .from('forge_quiz_live_players')
+      .select('id, user_id, display_name, avatar_emoji, score, streak, best_streak')
+      .eq('session_id', sessionId)
+      .eq('is_kicked', false)
+      .order('score', { ascending: false })
+    console.error('[Leaderboard] final player list:', players)
     const ranked = (players ?? []).map((p, i) => {
       const prev = prevRanksRef.current[p.user_id]
       const change = prev != null ? prev - (i + 1) : 0
-      return { ...p, gained: gainedBy[p.user_id] ?? 0, change }
+      return { ...p, gained: 0, change }
     })
     // Record ranks for next comparison.
     const nextRanks: Record<string, number> = {}
@@ -132,7 +131,7 @@ export default function HostGameClient({
     prevRanksRef.current = nextRanks
     console.log('Leaderboard players fetched:', { rawPlayers: players, ranked })
     setBoard(ranked)
-  }, [sessionId, qIndex, questions])
+  }, [sessionId])
 
   // Realtime: session (state/status) + answers (live counter + reveal bars) +
   // players (live leaderboard scores). Handlers merge into local state and read

@@ -9,7 +9,6 @@ import { scoreAnswer, correctAnswerText } from '@/lib/quizScoring'
 // --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
 // --   session_id uuid REFERENCES forge_quiz_live_sessions(id),
 // --   player_id uuid REFERENCES forge_quiz_live_players(id),
-// --   user_id uuid REFERENCES profiles(id),
 // --   question_id uuid REFERENCES forge_quiz_questions(id),
 // --   answer text,
 // --   is_correct boolean,
@@ -94,12 +93,12 @@ export async function POST(request: Request) {
     const gained = basePoints + bonus
     const newBest = Math.max(player.best_streak ?? 0, newStreak)
 
-    // The live answers table keys answers by (session_id, question_id) where
-    // question_id is the question's uuid — there is NO question_index column
-    // (inserting one 400s and the row is silently dropped, which is what left
-    // the host counter/reveal stuck at 0).
+    // Columns: (session_id, question_id, player_id, answer, is_correct, points,
+    // answer_time_ms). There is NO user_id column and NO question_index column on
+    // forge_quiz_live_answers — inserting either 400s and the row is silently
+    // dropped, which is what left the host counter/reveal stuck at 0 rows.
     const { error: insertError } = await adminClient.from('forge_quiz_live_answers').insert({
-      session_id: sessionId, player_id: player.id, user_id: user.id, question_id: question.id,
+      session_id: sessionId, player_id: player.id, question_id: question.id,
       answer: answer != null ? String(answer) : null, is_correct: isCorrect, points: gained, answer_time_ms: elapsedMs,
     })
     // IMPORTANT: an answer-count insert failure must NOT block the player's UI.

@@ -39,6 +39,7 @@ export async function POST(request: Request) {
 
     // Answers for THIS session + question, keyed by question_id (uuid → the
     // question's forge_quiz_questions.id). There is NO question_index column.
+    console.error('[answer-stats] querying with:', { sessionId, questionId })
     const { data: rows, error: rowsError } = await adminClient
       .from('forge_quiz_live_answers')
       .select('answer')
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
 
     const data = { answered: rows?.length ?? 0, total: total ?? 0, rows: rows ?? [], counts }
     console.error('[answer-stats] success:', data)
+    console.error('[answer-stats] final counts:', counts, 'total:', total ?? 0)
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('[answer-stats] error:', error)
