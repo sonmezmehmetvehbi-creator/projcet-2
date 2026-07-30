@@ -38,7 +38,6 @@ export default function HostGameClient({
   const q = questions[qIndex]
   const timeLimit = (q?.time_limit || quiz.time_per_question || 20)
   const total_qs = questions.length
-  const isScreenShare = session.display_mode === 'screen_share'
   const nOptions = q?.question_type === 'tf' ? 2 : q?.question_type === 'mc' ? Math.min(4, (q.options?.length ?? 4)) : 0
 
   const elapsed = session.question_started_at ? Math.max(0, (now - new Date(session.question_started_at).getTime()) / 1000) : 0
@@ -76,6 +75,7 @@ export default function HostGameClient({
       const idx = Number(a.answer)
       if (idx >= 0 && idx < counts.length) counts[idx]++
     }
+    console.log('Answer counts for reveal:', { questionIndex: i, counts, total: (data ?? []).length, rawRows: data })
     setReveal({ counts, total: (data ?? []).length })
   }, [sessionId, questions])
 
@@ -97,6 +97,7 @@ export default function HostGameClient({
     const nextRanks: Record<string, number> = {}
     ranked.forEach((p, i) => { nextRanks[p.user_id] = i + 1 })
     prevRanksRef.current = nextRanks
+    console.log('Leaderboard players fetched:', { rawPlayers: players, ranked })
     setBoard(ranked)
   }, [sessionId, qIndex])
 
@@ -131,7 +132,11 @@ export default function HostGameClient({
   useEffect(() => {
     console.log('[Live/host] phase:', session.status, '/', session.question_state, 'q', session.current_question_index)
     if (session.status === 'podium') { fetchBoard(); return }
-    if (session.question_state === 'question') { setReveal(null); fetchCounts() }
+    if (session.question_state === 'question') {
+      const optTexts = q?.question_type === 'tf' ? ['True', 'False'] : (q?.options ?? []).slice(0, nOptions)
+      console.log('Rendering options with text:', { question: q?.question_text, options: optTexts })
+      setReveal(null); fetchCounts()
+    }
     else if (session.question_state === 'revealed') { fetchReveal(); fetchCounts() }
     else if (session.question_state === 'leaderboard') { fetchBoard() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,10 +251,12 @@ export default function HostGameClient({
                 {Array.from({ length: nOptions }).map((_, i) => {
                   const s = ANSWER_STYLES[i]
                   const optText = q.question_type === 'tf' ? (i === 0 ? 'True' : 'False') : q.options?.[i]
+                  // The host "big screen" ALWAYS shows full option text, regardless
+                  // of display_mode — display_mode only affects the player's device.
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', background: s.color, padding: '1.25rem 1.5rem', minHeight: '5rem' }}>
                       <AnswerShape shape={s.shape} size={40} />
-                      {!isScreenShare && <span style={{ color: 'white', fontWeight: 800, fontSize: '1.35rem' }}>{optText}</span>}
+                      <span style={{ color: 'white', fontWeight: 800, fontSize: '1.35rem' }}>{optText}</span>
                     </div>
                   )
                 })}
@@ -278,17 +285,20 @@ export default function HostGameClient({
                 {Array.from({ length: nOptions }).map((_, i) => {
                   const s = ANSWER_STYLES[i]
                   const cnt = reveal?.counts[i] ?? 0
-                  const pct = reveal && reveal.total > 0 ? Math.round((cnt / reveal.total) * 100) : 0
+                  // Bar length is proportional to this option's count vs the total answered.
+                  const barPct = reveal && reveal.total > 0 ? Math.round((cnt / reveal.total) * 100) : 0
                   const isCorrect = i === correctIdx
                   const optText = q.question_type === 'tf' ? (i === 0 ? 'True' : 'False') : q.options?.[i]
                   return (
                     <div key={i} style={{ position: 'relative', borderRadius: '1rem', border: isCorrect ? '2px solid rgb(74,222,128)' : '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', padding: '0.5rem', overflow: 'hidden', boxShadow: isCorrect ? '0 0 24px rgba(34,197,94,0.4)' : 'none', opacity: isCorrect ? 1 : 0.75 }}>
-                      <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: s.color, opacity: 0.85, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
+                      <div style={{ position: 'absolute', inset: 0, width: `${barPct}%`, background: s.color, opacity: 0.85, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem' }}>
                         <AnswerShape shape={s.shape} size={28} />
                         <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', flex: 1 }}>{optText}</span>
                         {isCorrect && <Check style={{ width: '1.5rem', height: '1.5rem', color: 'rgb(134,239,172)' }} />}
-                        <span style={{ color: 'white', fontWeight: 900 }}>{pct}%</span>
+                        <span style={{ color: 'white', fontWeight: 900, fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                          {cnt} {cnt === 1 ? 'player' : 'players'}
+                        </span>
                       </div>
                     </div>
                   )

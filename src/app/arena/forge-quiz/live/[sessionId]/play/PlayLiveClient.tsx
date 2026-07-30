@@ -87,7 +87,7 @@ export default function PlayLiveClient({
       .channel(`live-play-${sessionId}-${userId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_sessions', filter: `id=eq.${sessionId}` }, (payload: any) => {
         const s = payload.new
-        console.log('[Live/play] session update:', { status: s.status, question_state: s.question_state, q: s.current_question_index })
+        console.log('Session state updated to:', { status: s.status, question_state: s.question_state, q: s.current_question_index })
         if (s.status === 'ended') { window.location.href = '/arena'; return }
         setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
       })

@@ -53,11 +53,15 @@ export default function HostWaitingRoomClient({
     const channel = supabase
       .channel(`live-host-${sessionId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
-        console.log('[Realtime] new live player:', payload.new)
         const row = payload.new
         if (row.is_kicked) return
         setCdCancelled(false)
-        setPlayers((prev) => (prev.some((p) => p.id === row.id) ? prev : [...prev, row as Player]))
+        setPlayers((prev) => {
+          if (prev.some((p) => p.id === row.id)) return prev
+          const next = [...prev, row as Player]
+          console.log('Player joined, current players:', next.map((p) => p.display_name))
+          return next
+        })
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
         const row = payload.new
@@ -76,7 +80,7 @@ export default function HostWaitingRoomClient({
         setTargetAt(s.countdown_target_at ?? null)
         if (s.status === 'active') goToGame()
       })
-      .subscribe()
+      .subscribe((status) => { console.log('[Live/host-waiting] channel status:', status) })
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
