@@ -33,10 +33,8 @@ export default function HostGameClient({
   const supaRef = useRef(createClient())
   const autoRevealedRef = useRef<Set<number>>(new Set())
   const prevRanksRef = useRef<Record<string, number>>({})
-  // Live answered-count tracking for the CURRENT question: a Set of answer row
-  // ids (dedupes duplicate realtime deliveries), plus the active player total so
-  // the realtime handler can decide when everyone has answered.
-  const answeredIdsRef = useRef<Set<string>>(new Set())
+  // Active-player total (denominator of "X / Y answered"), kept in a ref so the
+  // realtime handlers can compare against it without a stale closure.
   const totalRef = useRef(0)
 
   const qIndex = session.current_question_index
@@ -58,46 +56,50 @@ export default function HostGameClient({
   // Tick.
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
 
-  // Active (non-kicked) player total — the denominator of "X / Y answered".
-  // Players are locked once the game starts, but a mid-game kick can change it.
-  const fetchTotal = useCallback(async () => {
-    const supabase = supaRef.current
-    const { count } = await supabase.from('forge_quiz_live_players').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('is_kicked', false)
-    if (typeof count === 'number') { totalRef.current = count; setTotal(count); maybeAutoReveal() }
-  }, [sessionId])
-
-  // Seed the answered-count for the CURRENT question from the DB, then let the
-  // realtime INSERT handler increment from there. Called on every question start
-  // (resets to the current question's rows — 0 for a fresh question, or the real
-  // count if the host reloaded mid-question).
-  const seedAnswered = useCallback(async () => {
-    const supabase = supaRef.current
+  // Single source of truth for answer data, read via the SERVICE-ROLE API route
+  // (bypasses RLS on forge_quiz_live_answers — the anon browser client read
+  // silently returned 0 rows, which is why the counter and reveal bars stayed at
+  // 0 even though the rows exist). Drives: the "X / Y answered" counter, the
+  // reveal option bars, the active-player total, and auto-reveal.
+  const fetchStats = useCallback(async () => {
     const i = qIndexRef.current
-    const { data } = await supabase.from('forge_quiz_live_answers').select('id').eq('session_id', sessionId).eq('question_index', i)
-    const ids = new Set((data ?? []).map((r: any) => r.id as string))
-    answeredIdsRef.current = ids
-    setAnswered(ids.size)
-    console.log('[Live/host] seeded answered count for q', i, ':', ids.size, '/', totalRef.current)
-    maybeAutoReveal()
-  }, [sessionId])
+    try {
+      const res = await fetch('/api/arena/forge-quiz/live/answer-stats', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, questionIndex: i }),
+      })
+      const data = await res.json().catch(() => ({}))
+      // Raw rows BEFORE aggregating: 0 rows here (with the row confirmed in the
+      // DB) means the read/query is wrong; rows present but empty bars means the
+      // aggregation below is wrong.
+      console.error('[Live/host] answer-stats for q', i, ':', { ok: res.ok, status: res.status, data })
+      if (!res.ok) return
+      const rows: { answer: string | null }[] = data.rows ?? []
+      const tot = typeof data.total === 'number' ? data.total : totalRef.current
+      totalRef.current = tot
+      setTotal(tot)
+      setAnswered(rows.length)
 
-  const fetchReveal = useCallback(async () => {
-    const supabase = supaRef.current
-    const i = qIndexRef.current
-    const qq = questions[i]
-    const opts = qq?.question_type === 'tf' ? 2 : qq?.question_type === 'mc' ? Math.min(4, (qq.options?.length ?? 4)) : 1
-    const { data, error } = await supabase.from('forge_quiz_live_answers').select('answer').eq('session_id', sessionId).eq('question_index', i)
-    // Raw rows BEFORE aggregating: 0 rows ⇒ insert side is failing; rows present
-    // but bars empty ⇒ aggregation/render bug. `answer` is stored as the option
-    // index in string form ("0".."3"), so we group by Number(a.answer).
-    console.log('[Live/host] reveal raw rows for q', i, ':', { error, rows: data })
-    const counts = Array.from({ length: Math.max(1, opts) }, () => 0)
-    for (const a of data ?? []) {
-      const idx = Number(a.answer)
-      if (idx >= 0 && idx < counts.length) counts[idx]++
+      // Aggregate option counts for the reveal bars. `answer` is stored as the
+      // option index in string form ("0".."3"), so we group by Number(a.answer).
+      const qq = questions[i]
+      const opts = qq?.question_type === 'tf' ? 2 : qq?.question_type === 'mc' ? Math.min(4, (qq.options?.length ?? 4)) : 1
+      const counts = Array.from({ length: Math.max(1, opts) }, () => 0)
+      for (const a of rows) { const idx = Number(a.answer); if (idx >= 0 && idx < counts.length) counts[idx]++ }
+      if (qStateRef.current === 'revealed') {
+        console.error('[Live/host] reveal counts for q', i, ':', { counts, total: rows.length, rows })
+        setReveal({ counts, total: rows.length })
+      }
+
+      // Auto-reveal once every active player has answered this question.
+      if (qStateRef.current === 'question' && tot > 0 && rows.length >= tot && !autoRevealedRef.current.has(i)) {
+        autoRevealedRef.current.add(i)
+        console.error('[Live/host] all players answered → auto reveal q', i)
+        revealNow()
+      }
+    } catch (e) {
+      console.error('[Live/host] answer-stats fetch threw:', e)
     }
-    console.log('Answer counts for reveal:', { questionIndex: i, counts, total: (data ?? []).length })
-    setReveal({ counts, total: (data ?? []).length })
   }, [sessionId, questions])
 
   const fetchBoard = useCallback(async () => {
@@ -122,16 +124,6 @@ export default function HostGameClient({
     setBoard(ranked)
   }, [sessionId, qIndex])
 
-  // Auto-reveal as soon as every active player has answered the current question
-  // — same effect as the timer expiring or the host hitting "Reveal Now".
-  function maybeAutoReveal() {
-    if (qStateRef.current === 'question' && totalRef.current > 0 && answeredIdsRef.current.size >= totalRef.current && !autoRevealedRef.current.has(qIndexRef.current)) {
-      autoRevealedRef.current.add(qIndexRef.current)
-      console.log('[Live/host] all players answered → auto reveal, q', qIndexRef.current)
-      revealNow()
-    }
-  }
-
   // Realtime: session (state/status) + answers (live counter + reveal bars) +
   // players (live leaderboard scores). Handlers merge into local state and read
   // the current question via refs — never a stale closure, never a full refresh.
@@ -145,21 +137,18 @@ export default function HostGameClient({
         setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_answers', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
-        const row = payload.new
-        // Ignore answers for a previous/other question (filter is session-scoped).
-        if (row?.question_index !== qIndexRef.current) return
-        // Increment the live per-question counter (dedupe on the row id).
-        if (row.id && answeredIdsRef.current.has(row.id)) return
-        if (row.id) answeredIdsRef.current.add(row.id)
-        const n = answeredIdsRef.current.size
-        setAnswered(n)
-        console.log('[Live/host] answer received for q', qIndexRef.current, '→', n, '/', totalRef.current)
-        if (qStateRef.current === 'revealed') fetchReveal()
-        maybeAutoReveal()
+        // Fast path — fires only if RLS/publication lets answer events through.
+        // (May be silent under RLS; the players-UPDATE trigger below is the
+        // reliable path since scoring updates the player row on every answer.)
+        console.error('[Live/host] answer event received:', payload.new)
+        if (payload.new?.question_index !== qIndexRef.current) return
+        fetchStats()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, () => {
-        // Keep the active-player total (denominator) fresh; refresh leaderboard scores.
-        if (qStateRef.current === 'leaderboard' || qStateRef.current === 'question') fetchTotal()
+        // Every answer also updates the player's row (score/attempted) via the
+        // submit route, and players-realtime is confirmed working — so this is
+        // the reliable trigger to re-read answer stats during a live question.
+        if (qStateRef.current === 'question' || qStateRef.current === 'revealed') fetchStats()
         if (qStateRef.current === 'leaderboard') fetchBoard()
       })
       .subscribe((status) => { console.log('[Live/host] channel status:', status) })
@@ -174,15 +163,12 @@ export default function HostGameClient({
     if (session.question_state === 'question') {
       const optTexts = q?.question_type === 'tf' ? ['True', 'False'] : (q?.options ?? []).slice(0, nOptions)
       console.log('Rendering options with text:', { question: q?.question_text, options: optTexts })
-      // New question → reset the live answered-count, refresh the player total,
-      // then seed from the DB (realtime INSERTs increment from there).
+      // New question → reset the counter, then read fresh stats from the server.
       setReveal(null)
-      answeredIdsRef.current = new Set()
       setAnswered(0)
-      fetchTotal()
-      seedAnswered()
+      fetchStats()
     }
-    else if (session.question_state === 'revealed') { fetchReveal(); fetchTotal() }
+    else if (session.question_state === 'revealed') { fetchStats() }
     else if (session.question_state === 'leaderboard') { fetchBoard() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.question_state, session.current_question_index, session.status])
