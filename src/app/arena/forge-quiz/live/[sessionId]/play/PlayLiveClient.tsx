@@ -76,20 +76,26 @@ export default function PlayLiveClient({
     setBoard(data ?? [])
   }, [sessionId])
 
-  // Realtime session.
+  const qStateRef = useRef(session.question_state)
+  qStateRef.current = session.question_state
+
+  // Realtime: session drives every screen transition; players keeps the
+  // leaderboard scores fresh and handles being kicked. Merge into local state.
   useEffect(() => {
     const supabase = supaRef.current
     const channel = supabase
       .channel(`live-play-${sessionId}-${userId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_sessions', filter: `id=eq.${sessionId}` }, (payload: any) => {
         const s = payload.new
+        console.log('[Live/play] session update:', { status: s.status, question_state: s.question_state, q: s.current_question_index })
         if (s.status === 'ended') { window.location.href = '/arena'; return }
         setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
-        if (payload.new.user_id === userId && payload.new.is_kicked) window.location.href = `/arena/forge-quiz/live/${sessionId}/join`
+        if (payload.new.user_id === userId && payload.new.is_kicked) { window.location.href = `/arena/forge-quiz/live/${sessionId}/join`; return }
+        if (qStateRef.current === 'leaderboard' || qStateRef.current === 'revealed') fetchBoard()
       })
-      .subscribe()
+      .subscribe((status) => { console.log('[Live/play] channel status:', status) })
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, userId])
@@ -101,6 +107,7 @@ export default function PlayLiveClient({
 
   async function submit(answer: any) {
     if (submitting || answeredThis) return
+    console.log('[Live/play] submitting answer for q', qIndex, ':', answer)
     setSubmitting(true)
     try {
       const res = await fetch('/api/arena/forge-quiz/live/submit-answer', {
@@ -108,9 +115,12 @@ export default function PlayLiveClient({
         body: JSON.stringify({ sessionId, questionIndex: qIndex, answer }),
       })
       const data = await res.json()
-      if (res.ok) setResult({ qIndex, isCorrect: data.isCorrect, points: data.points, correctAnswer: data.correctAnswer, answer })
-      else if (data.tooLate) setResult({ qIndex, tooLate: true })
-    } catch {}
+      // Transition to the "waiting for others" screen immediately on success —
+      // don't wait for any realtime echo.
+      if (res.ok) { console.log('[Live/play] answer accepted:', data); setResult({ qIndex, isCorrect: data.isCorrect, points: data.points, correctAnswer: data.correctAnswer, answer }) }
+      else if (data.tooLate) { console.log('[Live/play] answer too late'); setResult({ qIndex, tooLate: true }) }
+      else console.warn('[Live/play] submit failed:', data)
+    } catch (e) { console.warn('[Live/play] submit error:', e) }
     setSubmitting(false)
   }
 

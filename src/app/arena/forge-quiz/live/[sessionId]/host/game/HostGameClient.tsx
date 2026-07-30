@@ -44,35 +44,47 @@ export default function HostGameClient({
   const elapsed = session.question_started_at ? Math.max(0, (now - new Date(session.question_started_at).getTime()) / 1000) : 0
   const secondsLeft = Math.max(0, Math.ceil(timeLimit - elapsed))
 
+  // Refs so the realtime handlers (which are set up once) always read the
+  // CURRENT question index / state rather than the values captured at mount.
+  const qIndexRef = useRef(qIndex)
+  const qStateRef = useRef(session.question_state)
+  qIndexRef.current = qIndex
+  qStateRef.current = session.question_state
+
   // Tick.
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
 
   const fetchCounts = useCallback(async () => {
     const supabase = supaRef.current
+    const i = qIndexRef.current
     const [{ count: tp }, { count: ac }] = await Promise.all([
       supabase.from('forge_quiz_live_players').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('is_kicked', false),
-      supabase.from('forge_quiz_live_answers').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('question_index', qIndex),
+      supabase.from('forge_quiz_live_answers').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('question_index', i),
     ])
     if (typeof tp === 'number') setTotal(tp)
     if (typeof ac === 'number') setAnswered(ac)
-  }, [sessionId, qIndex])
+  }, [sessionId])
 
   const fetchReveal = useCallback(async () => {
     const supabase = supaRef.current
-    const { data } = await supabase.from('forge_quiz_live_answers').select('answer').eq('session_id', sessionId).eq('question_index', qIndex)
-    const counts = Array.from({ length: Math.max(1, nOptions) }, () => 0)
+    const i = qIndexRef.current
+    const qq = questions[i]
+    const opts = qq?.question_type === 'tf' ? 2 : qq?.question_type === 'mc' ? Math.min(4, (qq.options?.length ?? 4)) : 1
+    const { data } = await supabase.from('forge_quiz_live_answers').select('answer').eq('session_id', sessionId).eq('question_index', i)
+    const counts = Array.from({ length: Math.max(1, opts) }, () => 0)
     for (const a of data ?? []) {
       const idx = Number(a.answer)
       if (idx >= 0 && idx < counts.length) counts[idx]++
     }
     setReveal({ counts, total: (data ?? []).length })
-  }, [sessionId, qIndex, nOptions])
+  }, [sessionId, questions])
 
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
+    const i = qIndexRef.current
     const [{ data: players }, { data: answers }] = await Promise.all([
       supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false }),
-      supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_index', qIndex),
+      supabase.from('forge_quiz_live_answers').select('user_id, points').eq('session_id', sessionId).eq('question_index', i),
     ])
     const gainedBy: Record<string, number> = {}
     for (const a of answers ?? []) gainedBy[a.user_id] = (gainedBy[a.user_id] ?? 0) + (a.points ?? 0)
@@ -88,26 +100,36 @@ export default function HostGameClient({
     setBoard(ranked)
   }, [sessionId, qIndex])
 
-  // Realtime: session + answers.
+  // Realtime: session (state/status) + answers (live counter + reveal bars) +
+  // players (live leaderboard scores). Handlers merge into local state and read
+  // the current question via refs — never a stale closure, never a full refresh.
   useEffect(() => {
     const supabase = supaRef.current
     const channel = supabase
       .channel(`live-hostgame-${sessionId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_sessions', filter: `id=eq.${sessionId}` }, (payload: any) => {
         const s = payload.new
+        console.log('[Live/host] session update:', { status: s.status, question_state: s.question_state, q: s.current_question_index })
         setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_answers', filter: `session_id=eq.${sessionId}` }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forge_quiz_live_answers', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
+        if (payload.new?.question_index !== qIndexRef.current) return
         fetchCounts()
-        if (session.question_state === 'revealed') fetchReveal()
+        if (qStateRef.current === 'revealed') fetchReveal()
       })
-      .subscribe()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, () => {
+        // Keep the leaderboard / player count fresh as scores change.
+        if (qStateRef.current === 'leaderboard' || qStateRef.current === 'question') fetchCounts()
+        if (qStateRef.current === 'leaderboard') fetchBoard()
+      })
+      .subscribe((status) => { console.log('[Live/host] channel status:', status) })
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
-  // React to state changes.
+  // React to state changes (drives the host UI + data fetches for each phase).
   useEffect(() => {
+    console.log('[Live/host] phase:', session.status, '/', session.question_state, 'q', session.current_question_index)
     if (session.status === 'podium') { fetchBoard(); return }
     if (session.question_state === 'question') { setReveal(null); fetchCounts() }
     else if (session.question_state === 'revealed') { fetchReveal(); fetchCounts() }
@@ -119,6 +141,7 @@ export default function HostGameClient({
   useEffect(() => {
     if (session.question_state === 'question' && secondsLeft <= 0 && session.question_started_at && !autoRevealedRef.current.has(qIndex)) {
       autoRevealedRef.current.add(qIndex)
+      console.log('[Live/host] timer hit 0 → auto reveal, q', qIndex)
       revealNow()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,12 +149,39 @@ export default function HostGameClient({
 
   async function post(endpoint: string, body: any) {
     setBusy(true)
-    try { await fetch(`/api/arena/forge-quiz/live/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) } catch {}
-    setBusy(false)
+    try {
+      const res = await fetch(`/api/arena/forge-quiz/live/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json().catch(() => ({}))
+      setBusy(false)
+      return { ok: res.ok, data }
+    } catch { setBusy(false); return { ok: false, data: {} as any } }
   }
-  const revealNow = () => post('reveal-question', { sessionId, state: 'revealed' })
-  const showLeaderboard = () => post('reveal-question', { sessionId, state: 'leaderboard' })
-  const nextQuestion = () => post('next-question', { sessionId })
+
+  // Host actions update the local session immediately (optimistic) so the host's
+  // own screen advances without waiting for the realtime echo; realtime then
+  // propagates the same change to the players.
+  async function revealNow() {
+    console.log('[Live/host] reveal now, q', qIndexRef.current)
+    setSession((prev) => ({ ...prev, question_state: 'revealed' }))
+    await post('reveal-question', { sessionId, state: 'revealed' })
+  }
+  async function showLeaderboard() {
+    console.log('[Live/host] show leaderboard')
+    setSession((prev) => ({ ...prev, question_state: 'leaderboard' }))
+    await post('reveal-question', { sessionId, state: 'leaderboard' })
+  }
+  async function nextQuestion() {
+    const { ok, data } = await post('next-question', { sessionId })
+    if (!ok) return
+    if (data.podium) {
+      console.log('[Live/host] podium reached')
+      setSession((prev) => ({ ...prev, status: 'podium', question_state: 'leaderboard' }))
+    } else if (typeof data.questionIndex === 'number') {
+      console.log('[Live/host] next question →', data.questionIndex)
+      autoRevealedRef.current.delete(data.questionIndex)
+      setSession((prev) => ({ ...prev, current_question_index: data.questionIndex, question_state: 'question', status: 'active', question_started_at: new Date().toISOString() }))
+    }
+  }
 
   async function runAgain() {
     setBusy(true)
