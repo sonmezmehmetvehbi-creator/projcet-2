@@ -91,10 +91,19 @@ export async function POST(request: Request) {
     const gained = basePoints + bonus
     const newBest = Math.max(player.best_streak ?? 0, newStreak)
 
-    await adminClient.from('forge_quiz_live_answers').insert({
+    // NOTE: the live answers table keys answers by (session_id, question_index) —
+    // there is no separate question_id column. question_index === the session's
+    // current_question_index, which is exactly what the host queries against, so
+    // there's no id/session mismatch here (verified against fetchReveal/fetchCounts).
+    const { error: insertError } = await adminClient.from('forge_quiz_live_answers').insert({
       session_id: sessionId, player_id: player.id, user_id: user.id, question_index: questionIndex,
       answer: answer != null ? String(answer) : null, is_correct: isCorrect, points: gained, answer_time_ms: elapsedMs,
     })
+    if (insertError) {
+      console.error('[Live] answer insert failed:', insertError)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+    console.log('[Live] answer inserted for session:', sessionId, 'question_index:', questionIndex)
 
     await adminClient.from('forge_quiz_live_players').update({
       score: (player.score ?? 0) + gained,
