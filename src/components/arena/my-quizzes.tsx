@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { LayoutGrid, Swords, Rocket, Compass } from "lucide-react"
+import { LayoutGrid, Swords, Rocket, Compass, Star } from "lucide-react"
 import { CreatedQuizCard, JoinedQuizCard, type CreatedCard, type JoinedCard } from "@/components/arena/quiz-card"
 import { EmptyState } from "@/components/arena/empty-state"
 
-type Tab = "created" | "joined"
+type Tab = "created" | "joined" | "starred"
 
 export function MyQuizzes({
   created,
@@ -20,12 +20,53 @@ export function MyQuizzes({
   const [tab, setTab] = useState<Tab>("created")
   const reduceMotion = useReducedMotion()
 
+  // Local, optimistic star state keyed by quizId. Overrides the server-provided
+  // `starred` so toggling a card's ⭐ moves it in/out of the Starred tab instantly
+  // (the toggle-star API is still persisted in the background).
+  const [starOverrides, setStarOverrides] = useState<Record<string, boolean>>({})
+
+  const effectiveCreated: CreatedCard[] = created.map((c) => {
+    const o = starOverrides[c.quizId]
+    return o === undefined || !c.quizId ? c : { ...c, starred: o }
+  })
+  const starredCards = effectiveCreated.filter((c) => c.starred)
+
+  async function handleToggleStar(quizId: string, current: boolean) {
+    if (!quizId) return
+    const next = !current
+    setStarOverrides((o) => ({ ...o, [quizId]: next })) // optimistic
+    try {
+      const res = await fetch("/api/arena/forge-quiz/toggle-star", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, starred: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setStarOverrides((o) => ({ ...o, [quizId]: current })) // revert on failure
+    }
+  }
+
   const tabs: { id: Tab; label: string; icon: typeof LayoutGrid; count: number }[] = [
-    { id: "created", label: "Created", icon: LayoutGrid, count: created.length },
+    { id: "created", label: "Created", icon: LayoutGrid, count: effectiveCreated.length },
     { id: "joined", label: "Joined", icon: Swords, count: joined.length },
+    { id: "starred", label: "Starred", icon: Star, count: starredCards.length },
   ]
 
-  const items = tab === "created" ? created : joined
+  const createdView = (list: CreatedCard[], keyPrefix: string) => (
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map((quiz, i) => (
+        <motion.li
+          key={`${keyPrefix}-${quiz.id}`}
+          initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+          className="[&>*]:w-full"
+        >
+          <CreatedQuizCard quiz={quiz} onToggleStar={() => handleToggleStar(quiz.quizId, quiz.starred)} />
+        </motion.li>
+      ))}
+    </ul>
+  )
 
   return (
     <section aria-labelledby="my-quizzes-heading" className="relative mx-auto max-w-6xl px-5 pt-16 pb-24 sm:px-8">
@@ -55,7 +96,7 @@ export function MyQuizzes({
               type="button"
               aria-selected={selected}
               onClick={() => setTab(t.id)}
-              className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex-none sm:px-5 ${
+              className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex-none sm:px-5 ${
                 selected ? "text-arena-fg" : "text-arena-muted hover:text-arena-fg"
               }`}
             >
@@ -66,8 +107,8 @@ export function MyQuizzes({
                   className="absolute inset-0 -z-10 rounded-xl border border-brand/40 bg-brand/15 shadow-lg shadow-brand/15"
                 />
               )}
-              <t.icon className="h-4 w-4" aria-hidden />
-              {t.label}
+              <t.icon className={`h-4 w-4 shrink-0 ${t.id === "starred" && selected ? "fill-ember text-ember" : ""}`} aria-hidden />
+              <span>{t.label}</span>
               <span className="rounded-md bg-arena-bg/70 px-1.5 py-0.5 text-[11px] tabular-nums text-arena-muted">
                 {t.count}
               </span>
@@ -79,14 +120,14 @@ export function MyQuizzes({
       <div className="mt-6">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={`${tab}-${items.length === 0 ? "empty" : "list"}`}
+            key={tab}
             initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            {items.length === 0 ? (
-              tab === "created" ? (
+            {tab === "created" &&
+              (effectiveCreated.length === 0 ? (
                 <EmptyState
                   icon={Rocket}
                   title="No quizzes yet — your arena awaits"
@@ -95,6 +136,11 @@ export function MyQuizzes({
                   actionHref={createHref}
                 />
               ) : (
+                createdView(effectiveCreated, "created")
+              ))}
+
+            {tab === "joined" &&
+              (joined.length === 0 ? (
                 <EmptyState
                   icon={Compass}
                   title="You haven't joined a game yet"
@@ -103,34 +149,34 @@ export function MyQuizzes({
                   actionHref={createHref}
                   tone="sky"
                 />
-              )
-            ) : (
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {tab === "created"
-                  ? created.map((quiz, i) => (
-                      <motion.li
-                        key={quiz.id}
-                        initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.45, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                        className="[&>*]:w-full"
-                      >
-                        <CreatedQuizCard quiz={quiz} />
-                      </motion.li>
-                    ))
-                  : joined.map((quiz, i) => (
-                      <motion.li
-                        key={quiz.id}
-                        initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.45, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                        className="[&>*]:w-full"
-                      >
-                        <JoinedQuizCard quiz={quiz} />
-                      </motion.li>
-                    ))}
-              </ul>
-            )}
+              ) : (
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {joined.map((quiz, i) => (
+                    <motion.li
+                      key={quiz.id}
+                      initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.45, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                      className="[&>*]:w-full"
+                    >
+                      <JoinedQuizCard quiz={quiz} />
+                    </motion.li>
+                  ))}
+                </ul>
+              ))}
+
+            {tab === "starred" &&
+              (starredCards.length === 0 ? (
+                <EmptyState
+                  icon={Star}
+                  title="No starred quizzes yet"
+                  description="Tap the ⭐ on any quiz to save it here for quick access."
+                  actionLabel="Browse my quizzes"
+                  actionHref={createHref}
+                />
+              ) : (
+                createdView(starredCards, "starred")
+              ))}
           </motion.div>
         </AnimatePresence>
       </div>

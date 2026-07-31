@@ -23,8 +23,13 @@ export default async function ForgeQuizEditPage({ params }: { params: { quizId: 
   if (!quiz) redirect('/arena')
   if (quiz.creator_id !== user.id) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
 
+  // "Manage" from the Arena hub must reliably land here (edit + relaunch) for the
+  // creator of ANY quiz. Previously this redirected every non-expired quiz to
+  // /lobby — but for a live-mode quiz with no open session, /lobby then bounces
+  // to /arena, so "Manage" appeared to do nothing. Only send an ACTIVE self-paced
+  // quiz to its lobby (its real live-management screen, which never bounces).
   const expired = quiz.status === 'ended' || (quiz.expires_at && new Date(quiz.expires_at) < new Date())
-  if (!expired) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
+  if (!expired && quiz.play_mode === 'self_paced') redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
 
   const { data: questions } = await adminClient
     .from('forge_quiz_questions')

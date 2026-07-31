@@ -79,15 +79,17 @@ function Meta({ icon: Icon, children }: { icon: typeof Users; children: React.Re
 }
 
 // ── Three-dot card menu: Star / Delete (owner only) / Assign (coming soon) ──
-function CardMenu({ quizId, canModify, starred }: { quizId: string; canModify: boolean; starred: boolean }) {
+// Star toggling is delegated to the parent (MyQuizzes) via onToggleStar so the
+// whole view — including the "Starred" tab — updates optimistically without a
+// reload; the `starred` prop reflects that parent-owned state.
+function CardMenu({
+  quizId, canModify, starred, onToggleStar,
+}: { quizId: string; canModify: boolean; starred: boolean; onToggleStar?: () => void }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [isStarred, setIsStarred] = useState(starred)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => setIsStarred(starred), [starred])
 
   useEffect(() => {
     if (!open) return
@@ -100,22 +102,9 @@ function CardMenu({ quizId, canModify, starred }: { quizId: string; canModify: b
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey) }
   }, [open])
 
-  async function toggleStar() {
+  function toggleStar() {
     if (busy || !canModify) return
-    const next = !isStarred
-    setBusy(true)
-    setIsStarred(next) // optimistic
-    try {
-      const res = await fetch("/api/arena/forge-quiz/toggle-star", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quizId, starred: next }),
-      })
-      if (!res.ok) throw new Error()
-      router.refresh()
-    } catch {
-      setIsStarred(!next) // revert on failure
-    }
-    setBusy(false)
+    onToggleStar?.()
     setOpen(false)
   }
 
@@ -187,8 +176,8 @@ function CardMenu({ quizId, canModify, starred }: { quizId: string; canModify: b
                 disabled={!canModify || busy}
                 className={`${itemBase} ${canModify ? "text-arena-fg hover:bg-arena-bg/60" : "cursor-not-allowed text-arena-muted/50"}`}
               >
-                <Star className={`h-4 w-4 ${isStarred ? "fill-ember text-ember" : ""}`} aria-hidden />
-                {isStarred ? "Unstar" : "Star"}
+                <Star className={`h-4 w-4 ${starred ? "fill-ember text-ember" : ""}`} aria-hidden />
+                {starred ? "Unstar" : "Star"}
               </button>
               <button
                 type="button"
@@ -325,7 +314,7 @@ function QuickPlayModal({ quizId, onClose }: { quizId: string; onClose: () => vo
   )
 }
 
-export function CreatedQuizCard({ quiz }: { quiz: CreatedCard }) {
+export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onToggleStar?: () => void }) {
   const [quickPlay, setQuickPlay] = useState(false)
   const canModify = quiz.kind === "quiz" && !!quiz.quizId
 
@@ -347,7 +336,7 @@ export function CreatedQuizCard({ quiz }: { quiz: CreatedCard }) {
             <StatusBadge active={quiz.active} activeLabel={quiz.mode === "Live" ? "Live" : "Active"} />
           </div>
         </div>
-        <CardMenu quizId={quiz.quizId} canModify={canModify} starred={quiz.starred} />
+        <CardMenu quizId={quiz.quizId} canModify={canModify} starred={quiz.starred} onToggleStar={onToggleStar} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-arena-muted">
