@@ -289,3 +289,47 @@
 @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
 @keyframes podiumRise { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes goldPulse { 0%, 100% { box-shadow: 0 0 20px rgba(251,191,36,0.4); } 50% { box-shadow: 0 0 40px rgba(251,191,36,0.8); } }
+
+/* ───────────── Arena hub (v0) — ambient / motion utilities ───────────── */
+@keyframes orb-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(8vw, 6vh, 0) scale(1.12); }
+  66% { transform: translate3d(-5vw, 10vh, 0) scale(0.94); }
+}
+@keyframes orb-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  40% { transform: translate3d(-10vw, 8vh, 0) scale(0.9); }
+  75% { transform: translate3d(6vw, -6vh, 0) scale(1.15); }
+}
+@keyframes orb-drift-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); }
+  50% { transform: translate3d(7vw, -9vh, 0) scale(1.1); }
+}
+.animate-orb-a { animation: orb-drift-a 26s ease-in-out infinite; }
+.animate-orb-b { animation: orb-drift-b 32s ease-in-out infinite; }
+.animate-orb-c { animation: orb-drift-c 38s ease-in-out infinite; }
+
+@keyframes idle-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.24 295 / 0.55), 0 8px 24px -8px oklch(0.55 0.24 295 / 0.5); }
+  50% { box-shadow: 0 0 0 8px oklch(0.55 0.24 295 / 0), 0 12px 32px -6px oklch(0.55 0.24 295 / 0.7); }
+}
+.animate-idle-glow { animation: idle-glow 2.6s ease-in-out infinite; }
+
+@keyframes idle-glow-ember {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.73 0.18 55 / 0.5), 0 8px 24px -8px oklch(0.73 0.18 55 / 0.45); }
+  50% { box-shadow: 0 0 0 8px oklch(0.73 0.18 55 / 0), 0 12px 32px -6px oklch(0.73 0.18 55 / 0.65); }
+}
+.animate-idle-glow-ember { animation: idle-glow-ember 2.6s ease-in-out infinite; }
+
+.grid-veil {
+  background-image: linear-gradient(to right, oklch(1 0 0 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-a, .animate-orb-b, .animate-orb-c,
+  .animate-idle-glow, .animate-idle-glow-ember { animation: none !important; }
+}
