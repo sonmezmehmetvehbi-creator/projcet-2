@@ -129,7 +129,7 @@ export default function ArenaClient({
   ]
 
   return (
-    <div className="relative min-h-screen bg-arena-bg text-arena-fg">
+    <div className="relative min-h-screen overflow-x-hidden bg-arena-bg text-arena-fg">
       <ArenaHero stats={stats} liveNow={liveNow} />
       <ActionCards createHref={CREATE_HREF} onJoin={handleJoin} joining={joining} joinError={joinError} />
       <MyQuizzes created={createdCards} joined={joinedCards} createHref={CREATE_HREF} />

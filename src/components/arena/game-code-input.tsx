@@ -1,17 +1,22 @@
 "use client"
 
-import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react"
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react"
 
 const LENGTH = 6
 
 type GameCodeInputProps = {
   onComplete?: (code: string) => void
   onChange?: (code: string) => void
+  autoFocus?: boolean
 }
 
-export function GameCodeInput({ onComplete, onChange }: GameCodeInputProps) {
+export function GameCodeInput({ onComplete, onChange, autoFocus = false }: GameCodeInputProps) {
   const [chars, setChars] = useState<string[]>(Array(LENGTH).fill(""))
   const refs = useRef<Array<HTMLInputElement | null>>([])
+
+  useEffect(() => {
+    if (autoFocus) refs.current[0]?.focus()
+  }, [autoFocus])
 
   function commit(next: string[]) {
     setChars(next)
