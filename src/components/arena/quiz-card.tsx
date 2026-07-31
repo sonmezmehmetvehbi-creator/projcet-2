@@ -213,7 +213,7 @@ function CardMenu({
 
 // ── Quick-play: pick a format (self-paced / live), relaunch, and start. No
 // editing step. Only offered on owned quiz cards (relaunch requires ownership).
-function QuickPlayModal({ quizId, onClose }: { quizId: string; onClose: () => void }) {
+export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quizId: string; onClose: () => void; title?: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<"self_paced" | "live" | null>(null)
   const [error, setError] = useState("")
@@ -273,7 +273,7 @@ function QuickPlayModal({ quizId, onClose }: { quizId: string; onClose: () => vo
           <X className="h-4 w-4" />
         </button>
 
-        <h3 className="text-lg font-semibold tracking-tight text-arena-fg">Play again</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-arena-fg">{title}</h3>
         <p className="mt-1 text-sm text-arena-muted">How do you want to run it?</p>
 
         <div className="mt-5 grid gap-3">

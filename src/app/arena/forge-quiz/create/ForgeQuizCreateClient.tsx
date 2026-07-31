@@ -259,7 +259,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       const payload = {
         title, welcomeMessage: welcome, bannerColor: banner, playMode,
         timePerQuestion: timePerQ, maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-        duration, customDurationHours, allowReplay, isPublic,
+        duration, customDurationHours, allowReplay, isPublic, subject, topic,
         questions: questions.map((q) => ({
           question_text: q.question_text, question_type: q.question_type,
           options: q.question_type === 'mc' || q.question_type === 'tf' ? q.options : null,

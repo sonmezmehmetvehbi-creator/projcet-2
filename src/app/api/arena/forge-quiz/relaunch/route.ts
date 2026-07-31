@@ -26,7 +26,10 @@ export async function POST(request: Request) {
 
     const { data: orig } = await adminClient.from('forge_quizzes').select('*').eq('id', originalQuizId).maybeSingle()
     if (!orig) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
-    if (orig.creator_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // The creator can always relaunch; anyone can play a PUBLIC quiz from Browse
+    // (the clone is owned by the caller and stays private — is_public not copied).
+    const isOwner = orig.creator_id === user.id
+    if (!isOwner && !orig.is_public) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data: questions } = await adminClient
       .from('forge_quiz_questions')
@@ -55,6 +58,8 @@ export async function POST(request: Request) {
         status: isLive ? 'waiting' : 'active',
         question_count: questions.length,
         expires_at: expiresAt,
+        subject: orig.subject ?? null,
+        topic: orig.topic ?? null,
       })
       .select('id')
       .single()
@@ -78,6 +83,10 @@ export async function POST(request: Request) {
     }))
     const { error: qErr } = await adminClient.from('forge_quiz_questions').insert(rows)
     if (qErr) throw qErr
+
+    // Count this launch toward the ORIGINAL quiz's popularity (drives Browse's
+    // "Most Popular" sort). -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
+    await adminClient.from('forge_quizzes').update({ play_count: (orig.play_count ?? 0) + 1 }).eq('id', originalQuizId)
 
     return NextResponse.json({ newQuizId: newQuiz.id, mode: isLive ? 'live' : 'self_paced' })
   } catch (error: any) {

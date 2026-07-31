@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Search, ArrowRight } from 'lucide-react'
 import { ArenaHero, type ArenaStat } from '@/components/arena/arena-hero'
 import { ActionCards } from '@/components/arena/action-cards'
 import { MyQuizzes } from '@/components/arena/my-quizzes'
@@ -132,6 +134,26 @@ export default function ArenaClient({
     <div className="relative min-h-screen overflow-x-hidden bg-arena-bg text-arena-fg">
       <ArenaHero stats={stats} liveNow={liveNow} />
       <ActionCards createHref={CREATE_HREF} onJoin={handleJoin} joining={joining} joinError={joinError} />
+
+      {/* Browse public quizzes entry point */}
+      <div className="mx-auto w-full max-w-6xl px-5 pt-6 sm:px-8">
+        <Link
+          href="/arena/browse"
+          className="group flex items-center justify-between gap-4 rounded-2xl border border-arena-border bg-surface/60 p-5 backdrop-blur-sm transition-all duration-300 hover:border-sky/45 hover:bg-surface/85 hover:shadow-xl hover:shadow-sky/10 sm:p-6"
+        >
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sky/40 bg-sky/12 text-sky shadow-lg shadow-sky/15">
+              <Search className="h-6 w-6" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold tracking-tight text-arena-fg">🔍 Browse Quizzes</h3>
+              <p className="truncate text-sm text-arena-muted">Discover and play quizzes created by the community</p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 shrink-0 text-arena-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-sky" aria-hidden />
+        </Link>
+      </div>
+
       <MyQuizzes created={createdCards} joined={joinedCards} createHref={CREATE_HREF} />
     </div>
   )

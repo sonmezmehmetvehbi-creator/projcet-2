@@ -25,6 +25,8 @@ import { NextResponse } from 'next/server'
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS is_starred boolean DEFAULT false;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS is_public boolean DEFAULT false;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS subject text;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS topic text;
 // --
 // -- -- Browse-public "save" (star) join table — replaces the is_starred boolean.
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_stars (
@@ -96,6 +98,8 @@ export async function POST(request: Request) {
       customDurationHours = null,
       allowReplay = true,
       isPublic = false,
+      subject = '',
+      topic = '',
       questions = [],
     } = await request.json()
 
@@ -131,6 +135,8 @@ export async function POST(request: Request) {
         expires_at: expiresAt,
         allow_replay: !!allowReplay,
         is_public: !!isPublic,
+        subject: subject ? String(subject).slice(0, 80) : null,
+        topic: topic ? String(topic).slice(0, 120) : null,
       })
       .select('id')
       .single()
