@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const { data: session } = await adminClient
       .from('forge_quiz_live_sessions')
-      .select('host_id, quiz_id, current_question_index')
+      .select('host_id, quiz_id, current_question_index, question_state')
       .eq('id', sessionId)
       .maybeSingle()
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
@@ -30,7 +30,13 @@ export async function POST(request: Request) {
     const nextIndex = (session.current_question_index ?? 0) + 1
 
     if (nextIndex >= (total ?? 0)) {
-      // Last question just finished — freeze the game at the podium.
+      // Last question just finished. Show the FINAL leaderboard one more time
+      // (same as between every other round) BEFORE freezing at the podium — never
+      // jump reveal → podium. The podium is only reached from the leaderboard.
+      if (session.question_state !== 'leaderboard') {
+        await adminClient.from('forge_quiz_live_sessions').update({ question_state: 'leaderboard' }).eq('id', sessionId)
+        return NextResponse.json({ success: true, finalLeaderboard: true })
+      }
       // -- ALTER TABLE forge_quiz_live_sessions ADD COLUMN IF NOT EXISTS ended_at timestamptz;
       await adminClient.from('forge_quiz_live_sessions').update({ status: 'podium', question_state: 'leaderboard', ended_at: new Date().toISOString() }).eq('id', sessionId)
       return NextResponse.json({ success: true, podium: true })

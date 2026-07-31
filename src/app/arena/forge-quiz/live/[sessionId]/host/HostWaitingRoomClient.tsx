@@ -23,6 +23,10 @@ export default function HostWaitingRoomClient({
 
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
   const [removing, setRemoving] = useState<Set<string>>(new Set())
+  // Kahoot-style kick: first tap on a player's card arms a confirm overlay, a
+  // second tap removes them. Auto-disarms after a few seconds.
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [targetAt, setTargetAt] = useState<string | null>(session.countdown_target_at ?? null)
   const [now, setNow] = useState(() => Date.now())
   const [cdMin, setCdMin] = useState(0)
@@ -128,6 +132,23 @@ export default function HostWaitingRoomClient({
     } catch { setStarting(false) }
   }
 
+  // Tap once to arm the confirm overlay, tap the same card again to kick.
+  function onCardTap(p: Player) {
+    if (removing.has(p.id)) return
+    if (confirmId === p.id) {
+      if (confirmTimer.current) { clearTimeout(confirmTimer.current); confirmTimer.current = null }
+      setConfirmId(null)
+      kick(p)
+      return
+    }
+    setConfirmId(p.id)
+    if (confirmTimer.current) clearTimeout(confirmTimer.current)
+    confirmTimer.current = setTimeout(() => { setConfirmId(null); confirmTimer.current = null }, 3000)
+  }
+
+  // Clear the pending confirm timer on unmount.
+  useEffect(() => () => { if (confirmTimer.current) clearTimeout(confirmTimer.current) }, [])
+
   async function kick(p: Player) {
     setRemoving((s) => new Set(s).add(p.id))
     try {
@@ -199,22 +220,34 @@ export default function HostWaitingRoomClient({
           {full && <span style={{ marginLeft: '0.5rem', color: 'rgb(251,146,60)', fontSize: '0.9375rem', fontWeight: 800 }}>FULL</span>}
         </p>
 
-        {/* Player grid */}
+        {/* Player grid — tap a player to remove them (Kahoot-style) */}
         {count === 0 ? (
           <p style={{ color: 'rgb(148,148,168)', fontSize: '1.0625rem' }}>Waiting for players to join…</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${cardRem}rem, 1fr))`, gap: '0.75rem', justifyContent: 'center' }}>
-            {players.map((p) => (
-              <div key={p.id} className="hp-card" style={{ position: 'relative', borderRadius: '1rem', border: '1px solid rgba(124,58,237,0.3)', background: 'rgba(19,19,31,0.8)', padding: '0.75rem 0.5rem', animation: 'hpPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both', opacity: removing.has(p.id) ? 0 : 1, transform: removing.has(p.id) ? 'scale(0.6)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease' }}>
-                <div style={{ fontSize: `${emojiRem}rem`, lineHeight: 1 }}>{p.avatar_emoji}</div>
-                <div style={{ marginTop: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</div>
-                <button className="hp-kick" onClick={() => kick(p)} title={`Kick ${p.display_name}`}
-                  style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', width: '1.5rem', height: '1.5rem', borderRadius: '9999px', border: 'none', background: 'rgb(220,38,38)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s ease' }}>
-                  <X style={{ width: '0.85rem', height: '0.85rem' }} />
-                </button>
-              </div>
-            ))}
-          </div>
+          <>
+            <p style={{ color: 'rgb(120,120,140)', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '1rem' }}>Tap a player to remove them</p>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${cardRem}rem, 1fr))`, gap: '0.75rem', justifyContent: 'center' }}>
+              {players.map((p) => {
+                const confirming = confirmId === p.id
+                const isRemoving = removing.has(p.id)
+                return (
+                  <button key={p.id} type="button" className="hp-card" onClick={() => onCardTap(p)}
+                    aria-label={confirming ? `Confirm remove ${p.display_name}` : `Remove ${p.display_name}`}
+                    style={{ position: 'relative', display: 'block', width: '100%', textAlign: 'center', cursor: 'pointer', borderRadius: '1rem', border: confirming ? '1px solid rgba(220,38,38,0.85)' : '1px solid rgba(124,58,237,0.3)', background: 'rgba(19,19,31,0.8)', padding: '0.75rem 0.5rem', font: 'inherit', color: 'inherit', animation: isRemoving ? undefined : (confirming ? 'hpShake 0.4s ease' : 'hpPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both'), opacity: isRemoving ? 0 : 1, transform: isRemoving ? 'scale(0.6)' : 'none', transition: 'opacity 0.3s ease, transform 0.3s ease, border-color 0.15s ease' }}>
+                    <div style={{ fontSize: `${emojiRem}rem`, lineHeight: 1 }}>{p.avatar_emoji}</div>
+                    <div style={{ marginTop: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</div>
+                    {confirming && (
+                      <div style={{ position: 'absolute', inset: 0, borderRadius: '1rem', background: 'rgba(220,38,38,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.15rem', zIndex: 2 }}>
+                        <X style={{ width: '1.4rem', height: '1.4rem', color: 'white' }} />
+                        <span style={{ fontWeight: 900, fontSize: '0.85rem', color: 'white', lineHeight: 1 }}>Remove?</span>
+                        <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.9)', fontWeight: 700 }}>Tap again</span>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -231,8 +264,9 @@ export default function HostWaitingRoomClient({
       <style>{`
         @keyframes hpPop { 0% { opacity: 0; transform: scale(0.3) rotate(-8deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
         @keyframes hpGlow { 0%, 100% { text-shadow: 0 0 30px ${color}; } 50% { text-shadow: 0 0 55px ${color}, 0 0 20px ${color}; } }
+        @keyframes hpShake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
         .hp-code { animation: hpGlow 2.2s ease-in-out infinite; }
-        .hp-card:hover .hp-kick { opacity: 1; }
+        .hp-card { -webkit-tap-highlight-color: transparent; }
       `}</style>
     </div>
   )

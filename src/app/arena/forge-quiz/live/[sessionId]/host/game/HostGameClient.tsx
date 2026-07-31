@@ -227,7 +227,12 @@ export default function HostGameClient({
   async function nextQuestion() {
     const { ok, data } = await post('next-question', { sessionId })
     if (!ok) return
-    if (data.podium) {
+    if (data.finalLeaderboard) {
+      // Last question done, but the final leaderboard hasn't been shown yet —
+      // show it first (with a "See Podium →" button); podium comes on the next tap.
+      console.log('[Live/host] final leaderboard before podium')
+      setSession((prev) => ({ ...prev, status: 'active', question_state: 'leaderboard' }))
+    } else if (data.podium) {
       console.log('[Live/host] podium reached')
       setSession((prev) => ({ ...prev, status: 'podium', question_state: 'leaderboard' }))
     } else if (typeof data.questionIndex === 'number') {
