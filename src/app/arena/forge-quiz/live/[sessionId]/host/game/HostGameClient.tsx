@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 import TimerRing from '@/components/arena/TimerRing'
 import { ANSWER_STYLES, AnswerShape } from '@/components/arena/AnswerShapes'
 import LivePodium from '@/components/arena/LivePodium'
+import { useFlipRows } from '@/components/arena/useFlipRows'
 
 type Question = any
 type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
@@ -45,6 +46,13 @@ export default function HostGameClient({
 
   const elapsed = session.question_started_at ? Math.max(0, (now - new Date(session.question_started_at).getTime()) / 1000) : 0
   const secondsLeft = Math.max(0, Math.ceil(timeLimit - elapsed))
+
+  // Leaderboard FLIP animation: the visible rows, plus the round's single
+  // biggest riser (largest positive rank delta) which gets an extra scale pulse.
+  const lbVisible = board.slice(0, session.status === 'podium' ? 10 : 5)
+  const setLbRef = useFlipRows(lbVisible.map((p) => p.user_id), session.question_state === 'leaderboard')
+  const lbMaxUp = Math.max(0, ...lbVisible.map((p) => (p.change > 0 ? p.change : 0)))
+  const lbBigMoverId = lbMaxUp > 0 ? lbVisible.find((p) => p.change === lbMaxUp)?.user_id : undefined
 
   // Refs so the realtime handlers (which are set up once) always read the
   // CURRENT question index / state rather than the values captured at mount.
@@ -360,22 +368,32 @@ export default function HostGameClient({
               {session.status === 'podium' ? '🏆 Final Results' : 'Leaderboard'}
             </h1>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '40rem', margin: '0 auto' }}>
-              {board.slice(0, session.status === 'podium' ? 10 : 5).map((p, i) => {
+              {lbVisible.map((p, i) => {
                 const onFire = p.streak >= 3 && i === board.findIndex((x) => x.streak >= 3)
+                const movedUp = p.change > 0
+                const isBigMover = movedUp && p.user_id === lbBigMoverId
+                // Glow (green) for up-movers; extra scale pulse for the biggest riser.
+                // Inner element carries the visuals so the FLIP transform on the
+                // outer wrapper never collides with the scale-pulse transform.
+                const innerAnim = movedUp
+                  ? `lbFadeIn 0.4s ease both, lbUpGlow 1.6s ease 0.1s both${isBigMover ? ', lbBigMover 0.8s ease 0.25s both' : ''}`
+                  : 'lbFadeIn 0.4s ease both'
                 return (
-                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', border: i < 3 ? '1px solid rgba(251,191,36,0.4)' : '1px solid rgba(255,255,255,0.08)', background: i < 3 ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.03)', padding: '0.9rem 1.25rem', animation: 'lbSlide 0.4s ease both', animationDelay: `${i * 0.08}s` }}>
-                    <span style={{ width: '2rem', textAlign: 'center', fontWeight: 900, fontSize: '1.25rem', color: i < 3 ? 'rgb(251,191,36)' : 'rgb(180,180,200)' }}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
-                    <span style={{ fontSize: '1.75rem' }}>{p.avatar_emoji}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
-                        {onFire && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.6875rem', fontWeight: 800, color: 'rgb(251,146,60)', background: 'rgba(251,146,60,0.15)', padding: '0.1rem 0.45rem', borderRadius: '9999px' }}><Flame style={{ width: '0.75rem', height: '0.75rem' }} /> On Fire</span>}
-                        {p.change > 0 && <span style={{ fontSize: '0.75rem', color: 'rgb(74,222,128)', fontWeight: 800 }}>▲{p.change}</span>}
-                        {p.change < 0 && <span style={{ fontSize: '0.75rem', color: 'rgb(248,113,113)', fontWeight: 800 }}>▼{-p.change}</span>}
+                  <div key={p.user_id} ref={setLbRef(p.user_id)} style={{ willChange: 'transform' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', border: i < 3 ? '1px solid rgba(251,191,36,0.4)' : '1px solid rgba(255,255,255,0.08)', background: i < 3 ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.03)', padding: '0.9rem 1.25rem', animation: innerAnim }}>
+                      <span style={{ width: '2rem', textAlign: 'center', fontWeight: 900, fontSize: '1.25rem', color: i < 3 ? 'rgb(251,191,36)' : 'rgb(180,180,200)' }}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
+                      <span style={{ fontSize: '1.75rem' }}>{p.avatar_emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
+                          {onFire && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.6875rem', fontWeight: 800, color: 'rgb(251,146,60)', background: 'rgba(251,146,60,0.15)', padding: '0.1rem 0.45rem', borderRadius: '9999px' }}><Flame style={{ width: '0.75rem', height: '0.75rem' }} /> On Fire</span>}
+                          {movedUp && <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.72rem', color: 'rgb(41,28,4)', background: 'rgb(74,222,128)', fontWeight: 900, padding: '0.08rem 0.4rem', borderRadius: '9999px', animation: 'lbBadge 1.8s ease both' }}>▲ +{p.change}</span>}
+                          {p.change < 0 && <span style={{ fontSize: '0.72rem', color: 'rgb(150,150,168)', fontWeight: 800 }}>▼{-p.change}</span>}
+                        </div>
+                        {p.gained > 0 && <span style={{ fontSize: '0.8125rem', color: 'rgb(74,222,128)', fontWeight: 700 }}>+{p.gained}</span>}
                       </div>
-                      {p.gained > 0 && <span style={{ fontSize: '0.8125rem', color: 'rgb(74,222,128)', fontWeight: 700 }}>+{p.gained}</span>}
+                      <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.35rem' }}>{p.score}</span>
                     </div>
-                    <span style={{ fontWeight: 900, color: 'rgb(251,191,36)', fontSize: '1.35rem' }}>{p.score}</span>
                   </div>
                 )
               })}
@@ -414,8 +432,11 @@ export default function HostGameClient({
       </div>
 
       <style>{`
-        @keyframes lbSlide { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes lbUpGlow { 0% { box-shadow: 0 0 0 rgba(34,197,94,0); } 28% { box-shadow: 0 0 26px rgba(34,197,94,0.55); border-color: rgba(74,222,128,0.7); } 100% { box-shadow: 0 0 0 rgba(34,197,94,0); } }
+        @keyframes lbBigMover { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.05); } }
+        @keyframes lbBadge { 0% { opacity: 0; transform: translateY(4px); } 12% { opacity: 1; transform: translateY(0); } 72% { opacity: 1; } 100% { opacity: 0; transform: translateY(-2px); } }
       `}</style>
     </div>
   )

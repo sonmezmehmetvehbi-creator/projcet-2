@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { ANSWER_STYLES, AnswerShape } from '@/components/arena/AnswerShapes'
 import PlayerResult from '@/components/arena/PlayerResult'
+import { useFlipRows } from '@/components/arena/useFlipRows'
 
 type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
 type Result = { qIndex: number; isCorrect?: boolean; points?: number; correctAnswer?: string; answer?: any; tooLate?: boolean }
@@ -28,7 +29,7 @@ export default function PlayLiveClient({
   const [sliderVal, setSliderVal] = useState<number | null>(null)
   const [frVal, setFrVal] = useState('')
   const [waitIdx, setWaitIdx] = useState(0)
-  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; correct?: number; attempted?: number; best_streak?: number }[]>([])
+  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; correct?: number; attempted?: number; best_streak?: number; change?: number }[]>([])
   const [shake, setShake] = useState(false)
 
   const supaRef = useRef(createClient())
@@ -74,10 +75,20 @@ export default function PlayLiveClient({
     }
   }, [session.question_state, answeredThis, result?.isCorrect])
 
+  const prevRanksRef = useRef<Record<string, number>>({})
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
     const { data } = await supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, correct, attempted, best_streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false })
-    setBoard(data ?? [])
+    // Rank delta vs the previous fetch: positive = moved up N spots. Drives the
+    // overtake badges/glow (purely visual — order still comes from score desc).
+    const ranked = (data ?? []).map((p, i) => {
+      const prev = prevRanksRef.current[p.user_id]
+      return { ...p, change: prev != null ? prev - (i + 1) : 0 }
+    })
+    const nextRanks: Record<string, number> = {}
+    ranked.forEach((p, i) => { nextRanks[p.user_id] = i + 1 })
+    prevRanksRef.current = nextRanks
+    setBoard(ranked)
   }, [sessionId])
 
   const qStateRef = useRef(session.question_state)
@@ -143,6 +154,12 @@ export default function PlayLiveClient({
   const myRank = board.findIndex((p) => p.user_id === userId)
   const myScore = myRank >= 0 ? board[myRank].score : 0
 
+  // Leaderboard FLIP animation (mini-leaderboard shown between questions).
+  const lbVisible = board.slice(0, 5)
+  const setLbRef = useFlipRows(lbVisible.map((p) => p.user_id), session.question_state === 'leaderboard')
+  const lbMaxUp = Math.max(0, ...lbVisible.map((p) => ((p.change ?? 0) > 0 ? (p.change as number) : 0)))
+  const lbBigMoverId = lbMaxUp > 0 ? lbVisible.find((p) => p.change === lbMaxUp)?.user_id : undefined
+
   // A key that changes only when the visual PHASE changes (not on every timer
   // tick) so the fade/scale-in transition replays on real state transitions.
   const phaseKey = session.status === 'podium'
@@ -161,6 +178,10 @@ export default function PlayLiveClient({
         @keyframes confettiFall { to { transform: translateY(120vh) rotate(720deg); opacity: 0; } }
         @keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.98) } to { opacity: 1; transform: scale(1) } }
         @keyframes spinRing { to { transform: rotate(360deg) } }
+        @keyframes lbFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes lbUpGlow { 0% { box-shadow: 0 0 0 rgba(34,197,94,0) } 28% { box-shadow: 0 0 22px rgba(34,197,94,0.55); border-color: rgba(74,222,128,0.7) } 100% { box-shadow: 0 0 0 rgba(34,197,94,0) } }
+        @keyframes lbBigMover { 0%, 100% { transform: scale(1) } 45% { transform: scale(1.05) } }
+        @keyframes lbBadge { 0% { opacity: 0; transform: translateY(4px) } 12% { opacity: 1; transform: translateY(0) } 72% { opacity: 1 } 100% { opacity: 0; transform: translateY(-2px) } }
       `}</style>
     </div>
   )
@@ -199,14 +220,26 @@ export default function PlayLiveClient({
           </div>
         </div>
         <div style={{ width: '100%', maxWidth: '26rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {board.slice(0, 5).map((p, i) => (
-            <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.user_id === userId ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.08)', background: p.user_id === userId ? `${color}22` : 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem' }}>
-              <span style={{ width: '1.5rem', fontWeight: 900, color: 'rgb(180,180,200)' }}>{i + 1}</span>
-              <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
-              <span style={{ flex: 1, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
-              <span style={{ fontWeight: 800, color: 'rgb(251,191,36)' }}>{p.score}</span>
-            </div>
-          ))}
+          {lbVisible.map((p, i) => {
+            const change = p.change ?? 0
+            const movedUp = change > 0
+            const isBigMover = movedUp && p.user_id === lbBigMoverId
+            const innerAnim = movedUp
+              ? `lbFadeIn 0.4s ease both, lbUpGlow 1.6s ease 0.1s both${isBigMover ? ', lbBigMover 0.8s ease 0.25s both' : ''}`
+              : 'lbFadeIn 0.4s ease both'
+            return (
+              <div key={p.user_id} ref={setLbRef(p.user_id)} style={{ willChange: 'transform' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.user_id === userId ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.08)', background: p.user_id === userId ? `${color}22` : 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem', animation: innerAnim }}>
+                  <span style={{ width: '1.5rem', fontWeight: 900, color: 'rgb(180,180,200)' }}>{i + 1}</span>
+                  <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
+                  <span style={{ flex: 1, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
+                  {movedUp && <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.68rem', color: 'rgb(41,28,4)', background: 'rgb(74,222,128)', fontWeight: 900, padding: '0.06rem 0.35rem', borderRadius: '9999px', animation: 'lbBadge 1.8s ease both' }}>▲ +{change}</span>}
+                  {change < 0 && <span style={{ fontSize: '0.68rem', color: 'rgb(150,150,168)', fontWeight: 800 }}>▼{-change}</span>}
+                  <span style={{ fontWeight: 800, color: 'rgb(251,191,36)' }}>{p.score}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
         {session.status !== 'podium' && <p style={{ color: 'rgb(148,148,168)', fontSize: '0.9375rem', marginTop: '0.5rem' }}>Waiting for next question…</p>}
       </div>
