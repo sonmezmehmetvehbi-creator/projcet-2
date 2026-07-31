@@ -41,7 +41,7 @@ export default async function ForgeQuizEditPage({ params }: { params: { quizId: 
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
       <Navbar profile={profile} bans={bans} />
       <EditQuizClient
-        quiz={{ id: quiz.id, title: quiz.title, banner_color: quiz.banner_color, time_per_question: quiz.time_per_question }}
+        quiz={{ id: quiz.id, title: quiz.title, banner_color: quiz.banner_color, time_per_question: quiz.time_per_question, is_public: quiz.is_public ?? false }}
         initialQuestions={questions ?? []}
       />
     </div>

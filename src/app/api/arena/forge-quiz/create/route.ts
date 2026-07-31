@@ -23,6 +23,30 @@ import { NextResponse } from 'next/server'
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS expires_at timestamptz;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS allow_replay boolean DEFAULT true;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS is_starred boolean DEFAULT false;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS is_public boolean DEFAULT false;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
+// --
+// -- -- Browse-public "save" (star) join table — replaces the is_starred boolean.
+// -- CREATE TABLE IF NOT EXISTS forge_quiz_stars (
+// --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+// --   quiz_id uuid REFERENCES forge_quizzes(id),
+// --   user_id uuid REFERENCES profiles(id),
+// --   created_at timestamptz DEFAULT now(),
+// --   UNIQUE (quiz_id, user_id)
+// -- );
+// -- ALTER TABLE forge_quiz_stars DISABLE ROW LEVEL SECURITY;
+// --
+// -- -- 1-5 star ratings (one per user per quiz).
+// -- CREATE TABLE IF NOT EXISTS forge_quiz_ratings (
+// --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+// --   quiz_id uuid REFERENCES forge_quizzes(id),
+// --   user_id uuid REFERENCES profiles(id),
+// --   rating int NOT NULL CHECK (rating BETWEEN 1 AND 5),
+// --   created_at timestamptz DEFAULT now(),
+// --   updated_at timestamptz DEFAULT now(),
+// --   UNIQUE (quiz_id, user_id)
+// -- );
+// -- ALTER TABLE forge_quiz_ratings DISABLE ROW LEVEL SECURITY;
 // --
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_questions (
 // --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -71,6 +95,7 @@ export async function POST(request: Request) {
       duration = '24h',
       customDurationHours = null,
       allowReplay = true,
+      isPublic = false,
       questions = [],
     } = await request.json()
 
@@ -105,6 +130,7 @@ export async function POST(request: Request) {
         question_count: questions.length,
         expires_at: expiresAt,
         allow_replay: !!allowReplay,
+        is_public: !!isPublic,
       })
       .select('id')
       .single()

@@ -86,6 +86,26 @@ export const label: React.CSSProperties = { display: 'block', fontSize: '0.75rem
 export const input: React.CSSProperties = { width: '100%', padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.35)', color: 'white', fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }
 export const sel: React.CSSProperties = { ...input, colorScheme: 'dark', cursor: 'pointer' }
 export const card: React.CSSProperties = { borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem' }
+
+// Shared public/private visibility toggle (create Step 1 + edit/manage screen).
+export function PublicToggle({ isPublic, onChange, disabled = false }: { isPublic: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', borderRadius: '0.875rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(255,255,255,0.03)', padding: '0.9rem 1.1rem' }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'white', fontWeight: 800, fontSize: '0.9375rem' }}>
+          <span aria-hidden>{isPublic ? '🌐' : '🔒'}</span> Make this quiz public
+        </div>
+        <div style={{ color: 'rgb(148,148,168)', fontSize: '0.78rem', marginTop: '0.25rem', lineHeight: 1.4 }}>
+          Public quizzes appear in Browse for anyone to play, host, or save. Others cannot edit your questions.
+        </div>
+      </div>
+      <button type="button" role="switch" aria-checked={isPublic} aria-label="Make this quiz public" disabled={disabled} onClick={() => onChange(!isPublic)}
+        style={{ position: 'relative', flexShrink: 0, width: '3rem', height: '1.6rem', borderRadius: '9999px', border: 'none', cursor: disabled ? 'default' : 'pointer', background: isPublic ? '#22c55e' : 'rgba(255,255,255,0.18)', transition: 'background 0.2s', opacity: disabled ? 0.6 : 1 }}>
+        <span style={{ position: 'absolute', top: '0.2rem', left: isPublic ? '1.6rem' : '0.2rem', width: '1.2rem', height: '1.2rem', borderRadius: '9999px', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+      </button>
+    </div>
+  )
+}
 export const pill = (active: boolean): React.CSSProperties => ({ padding: '0.5rem 0.9rem', borderRadius: '9999px', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.12)'}`, background: active ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.03)', color: active ? 'rgb(196,181,253)' : 'rgb(180,180,195)', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' })
 
 export function isValid(q: Question): boolean {
@@ -108,6 +128,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
   const [playMode, setPlayMode] = useState<'self_paced' | 'live'>('self_paced')
   const [timePerQ, setTimePerQ] = useState(20)
   const [maxPlayers, setMaxPlayers] = useState('')
+  const [isPublic, setIsPublic] = useState(false)
 
   // Launch step
   const [duration, setDuration] = useState('24h')
@@ -238,7 +259,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       const payload = {
         title, welcomeMessage: welcome, bannerColor: banner, playMode,
         timePerQuestion: timePerQ, maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-        duration, customDurationHours, allowReplay,
+        duration, customDurationHours, allowReplay, isPublic,
         questions: questions.map((q) => ({
           question_text: q.question_text, question_type: q.question_type,
           options: q.question_type === 'mc' || q.question_type === 'tf' ? q.options : null,
@@ -399,6 +420,9 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               <label style={label}>Max players (optional)</label>
               <input style={input} type="number" min={1} value={maxPlayers} onChange={(e) => setMaxPlayers(e.target.value)} placeholder="Unlimited" />
             </div>
+          </div>
+          <div style={{ marginTop: '1.25rem' }}>
+            <PublicToggle isPublic={isPublic} onChange={setIsPublic} />
           </div>
         </div>
       )}

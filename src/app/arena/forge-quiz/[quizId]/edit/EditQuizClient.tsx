@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, Plus } from 'lucide-react'
 import {
-  QuestionEditor, LaunchModePicker, newQuestion, isValid, customHours,
+  QuestionEditor, LaunchModePicker, PublicToggle, newQuestion, isValid, customHours,
   card, type Question, type QType,
 } from '@/app/arena/forge-quiz/create/ForgeQuizCreateClient'
 
@@ -34,6 +34,21 @@ export default function EditQuizClient({ quiz, initialQuestions }: { quiz: any; 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [uploadError, setUploadError] = useState('')
+
+  // Quiz-level public/private visibility, persisted immediately (optimistic).
+  const [isPublic, setIsPublic] = useState<boolean>(!!quiz.is_public)
+  async function togglePublic(next: boolean) {
+    setIsPublic(next)
+    try {
+      const res = await fetch('/api/arena/forge-quiz/update-settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quizId: quiz.id, isPublic: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setIsPublic(!next) // revert on failure
+    }
+  }
 
   // Launch state
   const [playMode, setPlayMode] = useState<'self_paced' | 'live'>('self_paced')
@@ -120,6 +135,7 @@ export default function EditQuizClient({ quiz, initialQuestions }: { quiz: any; 
 
       {phase === 'editing' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <PublicToggle isPublic={isPublic} onChange={togglePublic} />
           {questions.map((q, i) => (
             <QuestionEditor key={q._id} q={q} index={i} total={questions.length}
               onChange={(patch) => updateQuestion(q._id, patch)} onChangeType={(t) => changeType(q._id, t)}

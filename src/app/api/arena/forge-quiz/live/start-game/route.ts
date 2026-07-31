@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const { sessionId } = await request.json()
     if (!sessionId) return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
 
-    const { data: session } = await adminClient.from('forge_quiz_live_sessions').select('host_id, status').eq('id', sessionId).maybeSingle()
+    const { data: session } = await adminClient.from('forge_quiz_live_sessions').select('host_id, status, quiz_id').eq('id', sessionId).maybeSingle()
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     if (session.host_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -31,6 +31,13 @@ export async function POST(request: Request) {
       .update({ status: 'active', current_question_index: 0, question_started_at: new Date().toISOString(), question_state: 'question', countdown_target_at: null })
       .eq('id', sessionId)
     if (error) throw error
+
+    // A live playthrough is beginning — bump the quiz's play_count once per game.
+    // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
+    if (session.quiz_id) {
+      const { data: q } = await adminClient.from('forge_quizzes').select('play_count').eq('id', session.quiz_id).maybeSingle()
+      await adminClient.from('forge_quizzes').update({ play_count: (q?.play_count ?? 0) + 1 }).eq('id', session.quiz_id)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

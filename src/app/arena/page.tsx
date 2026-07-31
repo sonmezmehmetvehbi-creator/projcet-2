@@ -52,12 +52,24 @@ export default async function ArenaPage() {
   const now = Date.now()
   const isActive = (q: any) => q && q.status !== 'ended' && (!q.expires_at || new Date(q.expires_at).getTime() > now)
 
+  // Which of these quizzes has the current user starred (forge_quiz_stars join
+  // table — replaces the old is_starred boolean).
+  const starredSet = new Set<string>()
+  if (allIds.length > 0) {
+    const { data: stars } = await adminClient
+      .from('forge_quiz_stars')
+      .select('quiz_id')
+      .eq('user_id', user.id)
+      .in('quiz_id', allIds)
+    for (const s of stars ?? []) starredSet.add(s.quiz_id)
+  }
+
   const quizzesCreated = createdRows.map((q: any) => {
     const parts = byQuiz.get(q.id) ?? []
     return {
       id: q.id, title: q.title, banner_color: q.banner_color, play_mode: q.play_mode,
       expires_at: q.expires_at ?? null, playerCount: parts.filter((p) => p.completed).length,
-      active: isActive(q), is_starred: q.is_starred ?? false,
+      active: isActive(q), is_starred: starredSet.has(q.id),
     }
   })
 

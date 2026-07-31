@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const { quizId, displayName, avatarEmoji = '🎓' } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
 
-    const { data: quiz } = await adminClient.from('forge_quizzes').select('id, max_players').eq('id', quizId).maybeSingle()
+    const { data: quiz } = await adminClient.from('forge_quizzes').select('id, max_players, play_count').eq('id', quizId).maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
 
     // Already joined?
@@ -50,6 +50,11 @@ export async function POST(request: Request) {
       .select('id')
       .single()
     if (error) throw error
+
+    // A new self-paced playthrough is beginning — bump play_count once (only on
+    // first join; re-joins by the same user take the update path above).
+    // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
+    await adminClient.from('forge_quizzes').update({ play_count: (quiz.play_count ?? 0) + 1 }).eq('id', quizId)
 
     return NextResponse.json({ playerId: player.id })
   } catch (error: any) {
