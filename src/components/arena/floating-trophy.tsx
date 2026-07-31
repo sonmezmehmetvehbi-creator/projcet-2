@@ -1,11 +1,21 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from "framer-motion"
 import { Trophy, Sparkles, Zap } from "lucide-react"
 
 export function FloatingTrophy() {
   const reduceMotion = useReducedMotion()
+
+  // Cursor-parallax is a mouse-only affordance. On touch devices there is no
+  // hover cursor, so we never attach the listener nor apply the tilt transform —
+  // the trophy just keeps its gentle bob loop with no stuck/leftover transform.
+  const [hasFinePointer, setHasFinePointer] = useState(false)
+  useEffect(() => {
+    setHasFinePointer(window.matchMedia("(pointer: fine)").matches)
+  }, [])
+
+  const tiltEnabled = hasFinePointer && !reduceMotion
 
   // normalized cursor position (-0.5 .. 0.5)
   const px = useMotionValue(0)
@@ -20,9 +30,7 @@ export function FloatingTrophy() {
   const shiftY = useTransform(sy, [-0.5, 0.5], [10, -10])
 
   useEffect(() => {
-    if (reduceMotion) return
-    // desktop / fine-pointer only
-    if (typeof window === "undefined" || !window.matchMedia("(pointer: fine)").matches) return
+    if (!tiltEnabled) return
 
     function onMove(e: MouseEvent) {
       px.set(e.clientX / window.innerWidth - 0.5)
@@ -30,12 +38,12 @@ export function FloatingTrophy() {
     }
     window.addEventListener("mousemove", onMove, { passive: true })
     return () => window.removeEventListener("mousemove", onMove)
-  }, [px, py, reduceMotion])
+  }, [px, py, tiltEnabled])
 
   return (
     <div className="relative flex items-center justify-center [perspective:1000px]">
       <motion.div
-        style={reduceMotion ? undefined : { rotateX, rotateY, x: shiftX, y: shiftY }}
+        style={tiltEnabled ? { rotateX, rotateY, x: shiftX, y: shiftY } : undefined}
         className="relative"
       >
         <motion.div

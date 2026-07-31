@@ -56,7 +56,7 @@ export function EmptyState({
 
       <Link
         href={actionHref}
-        className="relative mt-6 inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-transform duration-200 outline-none hover:scale-[1.03] focus-visible:ring-4 focus-visible:ring-brand/40 active:scale-[0.99]"
+        className="relative mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground transition-transform duration-200 outline-none hover:scale-[1.03] focus-visible:ring-4 focus-visible:ring-brand/40 active:scale-[0.99]"
       >
         {actionLabel}
       </Link>

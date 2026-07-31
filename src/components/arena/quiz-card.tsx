@@ -97,7 +97,7 @@ export function CreatedQuizCard({ quiz }: { quiz: CreatedCard }) {
       <div className="mt-auto flex items-center gap-2">
         <Link
           href={quiz.href}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2.5 text-sm font-medium text-arena-fg transition-colors duration-200 outline-none hover:border-brand/50 hover:bg-brand/10 focus-visible:ring-2 focus-visible:ring-brand/40"
+          className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2.5 text-sm font-medium text-arena-fg transition-colors duration-200 outline-none hover:border-brand/50 hover:bg-brand/10 focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           {quiz.actionLabel}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -105,7 +105,7 @@ export function CreatedQuizCard({ quiz }: { quiz: CreatedCard }) {
         <Link
           href={quiz.href}
           aria-label={`${quiz.actionLabel} — ${quiz.title}`}
-          className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors duration-200 outline-none ${
+          className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors duration-200 outline-none ${
             quiz.active
               ? "border-ember/40 bg-ember/12 text-ember hover:bg-ember/20 focus-visible:ring-2 focus-visible:ring-ember/40"
               : "border-arena-border bg-arena-bg/60 text-arena-muted hover:border-sky/50 hover:text-sky focus-visible:ring-2 focus-visible:ring-sky/40"
@@ -159,7 +159,7 @@ export function JoinedQuizCard({ quiz }: { quiz: JoinedCard }) {
       <div className="mt-auto flex items-center justify-end gap-2">
         <Link
           href={quiz.href}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2 text-sm font-medium text-arena-fg transition-colors duration-200 outline-none hover:border-brand/50 hover:bg-brand/10 focus-visible:ring-2 focus-visible:ring-brand/40"
+          className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-arena-border bg-arena-bg/60 px-4 py-2 text-sm font-medium text-arena-fg transition-colors duration-200 outline-none hover:border-brand/50 hover:bg-brand/10 focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           {quiz.actionLabel}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />

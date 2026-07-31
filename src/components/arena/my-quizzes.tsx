@@ -55,7 +55,7 @@ export function MyQuizzes({
               type="button"
               aria-selected={selected}
               onClick={() => setTab(t.id)}
-              className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex-none sm:px-5 ${
+              className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:flex-none sm:px-5 ${
                 selected ? "text-arena-fg" : "text-arena-muted hover:text-arena-fg"
               }`}
             >

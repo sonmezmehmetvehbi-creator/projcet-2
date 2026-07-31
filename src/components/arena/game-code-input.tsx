@@ -70,8 +70,16 @@ export function GameCodeInput({ onComplete, onChange }: GameCodeInputProps) {
     handleChange(index, e.clipboardData.getData("text"))
   }
 
+  // Keep the focused box visible once the mobile keyboard slides up and reclaims
+  // the lower half of the viewport. Deferred so it runs after the keyboard opens.
+  function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+    e.currentTarget.select()
+    const el = e.currentTarget
+    setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 300)
+  }
+
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2" role="group" aria-label="6 character game code">
+    <div className="flex w-full items-center justify-center gap-1.5 sm:gap-2" role="group" aria-label="6 character game code">
       {chars.map((char, i) => (
         <input
           key={i}
@@ -82,12 +90,16 @@ export function GameCodeInput({ onComplete, onChange }: GameCodeInputProps) {
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={(e) => handlePaste(i, e)}
-          onFocus={(e) => e.currentTarget.select()}
+          onFocus={handleFocus}
+          // Game codes are alphanumeric (letters + digits), so a numeric/tel
+          // keyboard would be wrong — keep the text keyboard but hint uppercase.
           inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
           autoComplete="one-time-code"
           maxLength={LENGTH}
           aria-label={`Character ${i + 1} of ${LENGTH}`}
-          className="h-13 w-full min-w-0 rounded-xl border border-arena-input bg-arena-bg/70 text-center font-mono text-xl font-semibold uppercase text-arena-fg shadow-inner transition-all duration-200 outline-none placeholder:text-arena-muted/40 focus:border-sky/70 focus:bg-arena-bg focus:ring-4 focus:ring-sky/20 sm:h-14 sm:text-2xl"
+          className="h-13 min-w-0 flex-1 rounded-xl border border-arena-input bg-arena-bg/70 text-center font-mono text-xl font-semibold uppercase text-arena-fg shadow-inner transition-all duration-200 outline-none placeholder:text-arena-muted/40 focus:border-sky/70 focus:bg-arena-bg focus:ring-4 focus:ring-sky/20 sm:h-14 sm:text-2xl"
           placeholder="•"
         />
       ))}
