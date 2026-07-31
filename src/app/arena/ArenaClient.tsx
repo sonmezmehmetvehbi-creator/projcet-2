@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, History, Users } from 'lucide-react'
+import { ArrowRight, History, Users, X } from 'lucide-react'
 
 type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean }
 type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number }
@@ -30,9 +30,58 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
   const [joinCode, setJoinCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState('')
+  const boxRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Focus the first code box when the modal opens; lock body scroll behind it.
+  useEffect(() => {
+    if (!showJoin) return
+    setJoinCode(''); setJoinError('')
+    const t = setTimeout(() => boxRefs.current[0]?.focus(), 60)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { clearTimeout(t); document.body.style.overflow = prev }
+  }, [showJoin])
+
+  function setCharAt(i: number, ch: string) {
+    const arr = joinCode.padEnd(6, ' ').slice(0, 6).split('')
+    arr[i] = ch || ' '
+    setJoinCode(arr.join('').replace(/ +$/, ''))
+    setJoinError('')
+  }
+
+  function handleBoxChange(i: number, raw: string) {
+    const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (!clean) { setCharAt(i, ''); return }
+    // Support paste / fast typing: fan multiple chars across the boxes.
+    if (clean.length > 1) {
+      const arr = joinCode.padEnd(6, ' ').slice(0, 6).split('')
+      let j = i
+      for (const c of clean) { if (j > 5) break; arr[j] = c; j++ }
+      setJoinCode(arr.join('').replace(/ +$/, ''))
+      setJoinError('')
+      boxRefs.current[Math.min(j, 5)]?.focus()
+      return
+    }
+    setCharAt(i, clean)
+    if (i < 5) boxRefs.current[i + 1]?.focus()
+  }
+
+  function handleBoxKey(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !joinCode[i] && i > 0) {
+      e.preventDefault()
+      setCharAt(i - 1, '')
+      boxRefs.current[i - 1]?.focus()
+    } else if (e.key === 'ArrowLeft' && i > 0) {
+      boxRefs.current[i - 1]?.focus()
+    } else if (e.key === 'ArrowRight' && i < 5) {
+      boxRefs.current[i + 1]?.focus()
+    } else if (e.key === 'Enter') {
+      submitJoinCode()
+    }
+  }
 
   async function submitJoinCode() {
-    const code = joinCode.trim().toUpperCase()
+    const code = joinCode.replace(/\s/g, '').toUpperCase()
     if (!code || joining) return
     setJoining(true); setJoinError('')
     try {
@@ -87,31 +136,53 @@ export default function ArenaClient({ profile, quizzesCreated = [], quizzesJoine
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', padding: '0 1.75rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 0 26px rgba(245,158,11,0.4)' }}>
                 Create Quiz <ArrowRight style={{ width: '1.1rem', height: '1.1rem' }} />
               </button>
-              <button type="button" onClick={() => setShowJoin((s) => !s)}
+              <button type="button" onClick={() => setShowJoin(true)}
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', padding: '0 1.75rem', borderRadius: '0.875rem', border: '1px solid rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.08)', color: 'rgb(251,191,36)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 Join with Code →
               </button>
             </div>
-
-            {showJoin && (
-              <div style={{ marginTop: '1.25rem', maxWidth: '24rem' }}>
-                <form onSubmit={(e) => { e.preventDefault(); submitJoinCode() }} style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input value={joinCode} onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 6)); setJoinError('') }} placeholder="CODE" maxLength={6} autoFocus disabled={joining}
-                    style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(0,0,0,0.35)', border: `1px solid ${joinError ? 'rgba(248,113,113,0.6)' : 'rgba(245,158,11,0.5)'}`, color: 'white', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.4em', textAlign: 'center', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', outline: 'none', boxSizing: 'border-box' }} />
-                  <button type="submit" disabled={joining || joinCode.trim().length < 4}
-                    style={{ borderRadius: '0.75rem', border: 'none', background: joining ? 'rgba(245,158,11,0.5)' : 'rgb(245,158,11)', color: 'rgb(41,28,4)', fontWeight: 800, padding: '0 1.25rem', cursor: joining ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}>
-                    {joining ? 'Finding…' : 'Join →'}
-                  </button>
-                </form>
-                {joinError && <p style={{ marginTop: '0.5rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem', fontWeight: 600 }}>{joinError}</p>}
-                <button type="button" onClick={() => router.push('/arena/forge-quiz/live/join')}
-                  style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: 'rgb(196,181,253)', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-                  🎮 Joining a live game? Enter the code here →
-                </button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* ── Join-with-code modal (Kahoot-style OTP entry) ── */}
+        {showJoin && (
+          <div onClick={() => { if (!joining) setShowJoin(false) }}
+            style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(4,4,10,0.78)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'max(1.25rem, env(safe-area-inset-left)) 1.25rem', animation: 'joinFade 0.18s ease both' }}>
+            <div onClick={(e) => e.stopPropagation()}
+              style={{ position: 'relative', width: '100%', maxWidth: '26rem', borderRadius: '1.5rem', border: '1px solid rgba(245,158,11,0.4)', background: 'linear-gradient(160deg, rgba(41,28,8,0.98), rgba(19,19,31,0.98))', padding: '2.5rem 1.75rem 2rem', boxShadow: '0 24px 90px rgba(0,0,0,0.65)', animation: 'joinPop 0.22s cubic-bezier(0.16,1,0.3,1) both' }}>
+              <button type="button" onClick={() => setShowJoin(false)} aria-label="Close"
+                style={{ position: 'absolute', top: '0.875rem', right: '0.875rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgb(200,200,215)', cursor: 'pointer' }}>
+                <X style={{ width: '1.1rem', height: '1.1rem' }} />
+              </button>
+
+              <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎮</div>
+                <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.6rem', fontWeight: 800, color: 'white', marginBottom: '0.35rem' }}>Join a Game</h3>
+                <p style={{ color: 'rgb(200,180,140)', fontSize: '0.9375rem' }}>Enter the 6-character game code</p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: '21rem', margin: '0 auto' }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <input key={i} ref={(el) => { boxRefs.current[i] = el }}
+                    value={joinCode[i]?.trim() || ''} onChange={(e) => handleBoxChange(i, e.target.value)} onKeyDown={(e) => handleBoxKey(i, e)}
+                    inputMode="text" autoCapitalize="characters" autoComplete="off" spellCheck={false} maxLength={6} disabled={joining}
+                    style={{ flex: '1 1 0', minWidth: 0, height: '3.5rem', padding: 0, borderRadius: '0.75rem', background: 'rgba(0,0,0,0.4)', border: `2px solid ${joinError ? 'rgba(248,113,113,0.7)' : joinCode[i]?.trim() ? 'rgba(245,158,11,0.9)' : 'rgba(245,158,11,0.35)'}`, color: 'white', fontSize: '1.6rem', fontWeight: 900, textAlign: 'center', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }} />
+                ))}
+              </div>
+
+              {joinError && <p style={{ marginTop: '0.875rem', textAlign: 'center', color: 'rgb(248,113,113)', fontSize: '0.8125rem', fontWeight: 600 }}>{joinError}</p>}
+
+              <button type="button" onClick={submitJoinCode} disabled={joining || joinCode.replace(/\s/g, '').length < 4}
+                style={{ marginTop: '1.5rem', width: '100%', height: '3.4rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '0.875rem', border: 'none', background: joining || joinCode.replace(/\s/g, '').length < 4 ? 'rgba(245,158,11,0.4)' : 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 900, fontSize: '1.05rem', cursor: joining ? 'wait' : joinCode.replace(/\s/g, '').length < 4 ? 'default' : 'pointer', boxShadow: joinCode.replace(/\s/g, '').length >= 4 ? '0 0 26px rgba(245,158,11,0.35)' : 'none' }}>
+                {joining ? 'Finding…' : <>Join Game <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} /></>}
+              </button>
+            </div>
+            <style>{`
+              @keyframes joinFade { from { opacity: 0 } to { opacity: 1 } }
+              @keyframes joinPop { from { opacity: 0; transform: scale(0.94) translateY(8px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+            `}</style>
+          </div>
+        )}
 
         {/* ── My Quizzes ── */}
         <div style={{ marginTop: '3rem' }}>

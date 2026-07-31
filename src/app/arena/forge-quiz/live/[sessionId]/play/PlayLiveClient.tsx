@@ -8,7 +8,7 @@ import PlayerResult from '@/components/arena/PlayerResult'
 type SessionState = { status: string; display_mode: string; current_question_index: number; question_state: string; question_started_at: string | null }
 type Result = { qIndex: number; isCorrect?: boolean; points?: number; correctAnswer?: string; answer?: any; tooLate?: boolean }
 
-const WAITING_MSGS = ['Nice pick!', "Let's see how you did…", 'Fingers crossed!', 'Locked and loaded.', 'Hold tight…']
+const WAITING_MSGS = ['Answer locked in!', 'Nice pick!']
 
 export default function PlayLiveClient({
   sessionId, userId, me, initialSession, quiz, questions,
@@ -143,14 +143,24 @@ export default function PlayLiveClient({
   const myRank = board.findIndex((p) => p.user_id === userId)
   const myScore = myRank >= 0 ? board[myRank].score : 0
 
+  // A key that changes only when the visual PHASE changes (not on every timer
+  // tick) so the fade/scale-in transition replays on real state transitions.
+  const phaseKey = session.status === 'podium'
+    ? 'podium'
+    : `${session.question_state}:${qIndex}:${answeredThis || result?.tooLate ? 'w' : 'q'}`
+
   const shell = (children: React.ReactNode) => (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: '0.375rem', background: color }} />
-      {children}
+      <div key={phaseKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', animation: 'fadeScaleIn 0.28s ease both' }}>
+        {children}
+      </div>
       <style>{`
         @keyframes shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-8px)} 40%,60%{transform:translateX(8px)} }
         @keyframes pop { from{transform:scale(0.6);opacity:0} to{transform:scale(1);opacity:1} }
         @keyframes confettiFall { to { transform: translateY(120vh) rotate(720deg); opacity: 0; } }
+        @keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.98) } to { opacity: 1; transform: scale(1) } }
+        @keyframes spinRing { to { transform: rotate(360deg) } }
       `}</style>
     </div>
   )
@@ -226,10 +236,58 @@ export default function PlayLiveClient({
   console.error('[Live/play] render gate (answered→waiting):', { answeredThis, result, qIndex, question_state: session.question_state })
   if (answeredThis || result?.tooLate) {
     return shell(
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', padding: '2rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '3.5rem', animation: 'pop 0.4s ease both' }}>{result?.tooLate ? '⏳' : '✅'}</div>
-        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>{result?.tooLate ? 'Too late!' : 'Answer locked in!'}</h1>
-        {!result?.tooLate && <p style={{ color: 'rgb(148,148,168)', fontSize: '1.0625rem' }}>{WAITING_MSGS[waitIdx]}</p>}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '2rem', textAlign: 'center' }}>
+        {result?.tooLate ? (
+          <div style={{ fontSize: '3.25rem', animation: 'pop 0.4s ease both' }}>⏳</div>
+        ) : (
+          // CSS-only rotating gradient ring — professional, on-theme.
+          <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', background: `conic-gradient(from 0deg, ${color}00, ${color})`, WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0)', mask: 'radial-gradient(farthest-side, transparent calc(100% - 5px), #000 0)', animation: 'spinRing 0.85s linear infinite' }} />
+        )}
+        <div>
+          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.7rem', fontWeight: 800, color: 'white', marginBottom: '0.4rem' }}>{result?.tooLate ? 'Too late!' : WAITING_MSGS[waitIdx]}</h1>
+          {!result?.tooLate && <p style={{ color: 'rgb(148,148,168)', fontSize: '1rem' }}>Waiting for others…</p>}
+        </div>
+      </div>
+    )
+  }
+
+  // ── QUESTION: answering, SCREEN-SHARE mode → full-bleed Kahoot quadrant ──
+  // The 4 (or 2) colour+symbol tiles fill the entire viewport, no scrolling,
+  // with safe-area insets respected for notched phones.
+  if (isScreenShare && (q?.question_type === 'mc' || q?.question_type === 'tf')) {
+    const twoCol = nOptions > 2
+    return (
+      <div key={`ss:${qIndex}`} style={{
+        position: 'fixed', inset: 0, background: 'rgb(10,10,20)',
+        display: 'grid',
+        gridTemplateColumns: twoCol ? '1fr 1fr' : '1fr',
+        gridTemplateRows: '1fr 1fr',
+        gap: '0.55rem',
+        padding: 'calc(env(safe-area-inset-top, 0px) + 0.95rem) calc(env(safe-area-inset-right, 0px) + 0.55rem) calc(env(safe-area-inset-bottom, 0px) + 0.55rem) calc(env(safe-area-inset-left, 0px) + 0.55rem)',
+        animation: 'fadeScaleIn 0.28s ease both',
+      }}>
+        {/* timer bar pinned to the very top edge */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '0.4rem', background: 'rgba(255,255,255,0.12)', zIndex: 10 }}>
+          <div style={{ height: '100%', width: `${timePct * 100}%`, background: secondsLeft <= 5 ? 'rgb(239,68,68)' : color, transition: 'width 0.2s linear' }} />
+        </div>
+        {/* seconds countdown pill */}
+        <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 0.6rem)', left: '50%', transform: 'translateX(-50%)', zIndex: 10, minWidth: '2.5rem', height: '2.5rem', padding: '0 0.85rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', color: 'white', fontWeight: 900, fontSize: '1.05rem', boxShadow: '0 2px 12px rgba(0,0,0,0.45)' }}>
+          {Math.ceil(secondsLeft)}
+        </div>
+
+        {Array.from({ length: nOptions }).map((_, i) => {
+          const s = ANSWER_STYLES[i]
+          return (
+            <button key={i} onClick={() => submit(i)} disabled={submitting}
+              onPointerDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.97)' }}
+              onPointerUp={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+              onPointerLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, minWidth: 0, border: 'none', borderRadius: '1.1rem', background: s.color, cursor: 'pointer', opacity: submitting ? 0.55 : 1, transition: 'transform 0.08s ease, opacity 0.15s', WebkitTapHighlightColor: 'transparent' }}>
+              <AnswerShape shape={s.shape} size={76} />
+            </button>
+          )
+        })}
+        <style>{`@keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.98) } to { opacity: 1; transform: scale(1) } }`}</style>
       </div>
     )
   }

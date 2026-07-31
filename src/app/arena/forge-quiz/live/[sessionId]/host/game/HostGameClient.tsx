@@ -273,6 +273,11 @@ export default function HostGameClient({
 
       <div style={{ position: 'relative', maxWidth: '60rem', margin: '0 auto', padding: '2rem 1.5rem 6rem' }}>
 
+       {/* Keyed on the current phase/question so the fade+scale transition replays
+           on every real state change (not on timer ticks). Fixed action buttons
+           live OUTSIDE this wrapper — a transform here would un-pin them. */}
+       <div key={session.status === 'podium' ? 'podium' : `${session.question_state}:${qIndex}`} style={{ animation: 'fadeScaleIn 0.28s ease both' }}>
+
         {/* ── QUESTION ── */}
         {session.question_state === 'question' && q && (
           <>
@@ -308,12 +313,6 @@ export default function HostGameClient({
               </div>
             )}
 
-            <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
-              <button onClick={revealNow} disabled={busy}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(245,158,11,0.4)' }}>
-                Skip Timer / Reveal Now <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} />
-              </button>
-            </div>
           </>
         )}
 
@@ -351,12 +350,6 @@ export default function HostGameClient({
                 <p style={{ color: 'rgb(134,239,172)', fontWeight: 900, fontSize: '2rem' }}>{q.question_type === 'slider' ? q.slider_correct : q.correct_answer}</p>
               </div>
             )}
-            <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
-              <button onClick={showLeaderboard} disabled={busy}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}>
-                Show Leaderboard <ChevronRight style={{ width: '1.2rem', height: '1.2rem' }} />
-              </button>
-            </div>
           </>
         )}
 
@@ -388,19 +381,42 @@ export default function HostGameClient({
               })}
               {board.length === 0 && <p style={{ textAlign: 'center', color: 'rgb(148,148,168)' }}>No scores yet.</p>}
             </div>
-            {session.status !== 'podium' && (
-              <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
-                <button onClick={nextQuestion} disabled={busy}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(22,163,74), rgb(34,197,94))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(34,197,94,0.4)' }}>
-                  {busy ? <><Loader2 style={{ width: '1.2rem', height: '1.2rem' }} className="animate-spin" /> …</> : <>{isLast ? 'See Podium' : 'Next Question'} <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} /></>}
-                </button>
-              </div>
-            )}
           </>
+        )}
+       </div>
+
+        {/* ── Fixed action bar (kept outside the transformed wrapper so it stays
+             pinned to the viewport bottom during the fade/scale transition) ── */}
+        {session.question_state === 'question' && q && (
+          <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+            <button onClick={revealNow} disabled={busy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(245,158,11,0.4)' }}>
+              Skip Timer / Reveal Now <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} />
+            </button>
+          </div>
+        )}
+        {session.question_state === 'revealed' && q && (
+          <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+            <button onClick={showLeaderboard} disabled={busy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(124,58,237,0.4)' }}>
+              Show Leaderboard <ChevronRight style={{ width: '1.2rem', height: '1.2rem' }} />
+            </button>
+          </div>
+        )}
+        {session.question_state === 'leaderboard' && session.status !== 'podium' && (
+          <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
+            <button onClick={nextQuestion} disabled={busy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: '3.5rem', padding: '0 2.25rem', borderRadius: '9999px', border: 'none', background: 'linear-gradient(90deg, rgb(22,163,74), rgb(34,197,94))', color: 'white', fontWeight: 900, fontSize: '1.0625rem', cursor: 'pointer', boxShadow: '0 0 30px rgba(34,197,94,0.4)' }}>
+              {busy ? <><Loader2 style={{ width: '1.2rem', height: '1.2rem' }} className="animate-spin" /> …</> : <>{isLast ? 'See Podium' : 'Next Question'} <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} /></>}
+            </button>
+          </div>
         )}
       </div>
 
-      <style>{`@keyframes lbSlide { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }`}</style>
+      <style>{`
+        @keyframes lbSlide { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
     </div>
   )
 }
