@@ -7,7 +7,7 @@ import { ActionCards } from '@/components/arena/action-cards'
 import { MyQuizzes } from '@/components/arena/my-quizzes'
 import type { CreatedCard, JoinedCard } from '@/components/arena/quiz-card'
 
-type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean }
+type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean; is_starred?: boolean }
 type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number }
 type HostedLive = { id: string; title: string; banner_color: string; date: string; playerCount: number; active: boolean }
 type JoinedLive = { id: string; title: string; banner_color: string; date: string; score: number; rank: number; playerCount: number; active: boolean }
@@ -61,26 +61,33 @@ export default function ArenaClient({
   }
 
   // ── Map real Supabase data → card models (Created / Joined tabs) ──
+  // Created quizzes are owned: Manage → the edit/relaunch flow; the play button
+  // quick-relaunches after a format pick. Hosted live sessions are owned too but
+  // aren't relaunchable rows, so they get Manage → host control only.
   const createdCards: CreatedCard[] = [
     ...quizzesCreated.map((q): CreatedCard => ({
       id: `q-${q.id}`,
+      kind: 'quiz',
+      quizId: q.id,
       title: q.title,
       active: q.active,
       mode: q.play_mode === 'live' ? 'Live' : 'Self-paced',
       players: q.playerCount,
       meta: q.active ? (q.expires_at ? timeLeftLabel(q.expires_at) : undefined) : undefined,
-      href: `/arena/forge-quiz/${q.id}/lobby`,
-      actionLabel: q.active ? 'Manage' : 'View Results',
+      starred: !!q.is_starred,
+      manageHref: `/arena/forge-quiz/${q.id}/edit`,
     })),
     ...liveHosted.map((s): CreatedCard => ({
       id: `lh-${s.id}`,
+      kind: 'session',
+      quizId: '',
       title: s.title,
       active: s.active,
       mode: 'Live',
       players: s.playerCount,
       meta: liveDate(s.date),
-      href: s.active ? `/arena/forge-quiz/live/${s.id}/host` : `/arena/forge-quiz/live/${s.id}/results`,
-      actionLabel: s.active ? 'Rejoin' : 'View Results',
+      starred: false,
+      manageHref: `/arena/forge-quiz/live/${s.id}/host`,
     })),
   ]
 
@@ -94,8 +101,7 @@ export default function ArenaClient({
       score: q.score,
       totalPlayers: q.playerCount,
       meta: q.completed ? undefined : 'Not finished',
-      href: `/arena/forge-quiz/${q.id}/${q.active ? 'lobby' : 'results'}`,
-      actionLabel: q.active ? 'View Leaderboard' : 'View Results',
+      playHref: q.active ? `/arena/forge-quiz/${q.id}/lobby` : undefined,
     })),
     ...liveJoined.map((s): JoinedCard => ({
       id: `lj-${s.id}`,
@@ -106,8 +112,7 @@ export default function ArenaClient({
       score: s.score,
       totalPlayers: s.playerCount,
       meta: s.active ? liveDate(s.date) : undefined,
-      href: s.active ? `/arena/forge-quiz/live/${s.id}/play` : `/arena/forge-quiz/live/${s.id}/results`,
-      actionLabel: s.active ? 'Rejoin' : 'View Results',
+      playHref: s.active ? `/arena/forge-quiz/live/${s.id}/play` : undefined,
     })),
   ]
 

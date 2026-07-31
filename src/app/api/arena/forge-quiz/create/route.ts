@@ -22,6 +22,7 @@ import { NextResponse } from 'next/server'
 // -- ALTER TABLE forge_quizzes DISABLE ROW LEVEL SECURITY;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS expires_at timestamptz;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS allow_replay boolean DEFAULT true;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS is_starred boolean DEFAULT false;
 // --
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_questions (
 // --   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,

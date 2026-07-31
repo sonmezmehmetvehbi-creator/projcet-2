@@ -57,7 +57,7 @@ export default async function ArenaPage() {
     return {
       id: q.id, title: q.title, banner_color: q.banner_color, play_mode: q.play_mode,
       expires_at: q.expires_at ?? null, playerCount: parts.filter((p) => p.completed).length,
-      active: isActive(q),
+      active: isActive(q), is_starred: q.is_starred ?? false,
     }
   })
 
