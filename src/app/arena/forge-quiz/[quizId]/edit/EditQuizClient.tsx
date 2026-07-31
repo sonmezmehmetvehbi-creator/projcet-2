@@ -22,6 +22,7 @@ function fromDB(q: any): Question {
     slider_correct: q.slider_correct ?? 50,
     points_multiplier: [0, 1, 2].includes(q.points_multiplier) ? q.points_multiplier : 1,
     time_limit: q.time_limit ?? null,
+    speed_bonus_enabled: q.speed_bonus_enabled ?? true,
     image_url: q.image_url ?? null,
   }
 }
@@ -86,6 +87,7 @@ export default function EditQuizClient({ quiz, initialQuestions }: { quiz: any; 
         slider_max: q.question_type === 'slider' ? q.slider_max : null,
         slider_correct: q.question_type === 'slider' ? q.slider_correct : null,
         points_multiplier: q.points_multiplier, time_limit: q.time_limit,
+        speed_bonus_enabled: q.speed_bonus_enabled,
         image_url: q.image_url && q.image_url !== '__uploading__' ? q.image_url : null,
       }))
       // 1) Persist the edited questions to the original quiz.

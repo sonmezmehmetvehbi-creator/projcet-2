@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Confetti, { CountUp } from './Confetti'
+import { CountUp } from './Confetti'
+import { burstPersonal } from '@/lib/confettiBursts'
 
 export default function PlayerResult({
   rank, totalPlayers, score, correct, attempted, bestStreak, quizTitle, bannerColor = '#7c3aed', playerName, avatar,
@@ -22,6 +23,12 @@ export default function PlayerResult({
   const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0
   const medal = ['🥇', '🥈', '🥉'][rank - 1]
   const [copied, setCopied] = useState(false)
+
+  // A smaller, personal-scale confetti burst when a top-3 result lands.
+  useEffect(() => {
+    if (tier === 'top3') burstPersonal(rank === 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function share() {
     const text = `I placed #${rank} in ${quizTitle} Live! 🎯`
@@ -43,8 +50,7 @@ export default function PlayerResult({
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(8,8,16)', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2.5rem 1.5rem 4rem' }}>
-      {tier === 'top3' && <Confetti count={60} intense={rank === 1} />}
-      <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '40rem', height: '22rem', borderRadius: '9999px', background: `${bannerColor}22`, filter: 'blur(120px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '40rem', height: '22rem', borderRadius: '9999px', background: `${bannerColor}22`, filter: 'blur(120px)', pointerEvents: 'none', animation: 'ambientDrift 16s ease-in-out infinite' }} />
 
       <div style={{ position: 'relative', width: '100%', maxWidth: '26rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
         <div style={{ fontSize: '4rem', animation: 'introPop 0.5s ease both' }}>{tier === 'top3' ? medal : tier === 'mention' ? '🎖️' : avatar}</div>
@@ -61,7 +67,7 @@ export default function PlayerResult({
           <Stat label="Correct" value={`${correct}/${attempted}`} />
           <Stat label="Accuracy" value={`${accuracy}%`} />
           <Stat label="Best Streak" value={`🔥 ${bestStreak}`} />
-          <Stat label="Final Rank" value={`#${rank}`} />
+          <Stat label="Final Rank" value={<>#<CountUp value={rank} duration={900} /></>} />
         </div>
 
         <button onClick={share}
@@ -73,12 +79,15 @@ export default function PlayerResult({
         </Link>
       </div>
 
-      <style>{`@keyframes introPop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>
+      <style>{`
+        @keyframes introPop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes ambientDrift { 0%, 100% { transform: translate(-50%, 0) scale(1); } 50% { transform: translate(-46%, 16px) scale(1.1); } }
+      `}</style>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', padding: '1rem', textAlign: 'center' }}>
       <p style={{ color: 'rgb(148,148,168)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>{label}</p>

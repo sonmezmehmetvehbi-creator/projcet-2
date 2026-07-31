@@ -10,6 +10,9 @@ export type ScoreQuestion = {
   slider_correct?: number | null
   points_multiplier?: number | null
   time_limit?: number | null
+  // When false, a correct answer earns the full base points regardless of speed
+  // (no time-based reduction). Defaults to true (speed-weighted) when unset.
+  speed_bonus_enabled?: boolean | null
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
@@ -41,7 +44,11 @@ export function scoreAnswer(
   answerTimeMs: number,
   timeLimitSec: number,
 ): { isCorrect: boolean; points: number } {
-  const basePts = speedBase(answerTimeMs, Math.max(1, timeLimitSec) * 1000)
+  // Speed bonus ON (default): award points weighted by how fast the answer came
+  // in. Speed bonus OFF: award the full base (1000) for any correct answer.
+  const basePts = q.speed_bonus_enabled === false
+    ? 1000
+    : speedBase(answerTimeMs, Math.max(1, timeLimitSec) * 1000)
   const mult = [0, 1, 2].includes(q.points_multiplier as number) ? (q.points_multiplier as number) : 1
 
   if (q.question_type === 'mc' || q.question_type === 'tf') {

@@ -20,6 +20,7 @@ type Question = {
   slider_correct: number | null
   points_multiplier: number
   time_limit: number | null
+  speed_bonus_enabled?: boolean | null
   image_url: string | null
 }
 
@@ -139,7 +140,9 @@ export default function ForgeQuizPlayClient({
     return () => clearTimeout(t)
   }, [status, revealed, msLeft, reveal])
 
-  const basePts = () => 1000 * (msLeft / totalMs)
+  // Speed bonus OFF → flat 1000 base for a correct answer; ON → weighted by
+  // remaining time. (sliderPoints still grades partial credit off this base.)
+  const basePts = () => (q?.speed_bonus_enabled === false ? 1000 : 1000 * (msLeft / totalMs))
 
   function answerMC(idx: number) {
     if (revealed) return

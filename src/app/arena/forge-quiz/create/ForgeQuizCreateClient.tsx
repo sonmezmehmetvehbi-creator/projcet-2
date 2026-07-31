@@ -41,6 +41,7 @@ export type Question = {
   slider_correct: number
   points_multiplier: number
   time_limit: number | null
+  speed_bonus_enabled: boolean
   image_url: string | null
 }
 
@@ -58,6 +59,7 @@ export function newQuestion(type: QType = 'mc'): Question {
     slider_correct: 50,
     points_multiplier: 1,
     time_limit: null,
+    speed_bonus_enabled: true,
     image_url: null,
   }
 }
@@ -75,6 +77,7 @@ function fromAI(q: any): Question {
     slider_correct: q.slider_correct ?? 50,
     points_multiplier: [0, 1, 2].includes(q.points_multiplier) ? q.points_multiplier : 1,
     time_limit: q.time_limit ?? null,
+    speed_bonus_enabled: q.speed_bonus_enabled ?? true,
   }
 }
 
@@ -245,6 +248,7 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
           slider_max: q.question_type === 'slider' ? q.slider_max : null,
           slider_correct: q.question_type === 'slider' ? q.slider_correct : null,
           points_multiplier: q.points_multiplier, time_limit: q.time_limit,
+          speed_bonus_enabled: q.speed_bonus_enabled,
           image_url: q.image_url && q.image_url !== '__uploading__' ? q.image_url : null,
         })),
       }
@@ -648,6 +652,23 @@ export function QuestionEditor({ q, index, total, onChange, onChangeType, onRemo
         {POINTS.map((p) => <button key={p.v} type="button" onClick={() => onChange({ points_multiplier: p.v })} style={{ ...pill(q.points_multiplier === p.v), fontSize: '0.75rem' }}>{p.label}</button>)}
         <input style={{ ...input, width: '9rem', marginLeft: 'auto' }} type="number" min={5} max={120} value={q.time_limit ?? ''} onChange={(e) => onChange({ time_limit: e.target.value ? Number(e.target.value) : null })} placeholder={`Time: ${defaultTime}s`} />
       </div>
+
+      {/* Speed bonus toggle */}
+      {(() => {
+        const on = q.speed_bonus_enabled !== false
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div>
+              <div style={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>Speed Bonus</div>
+              <div style={{ color: 'rgb(148,148,168)', fontSize: '0.72rem' }}>Faster answers earn more points</div>
+            </div>
+            <button type="button" role="switch" aria-checked={on} aria-label="Speed bonus" onClick={() => onChange({ speed_bonus_enabled: !on })}
+              style={{ position: 'relative', flexShrink: 0, width: '3rem', height: '1.6rem', borderRadius: '9999px', border: 'none', cursor: 'pointer', background: on ? '#22c55e' : 'rgba(255,255,255,0.18)', transition: 'background 0.2s' }}>
+              <span style={{ position: 'absolute', top: '0.2rem', left: on ? '1.6rem' : '0.2rem', width: '1.2rem', height: '1.2rem', borderRadius: '9999px', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+            </button>
+          </div>
+        )
+      })()}
     </div>
   )
 }

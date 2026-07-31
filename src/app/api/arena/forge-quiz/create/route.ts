@@ -41,6 +41,7 @@ import { NextResponse } from 'next/server'
 // --   created_at timestamptz DEFAULT now()
 // -- );
 // -- ALTER TABLE forge_quiz_questions DISABLE ROW LEVEL SECURITY;
+// -- ALTER TABLE forge_quiz_questions ADD COLUMN IF NOT EXISTS speed_bonus_enabled boolean DEFAULT true;
 // --
 // -- Create a public storage bucket named 'quiz-images'.
 
@@ -121,6 +122,7 @@ export async function POST(request: Request) {
       slider_correct: q.slider_correct != null ? Number(q.slider_correct) : null,
       points_multiplier: [0, 1, 2].includes(q.points_multiplier) ? q.points_multiplier : 1,
       time_limit: q.time_limit != null ? Number(q.time_limit) : null,
+      speed_bonus_enabled: q.speed_bonus_enabled === false ? false : true,
       image_url: q.image_url || null,
     }))
 

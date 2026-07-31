@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       slider_correct: q.slider_correct,
       points_multiplier: q.points_multiplier,
       time_limit: q.time_limit,
+      speed_bonus_enabled: q.speed_bonus_enabled ?? true,
       image_url: q.image_url,
     }))
     const { error: qErr } = await adminClient.from('forge_quiz_questions').insert(rows)
