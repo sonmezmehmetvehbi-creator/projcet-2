@@ -27,6 +27,7 @@ import { NextResponse } from 'next/server'
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS subject text;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS topic text;
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS source_quiz_id uuid; -- original a relaunched copy came from
 // --
 // -- -- Browse-public "save" (star) join table — replaces the is_starred boolean.
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_stars (

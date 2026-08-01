@@ -37,6 +37,7 @@ export type PreviewData = {
   ratingSum: number
   myRating: number
   isOwner: boolean
+  hasPlayed: boolean
   questions: PreviewQuestion[]
 }
 
@@ -147,13 +148,25 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
           )}
         </div>
 
-        {/* Rating widget */}
+        {/* Rating widget — only interactive once the user has actually played. */}
         <div className="mt-6 rounded-2xl border border-arena-border bg-surface/60 p-4 sm:p-5">
-          <p className="text-sm font-semibold text-arena-fg">{myRating ? "Your rating" : "Rate this quiz"}</p>
-          <p className="mt-0.5 text-xs text-arena-muted">{myRating ? "Tap a star to change it." : "Help others discover great quizzes."}</p>
-          <div className="mt-3">
-            <StarInput value={myRating} onRate={rate} />
-          </div>
+          {data.hasPlayed ? (
+            <>
+              <p className="text-sm font-semibold text-arena-fg">{myRating ? "Your rating" : "Rate this quiz"}</p>
+              <p className="mt-0.5 text-xs text-arena-muted">{myRating ? "Tap a star to change it." : "Help others discover great quizzes."}</p>
+              <div className="mt-3">
+                <StarInput value={myRating} onRate={rate} />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-arena-fg">Rate this quiz</p>
+              <p className="mt-0.5 text-xs text-arena-muted">Play this quiz to leave a rating</p>
+              <div className="mt-3">
+                <StarInput value={0} onRate={() => {}} disabled />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Full question list (read-only) */}

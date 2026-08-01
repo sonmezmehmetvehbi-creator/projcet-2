@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import {
   ArrowUpRight, BarChart3, Crown, Users, ListChecks, Clock, Radio, Play,
-  MoreVertical, Star, Trash2, UserPlus, Loader2, Gamepad2, X,
+  MoreVertical, Star, Trash2, UserPlus, Loader2, X,
 } from "lucide-react"
+import { LaunchModePicker, customHours } from "@/app/arena/forge-quiz/create/ForgeQuizCreateClient"
 
 // Real-data card models (no mock lib/arena-data). ArenaClient maps the Supabase
 // results into these. `quizId` is the real forge_quizzes UUID used for
@@ -215,8 +216,18 @@ function CardMenu({
 // editing step. Only offered on owned quiz cards (relaunch requires ownership).
 export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quizId: string; onClose: () => void; title?: string }) {
   const router = useRouter()
-  const [busy, setBusy] = useState<"self_paced" | "live" | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+
+  // Same launch-mode + duration selection used by create / edit-relaunch. For a
+  // self-paced run the player picks THEIR OWN duration here (not the original's);
+  // relaunch ignores duration for live rooms.
+  const [playMode, setPlayMode] = useState<"self_paced" | "live">("self_paced")
+  const [duration, setDuration] = useState("24h")
+  const [durationMode, setDurationMode] = useState<"preset" | "custom">("preset")
+  const [customValue, setCustomValue] = useState(3)
+  const [customUnit, setCustomUnit] = useState<"hours" | "days">("hours")
+  const [allowReplay, setAllowReplay] = useState(true)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape" && !busy) onClose() }
@@ -226,18 +237,21 @@ export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quiz
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev }
   }, [busy, onClose])
 
-  async function run(mode: "self_paced" | "live") {
+  async function start() {
     if (busy) return
-    setBusy(mode); setError("")
+    setBusy(true); setError("")
     try {
+      const customDurationHours = playMode === "self_paced" && durationMode === "custom"
+        ? customHours(customValue, customUnit)
+        : null
       const relRes = await fetch("/api/arena/forge-quiz/relaunch", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originalQuizId: quizId, playMode: mode }),
+        body: JSON.stringify({ originalQuizId: quizId, playMode, duration, customDurationHours }),
       })
       const rel = await relRes.json()
       if (!relRes.ok || !rel.newQuizId) throw new Error(rel.error || "Could not start the quiz")
 
-      if (mode === "self_paced") {
+      if (playMode === "self_paced") {
         router.push(`/arena/forge-quiz/${rel.newQuizId}/lobby`)
         return
       }
@@ -251,7 +265,7 @@ export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quiz
       router.push(`/arena/forge-quiz/live/${ses.sessionId}/host`)
     } catch (e: any) {
       setError(e.message || "Something went wrong")
-      setBusy(null)
+      setBusy(false)
     }
   }
 
@@ -262,7 +276,7 @@ export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quiz
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm rounded-2xl border border-arena-border bg-surface p-6 shadow-2xl shadow-black/60"
+        className="relative max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-arena-border bg-surface p-6 shadow-2xl shadow-black/60"
       >
         <button
           type="button"
@@ -274,41 +288,30 @@ export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quiz
         </button>
 
         <h3 className="text-lg font-semibold tracking-tight text-arena-fg">{title}</h3>
-        <p className="mt-1 text-sm text-arena-muted">How do you want to run it?</p>
+        <p className="mt-1 text-sm text-arena-muted">Choose how to run it — self-paced runs use the duration you pick here.</p>
 
-        <div className="mt-5 grid gap-3">
-          <button
-            type="button"
-            onClick={() => run("self_paced")}
-            disabled={!!busy}
-            className="flex items-center gap-3 rounded-xl border border-arena-border bg-arena-bg/60 p-4 text-left transition-colors hover:border-brand/50 hover:bg-brand/10 disabled:opacity-60"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand/12 text-brand-foreground">
-              {busy === "self_paced" ? <Loader2 className="h-5 w-5 animate-spin" /> : <ListChecks className="h-5 w-5" />}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-arena-fg">Self-paced</span>
-              <span className="block text-xs text-arena-muted">Share a link · players go at their own pace</span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => run("live")}
-            disabled={!!busy}
-            className="flex items-center gap-3 rounded-xl border border-arena-border bg-arena-bg/60 p-4 text-left transition-colors hover:border-ember/50 hover:bg-ember/10 disabled:opacity-60"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-ember/30 bg-ember/12 text-ember">
-              {busy === "live" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Gamepad2 className="h-5 w-5" />}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-arena-fg">Live Room</span>
-              <span className="block text-xs text-arena-muted">Players join with a code · you host</span>
-            </span>
-          </button>
+        <div className="mt-5">
+          <LaunchModePicker
+            playMode={playMode} setPlayMode={setPlayMode}
+            duration={duration} setDuration={setDuration}
+            durationMode={durationMode} setDurationMode={setDurationMode}
+            customValue={customValue} setCustomValue={setCustomValue}
+            customUnit={customUnit} setCustomUnit={setCustomUnit}
+            allowReplay={allowReplay} setAllowReplay={setAllowReplay}
+          />
         </div>
 
         {error && <p className="mt-3 text-sm font-medium text-red-400">{error}</p>}
+
+        <button
+          type="button"
+          onClick={start}
+          disabled={busy}
+          className="mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground outline-none transition-transform hover:scale-[1.01] focus-visible:ring-4 focus-visible:ring-brand/40 active:scale-[0.99] disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+          {busy ? "Starting…" : playMode === "live" ? "Start Live Room" : "Start Self-Paced"}
+        </button>
       </div>
     </div>
   )

@@ -21,7 +21,9 @@ export default async function ForgeQuizEditPage({ params }: { params: { quizId: 
     .eq('id', params.quizId)
     .maybeSingle()
   if (!quiz) redirect('/arena')
-  if (quiz.creator_id !== user.id) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
+  // Editing is creator-only, ALWAYS — public means viewable/playable by others,
+  // never editable. Non-creators are sent to the read-only preview instead.
+  if (quiz.creator_id !== user.id) redirect(`/arena/browse/${params.quizId}`)
 
   // "Manage" from the Arena hub must reliably land here (edit + relaunch) for the
   // creator of ANY quiz. Previously this redirected every non-expired quiz to

@@ -40,7 +40,10 @@ export function StarDisplay({
   )
 }
 
-// Interactive 1-5 selector (hover preview + click to set).
+// Interactive 1-5 selector. The saved rating ONLY changes on click (onRate).
+// Hover is a purely-visual preview kept in separate state; leaving the widget
+// clears it, so the display always falls back to the committed `value` — it
+// never follows the cursor or "sticks" without a click.
 export function StarInput({
   value,
   onRate,
@@ -53,9 +56,15 @@ export function StarInput({
   disabled?: boolean
 }) {
   const [hover, setHover] = useState(0)
-  const active = hover || value
+  // Preview follows the cursor only while hovering; otherwise show the committed value.
+  const shown = disabled ? value : (hover || value)
   return (
-    <div className="inline-flex items-center gap-1" role="radiogroup" aria-label="Rate this quiz">
+    <div
+      className="inline-flex items-center gap-1"
+      role="radiogroup"
+      aria-label="Rate this quiz"
+      onMouseLeave={() => setHover(0)}
+    >
       {[1, 2, 3, 4, 5].map((i) => (
         <button
           key={i}
@@ -64,13 +73,14 @@ export function StarInput({
           aria-checked={value === i}
           aria-label={`${i} star${i === 1 ? "" : "s"}`}
           disabled={disabled}
-          onMouseEnter={() => !disabled && setHover(i)}
-          onMouseLeave={() => setHover(0)}
-          onClick={() => !disabled && onRate(i)}
+          onMouseEnter={() => { if (!disabled) setHover(i) }}
+          onFocus={() => { if (!disabled) setHover(i) }}
+          onBlur={() => setHover(0)}
+          onClick={() => { if (!disabled) onRate(i) }}
           className="rounded outline-none transition-transform duration-150 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ember/40 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Star
-            className={active >= i ? "fill-ember text-ember" : "text-arena-muted/50"}
+            className={shown >= i ? "fill-ember text-ember" : "text-arena-muted/50"}
             style={{ width: size, height: size }}
             aria-hidden
           />

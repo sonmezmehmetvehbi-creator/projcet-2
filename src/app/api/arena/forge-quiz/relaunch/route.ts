@@ -60,6 +60,10 @@ export async function POST(request: Request) {
         expires_at: expiresAt,
         subject: orig.subject ?? null,
         topic: orig.topic ?? null,
+        // Trace this playable copy back to its origin so plays of it count toward
+        // the original (e.g. the Browse "have you played this?" rating gate).
+        // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS source_quiz_id uuid;
+        source_quiz_id: orig.source_quiz_id ?? originalQuizId,
       })
       .select('id')
       .single()
