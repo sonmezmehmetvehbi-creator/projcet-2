@@ -4,9 +4,13 @@ import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Loader2, Plus, Sparkles,
-  Trash2, Image as ImageIcon, PencilLine, Bot, FileText, Link2, Gamepad2,
+  Trash2, Image as ImageIcon, PencilLine, Bot, FileText, Link2, Gamepad2, Play,
 } from 'lucide-react'
 import { SUBJECTS_BY_CATEGORY, getTopics } from '@/lib/subjects'
+import { LaunchChooser } from '@/components/arena/LaunchChooser'
+// Shared primitives live in a standalone module (no cycle with LaunchChooser).
+import { DURATIONS, customHours, input, sel, pill } from '@/components/arena/forgeShared'
+export { DURATIONS, customHours, input, sel, pill }
 
 // ── Constants ──
 const CATEGORIES = Object.keys(SUBJECTS_BY_CATEGORY).filter((c) => SUBJECTS_BY_CATEGORY[c].length > 0)
@@ -23,10 +27,6 @@ export const QTYPES = [
   { value: 'slider', label: 'Slider' }, { value: 'fr', label: 'Free Response' },
 ] as const
 export const POINTS = [{ v: 0, label: 'No Points (0×)' }, { v: 1, label: 'Normal (1×)' }, { v: 2, label: 'Double (2×)' }]
-const DURATIONS = [
-  { value: '1h', label: '1 hour' }, { value: '6h', label: '6 hours' }, { value: '12h', label: '12 hours' },
-  { value: '24h', label: '24 hours' }, { value: '3d', label: '3 days' }, { value: '7d', label: '7 days' },
-]
 
 export type QType = 'mc' | 'tf' | 'slider' | 'fr'
 export type Question = {
@@ -81,10 +81,8 @@ function fromAI(q: any): Question {
   }
 }
 
-// ── Shared styles ──
+// ── Shared styles (input/sel/pill come from forgeShared, re-exported above) ──
 export const label: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgb(196,181,253)', marginBottom: '0.5rem' }
-export const input: React.CSSProperties = { width: '100%', padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.35)', color: 'white', fontSize: '0.9375rem', outline: 'none', boxSizing: 'border-box' }
-export const sel: React.CSSProperties = { ...input, colorScheme: 'dark', cursor: 'pointer' }
 export const card: React.CSSProperties = { borderRadius: '1.25rem', border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(19,19,31,0.7)', padding: '1.5rem' }
 
 // Shared public/private visibility toggle (create Step 1 + edit/manage screen).
@@ -106,7 +104,6 @@ export function PublicToggle({ isPublic, onChange, disabled = false }: { isPubli
     </div>
   )
 }
-export const pill = (active: boolean): React.CSSProperties => ({ padding: '0.5rem 0.9rem', borderRadius: '9999px', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.12)'}`, background: active ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.03)', color: active ? 'rgb(196,181,253)' : 'rgb(180,180,195)', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' })
 
 export function isValid(q: Question): boolean {
   if (!q.question_text.trim()) return false
@@ -157,12 +154,10 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  // Live Room setup (shown after creating a live-mode quiz, before opening the room)
-  const [showLiveSetup, setShowLiveSetup] = useState(false)
+  // Once created, the quiz is saved as a draft template; we show a success state
+  // with an OPTIONAL "Launch Now" (the unified LaunchChooser) — no forced launch.
   const [createdQuizId, setCreatedQuizId] = useState<string | null>(null)
-  const [liveMaxPlayers, setLiveMaxPlayers] = useState('')
-  const [liveDisplayMode, setLiveDisplayMode] = useState<'screen_share' | 'everyone_sees'>('screen_share')
-  const [creatingRoom, setCreatingRoom] = useState(false)
+  const [launchOpen, setLaunchOpen] = useState(false)
   const [uploadError, setUploadError] = useState('')
 
   const subjects = category ? SUBJECTS_BY_CATEGORY[category] ?? [] : []
@@ -250,16 +245,14 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
     }
   }
 
+  // Creating a quiz just SAVES it (as a draft template) — no launching here.
   async function submit() {
     setSubmitError(''); setSubmitting(true)
     try {
-      const customDurationHours = durationMode === 'custom'
-        ? Math.max(1, Math.round(customValue * (customUnit === 'days' ? 24 : 1)))
-        : null
       const payload = {
-        title, welcomeMessage: welcome, bannerColor: banner, playMode,
+        title, welcomeMessage: welcome, bannerColor: banner,
         timePerQuestion: timePerQ, maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-        duration, customDurationHours, allowReplay, isPublic, subject, topic,
+        isPublic, subject, topic,
         questions: questions.map((q) => ({
           question_text: q.question_text, question_type: q.question_type,
           options: q.question_type === 'mc' || q.question_type === 'tf' ? q.options : null,
@@ -278,97 +271,46 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
       })
       const data = await res.json()
       if (!data.quizId) throw new Error(data.error || 'Failed to create quiz')
-      // Self-paced quizzes go to the shareable lobby. Live Room quizzes move to a
-      // dedicated confirmation screen that opens the real live waiting room —
-      // they never touch the self-paced lobby / its room code.
-      if (playMode === 'live') {
-        setCreatedQuizId(data.quizId)
-        setLiveMaxPlayers(maxPlayers)
-        setShowLiveSetup(true)
-        setSubmitting(false)
-        return
-      }
-      router.push(`/arena/forge-quiz/${data.quizId}/lobby`)
+      setCreatedQuizId(data.quizId) // → success screen (Launch Now is optional)
+      setSubmitting(false)
     } catch (e: any) {
       setSubmitError(e.message || 'Failed to create quiz')
       setSubmitting(false)
     }
   }
 
-  async function createLiveRoom() {
-    if (!createdQuizId) return
-    setCreatingRoom(true); setSubmitError('')
-    try {
-      const res = await fetch('/api/arena/forge-quiz/live/start-session', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quizId: createdQuizId, displayMode: liveDisplayMode, maxPlayers: liveMaxPlayers ? Number(liveMaxPlayers) : null }),
-      })
-      const data = await res.json()
-      if (!data.sessionId) throw new Error(data.error || 'Failed to create live room')
-      router.push(`/arena/forge-quiz/live/${data.sessionId}/host`)
-    } catch (e: any) {
-      setSubmitError(e.message || 'Failed to create live room')
-      setCreatingRoom(false)
-    }
-  }
-
   const validQuestions = questions.filter(isValid)
   const canProceed = step === 1 ? title.trim().length > 0 : step === 2 ? validQuestions.length >= 1 : true
-  const STEP_LABELS = ['Setup', 'Questions', 'Review', 'Launch']
+  const STEP_LABELS = ['Setup', 'Questions', 'Review']
   const estMinutes = Math.max(1, Math.round((questions.length * timePerQ) / 60))
 
-  // ── Live Room confirmation screen ──
-  if (showLiveSetup) {
+  // ── Success screen — quiz saved, launching is optional ──
+  if (createdQuizId) {
     return (
-      <div style={{ maxWidth: '38rem', margin: '0 auto', padding: '6rem 1.5rem 4rem' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 800, color: 'rgb(196,181,253)', marginBottom: '0.75rem' }}>
-          <Gamepad2 style={{ width: '1.1rem', height: '1.1rem' }} /> LIVE ROOM SETUP
-        </div>
-        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2rem', fontWeight: 800, color: 'white', marginBottom: '1.5rem' }}>Ready to go live?</h1>
-
-        {/* Summary card */}
-        <div style={{ borderRadius: '1rem', border: `1px solid ${banner}`, background: `linear-gradient(135deg, ${banner}, rgba(19,19,31,0.9))`, padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <span style={{ width: '1.5rem', height: '1.5rem', borderRadius: '0.375rem', background: banner, border: '2px solid rgba(255,255,255,0.6)' }} />
-            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{title || 'Untitled quiz'}</h2>
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.875rem' }}>{questions.length} question{questions.length === 1 ? '' : 's'} · {timePerQ}s per question</p>
-        </div>
-
-        {/* Max players */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={label}>Max players (optional)</label>
-          <input style={input} type="number" min={1} value={liveMaxPlayers} onChange={(e) => setLiveMaxPlayers(e.target.value)} placeholder="Unlimited" />
-        </div>
-
-        {/* Display mode toggle */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <label style={label}>Display mode</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            {([
-              { v: 'screen_share' as const, title: 'Screen Share 📺', desc: 'Questions show on the host screen; players tap colored symbols.' },
-              { v: 'everyone_sees' as const, title: 'Everyone Sees 📱', desc: 'Each player also sees the question text on their own device.' },
-            ]).map((m) => {
-              const active = liveDisplayMode === m.v
-              return (
-                <button key={m.v} type="button" onClick={() => setLiveDisplayMode(m.v)}
-                  style={{ textAlign: 'left', borderRadius: '1rem', border: `1px solid ${active ? 'rgba(124,58,237,0.8)' : 'rgba(255,255,255,0.1)'}`, background: active ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)', padding: '1rem', cursor: 'pointer' }}>
-                  <p style={{ color: 'white', fontWeight: 800, fontSize: '0.9375rem', marginBottom: '0.25rem' }}>{m.title}</p>
-                  <p style={{ color: 'rgb(148,148,168)', fontSize: '0.78rem', lineHeight: 1.35 }}>{m.desc}</p>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {submitError && <p style={{ margin: '0 0 0.75rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{submitError}</p>}
-        <button type="button" onClick={createLiveRoom} disabled={creatingRoom}
-          style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.5rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1.05rem', cursor: creatingRoom ? 'wait' : 'pointer' }}>
-          {creatingRoom ? <><Loader2 style={{ width: '1.15rem', height: '1.15rem' }} className="animate-spin" /> Opening room…</> : <>Create Live Room <ArrowRight style={{ width: '1.1rem', height: '1.1rem' }} /></>}
-        </button>
-        <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8125rem', color: 'rgb(148,148,168)' }}>
-          Your quiz has been saved. You can relaunch it anytime from the Arena.
+      <div style={{ maxWidth: '34rem', margin: '0 auto', padding: '7rem 1.5rem 4rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🎉</div>
+        <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.25rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>Quiz created!</h1>
+        <p style={{ color: 'rgb(148,148,168)', marginBottom: '2rem', lineHeight: 1.5 }}>
+          <strong style={{ color: 'white' }}>{title || 'Your quiz'}</strong> is saved to your Arena. Launch it now, or come back to it anytime from My Quizzes.
         </p>
+
+        <div style={{ borderRadius: '1rem', border: `1px solid ${banner}`, background: `linear-gradient(135deg, ${banner}, rgba(19,19,31,0.9))`, padding: '1.25rem', marginBottom: '1.75rem', textAlign: 'left' }}>
+          <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.3rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>{title || 'Untitled quiz'}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.875rem' }}>{questions.length} question{questions.length === 1 ? '' : 's'}{isPublic ? ' · 🌐 Public' : ' · 🔒 Private'}</p>
+        </div>
+
+        <button type="button" onClick={() => setLaunchOpen(true)}
+          style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.5rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+          <Play style={{ width: '1.2rem', height: '1.2rem' }} /> Launch Now
+        </button>
+        <button type="button" onClick={() => router.push('/arena')}
+          style={{ width: '100%', height: '3rem', borderRadius: '0.875rem', border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: 'rgb(200,200,215)', fontWeight: 700, cursor: 'pointer' }}>
+          Back to Arena
+        </button>
+
+        {launchOpen && (
+          <LaunchChooser quizId={createdQuizId} onClose={() => setLaunchOpen(false)} owner editHref={`/arena/forge-quiz/${createdQuizId}/edit`} title="Launch quiz" />
+        )}
       </div>
     )
   }
@@ -542,34 +484,10 @@ export default function ForgeQuizCreateClient({ defaultName }: { defaultName: st
               </div>
             ))}
           </div>
-          <button type="button" onClick={() => canProceed && setStep(4)} disabled={!canProceed}
-            style={{ width: '100%', marginTop: '1.25rem', height: '3rem', borderRadius: '0.875rem', border: 'none', background: canProceed ? 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))' : 'rgba(255,255,255,0.06)', color: canProceed ? 'white' : 'rgb(120,120,140)', fontWeight: 800, cursor: canProceed ? 'pointer' : 'not-allowed' }}>
-            Looks good! →
-          </button>
-        </div>
-      )}
-
-      {/* Step 4 — Launch */}
-      {step === 4 && (
-        <div style={card}>
-          <div style={{ borderRadius: '1rem', border: `1px solid ${banner}`, background: `linear-gradient(135deg, ${banner}, rgba(19,19,31,0.9))`, padding: '1.5rem', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>{title || 'Untitled quiz'}</h2>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>{questions.length} questions · {timePerQ}s each</p>
-          </div>
-
-          <LaunchModePicker
-            playMode={playMode} setPlayMode={setPlayMode}
-            duration={duration} setDuration={setDuration}
-            durationMode={durationMode} setDurationMode={setDurationMode}
-            customValue={customValue} setCustomValue={setCustomValue}
-            customUnit={customUnit} setCustomUnit={setCustomUnit}
-            allowReplay={allowReplay} setAllowReplay={setAllowReplay}
-          />
-
-          {submitError && <p style={{ margin: '1rem 0 0.75rem', color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{submitError}</p>}
-          <button type="button" onClick={submit} disabled={submitting || validQuestions.length < 1}
-            style={{ width: '100%', marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(245,158,11), rgb(251,191,36))', color: 'rgb(41,28,4)', fontWeight: 800, fontSize: '1rem', cursor: submitting ? 'wait' : 'pointer', opacity: validQuestions.length < 1 ? 0.5 : 1 }}>
-            {submitting ? <><Loader2 style={{ width: '1.1rem', height: '1.1rem' }} className="animate-spin" /> Launching…</> : 'Launch Quiz →'}
+          {submitError && <p style={{ margin: '1.25rem 0 0', color: 'rgb(248,113,113)', fontSize: '0.8125rem' }}>{submitError}</p>}
+          <button type="button" onClick={() => validQuestions.length >= 1 && submit()} disabled={submitting || validQuestions.length < 1}
+            style={{ width: '100%', marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: validQuestions.length >= 1 ? 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))' : 'rgba(255,255,255,0.06)', color: validQuestions.length >= 1 ? 'white' : 'rgb(120,120,140)', fontWeight: 800, cursor: submitting ? 'wait' : validQuestions.length >= 1 ? 'pointer' : 'not-allowed' }}>
+            {submitting ? <><Loader2 style={{ width: '1.1rem', height: '1.1rem' }} className="animate-spin" /> Creating…</> : 'Create Quiz ✓'}
           </button>
         </div>
       )}
@@ -697,12 +615,7 @@ export function QuestionEditor({ q, index, total, onChange, onChangeType, onRemo
   )
 }
 
-// Compute the total hours for a custom duration.
-export function customHours(value: number, unit: 'hours' | 'days'): number {
-  return Math.max(1, Math.round(value * (unit === 'days' ? 24 : 1)))
-}
-
-// ── Reusable launch-mode picker (used by create + edit/relaunch) ──
+// ── Reusable launch-mode picker (used by the self-paced lobby relaunch) ──
 export function LaunchModePicker({
   playMode, setPlayMode, duration, setDuration, durationMode, setDurationMode,
   customValue, setCustomValue, customUnit, setCustomUnit, allowReplay, setAllowReplay,

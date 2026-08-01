@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Play, Star, Check, Pencil, Users, ListChecks, Radio, SlidersHorizontal, Type } from "lucide-react"
-import { QuickPlayModal } from "@/components/arena/quiz-card"
+import { LaunchChooser } from "@/components/arena/LaunchChooser"
 import { StarDisplay, StarInput } from "@/components/arena/StarRating"
 import { ANSWER_STYLES, AnswerShape } from "@/components/arena/AnswerShapes"
 
@@ -37,7 +37,6 @@ export type PreviewData = {
   ratingSum: number
   myRating: number
   isOwner: boolean
-  hasPlayed: boolean
   questions: PreviewQuestion[]
 }
 
@@ -148,25 +147,13 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
           )}
         </div>
 
-        {/* Rating widget — only interactive once the user has actually played. */}
+        {/* Rating widget — available to any logged-in user (click-to-set). */}
         <div className="mt-6 rounded-2xl border border-arena-border bg-surface/60 p-4 sm:p-5">
-          {data.hasPlayed ? (
-            <>
-              <p className="text-sm font-semibold text-arena-fg">{myRating ? "Your rating" : "Rate this quiz"}</p>
-              <p className="mt-0.5 text-xs text-arena-muted">{myRating ? "Tap a star to change it." : "Help others discover great quizzes."}</p>
-              <div className="mt-3">
-                <StarInput value={myRating} onRate={rate} />
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-arena-fg">Rate this quiz</p>
-              <p className="mt-0.5 text-xs text-arena-muted">Play this quiz to leave a rating</p>
-              <div className="mt-3">
-                <StarInput value={0} onRate={() => {}} disabled />
-              </div>
-            </>
-          )}
+          <p className="text-sm font-semibold text-arena-fg">{myRating ? "Your rating" : "Rate this quiz"}</p>
+          <p className="mt-0.5 text-xs text-arena-muted">{myRating ? "Tap a star to change it." : "Help others discover great quizzes."}</p>
+          <div className="mt-3">
+            <StarInput value={myRating} onRate={rate} />
+          </div>
         </div>
 
         {/* Full question list (read-only) */}
@@ -179,7 +166,15 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
         </div>
       </div>
 
-      {playOpen && <QuickPlayModal quizId={data.id} onClose={() => setPlayOpen(false)} title="Play now" />}
+      {playOpen && (
+        <LaunchChooser
+          quizId={data.id}
+          onClose={() => setPlayOpen(false)}
+          owner={data.isOwner}
+          editHref={`/arena/forge-quiz/${data.id}/edit`}
+          title="Play now"
+        />
+      )}
     </div>
   )
 }

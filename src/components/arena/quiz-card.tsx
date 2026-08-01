@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation"
 import { motion, useReducedMotion } from "framer-motion"
 import {
   ArrowUpRight, BarChart3, Crown, Users, ListChecks, Clock, Radio, Play,
-  MoreVertical, Star, Trash2, UserPlus, Loader2, X,
+  MoreVertical, Star, Trash2, UserPlus, Loader2,
 } from "lucide-react"
-import { LaunchModePicker, customHours } from "@/app/arena/forge-quiz/create/ForgeQuizCreateClient"
+import { LaunchChooser } from "./LaunchChooser"
 
 // Real-data card models (no mock lib/arena-data). ArenaClient maps the Supabase
 // results into these. `quizId` is the real forge_quizzes UUID used for
@@ -212,113 +212,8 @@ function CardMenu({
   )
 }
 
-// ── Quick-play: pick a format (self-paced / live), relaunch, and start. No
-// editing step. Only offered on owned quiz cards (relaunch requires ownership).
-export function QuickPlayModal({ quizId, onClose, title = "Play again" }: { quizId: string; onClose: () => void; title?: string }) {
-  const router = useRouter()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState("")
-
-  // Same launch-mode + duration selection used by create / edit-relaunch. For a
-  // self-paced run the player picks THEIR OWN duration here (not the original's);
-  // relaunch ignores duration for live rooms.
-  const [playMode, setPlayMode] = useState<"self_paced" | "live">("self_paced")
-  const [duration, setDuration] = useState("24h")
-  const [durationMode, setDurationMode] = useState<"preset" | "custom">("preset")
-  const [customValue, setCustomValue] = useState(3)
-  const [customUnit, setCustomUnit] = useState<"hours" | "days">("hours")
-  const [allowReplay, setAllowReplay] = useState(true)
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape" && !busy) onClose() }
-    document.addEventListener("keydown", onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev }
-  }, [busy, onClose])
-
-  async function start() {
-    if (busy) return
-    setBusy(true); setError("")
-    try {
-      const customDurationHours = playMode === "self_paced" && durationMode === "custom"
-        ? customHours(customValue, customUnit)
-        : null
-      const relRes = await fetch("/api/arena/forge-quiz/relaunch", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originalQuizId: quizId, playMode, duration, customDurationHours }),
-      })
-      const rel = await relRes.json()
-      if (!relRes.ok || !rel.newQuizId) throw new Error(rel.error || "Could not start the quiz")
-
-      if (playMode === "self_paced") {
-        router.push(`/arena/forge-quiz/${rel.newQuizId}/lobby`)
-        return
-      }
-      // Live: open a fresh session for the relaunched quiz, then host it.
-      const sesRes = await fetch("/api/arena/forge-quiz/live/start-session", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quizId: rel.newQuizId }),
-      })
-      const ses = await sesRes.json()
-      if (!sesRes.ok || !ses.sessionId) throw new Error(ses.error || "Could not open the live room")
-      router.push(`/arena/forge-quiz/live/${ses.sessionId}/host`)
-    } catch (e: any) {
-      setError(e.message || "Something went wrong")
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div
-      onClick={() => !busy && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-arena-bg/80 p-5 backdrop-blur-sm"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-arena-border bg-surface p-6 shadow-2xl shadow-black/60"
-      >
-        <button
-          type="button"
-          onClick={() => !busy && onClose()}
-          aria-label="Close"
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-arena-muted transition-colors hover:bg-arena-bg/60 hover:text-arena-fg"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        <h3 className="text-lg font-semibold tracking-tight text-arena-fg">{title}</h3>
-        <p className="mt-1 text-sm text-arena-muted">Choose how to run it — self-paced runs use the duration you pick here.</p>
-
-        <div className="mt-5">
-          <LaunchModePicker
-            playMode={playMode} setPlayMode={setPlayMode}
-            duration={duration} setDuration={setDuration}
-            durationMode={durationMode} setDurationMode={setDurationMode}
-            customValue={customValue} setCustomValue={setCustomValue}
-            customUnit={customUnit} setCustomUnit={setCustomUnit}
-            allowReplay={allowReplay} setAllowReplay={setAllowReplay}
-          />
-        </div>
-
-        {error && <p className="mt-3 text-sm font-medium text-red-400">{error}</p>}
-
-        <button
-          type="button"
-          onClick={start}
-          disabled={busy}
-          className="mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground outline-none transition-transform hover:scale-[1.01] focus-visible:ring-4 focus-visible:ring-brand/40 active:scale-[0.99] disabled:opacity-60"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-          {busy ? "Starting…" : playMode === "live" ? "Start Live Room" : "Start Self-Paced"}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onToggleStar?: () => void }) {
-  const [quickPlay, setQuickPlay] = useState(false)
+  const [launchOpen, setLaunchOpen] = useState(false)
   const canModify = quiz.kind === "quiz" && !!quiz.quizId
 
   return (
@@ -358,8 +253,8 @@ export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onT
         {quiz.kind === "quiz" && (
           <button
             type="button"
-            onClick={() => setQuickPlay(true)}
-            aria-label={`Play "${quiz.title}" again`}
+            onClick={() => setLaunchOpen(true)}
+            aria-label={`Launch "${quiz.title}"`}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ember/40 bg-ember/12 text-ember transition-colors duration-200 outline-none hover:bg-ember/20 focus-visible:ring-2 focus-visible:ring-ember/40"
           >
             <Play className="h-4 w-4" aria-hidden />
@@ -367,7 +262,9 @@ export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onT
         )}
       </div>
 
-      {quickPlay && <QuickPlayModal quizId={quiz.quizId} onClose={() => setQuickPlay(false)} />}
+      {launchOpen && (
+        <LaunchChooser quizId={quiz.quizId} onClose={() => setLaunchOpen(false)} owner editHref={quiz.manageHref} />
+      )}
     </CardShell>
   )
 }

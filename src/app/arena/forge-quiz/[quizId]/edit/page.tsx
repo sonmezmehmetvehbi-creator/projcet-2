@@ -25,13 +25,11 @@ export default async function ForgeQuizEditPage({ params }: { params: { quizId: 
   // never editable. Non-creators are sent to the read-only preview instead.
   if (quiz.creator_id !== user.id) redirect(`/arena/browse/${params.quizId}`)
 
-  // "Manage" from the Arena hub must reliably land here (edit + relaunch) for the
-  // creator of ANY quiz. Previously this redirected every non-expired quiz to
-  // /lobby — but for a live-mode quiz with no open session, /lobby then bounces
-  // to /arena, so "Manage" appeared to do nothing. Only send an ACTIVE self-paced
-  // quiz to its lobby (its real live-management screen, which never bounces).
+  // Draft templates and any relaunchable quiz edit here. Only a currently-RUNNING
+  // self-paced instance (status 'active') is sent to its lobby (share management);
+  // drafts ('draft') and ended quizzes stay on this edit screen.
   const expired = quiz.status === 'ended' || (quiz.expires_at && new Date(quiz.expires_at) < new Date())
-  if (!expired && quiz.play_mode === 'self_paced') redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
+  if (quiz.status === 'active' && quiz.play_mode === 'self_paced' && !expired) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
 
   const { data: questions } = await adminClient
     .from('forge_quiz_questions')

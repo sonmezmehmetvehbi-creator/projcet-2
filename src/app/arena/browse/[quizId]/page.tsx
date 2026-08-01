@@ -39,41 +39,6 @@ export default async function BrowsePreviewPage({ params }: { params: { quizId: 
   const starCount = (stars ?? []).length
   const starred = (stars ?? []).some((s: any) => s.user_id === user.id)
 
-  // ── Has the current user actually PLAYED this quiz? (gates the rating widget)
-  // A public quiz is played via a relaunched copy, so count plays of this quiz
-  // AND of any copy that traces back to it (source_quiz_id).
-  const { data: copies } = await adminClient.from('forge_quizzes').select('id').eq('source_quiz_id', params.quizId)
-  const playableIds = Array.from(new Set([params.quizId, ...(copies ?? []).map((c: any) => c.id)]))
-
-  let hasPlayed = false
-  // Self-paced: a completed player row.
-  const { data: spDone } = await adminClient
-    .from('forge_quiz_players')
-    .select('id')
-    .in('quiz_id', playableIds)
-    .eq('user_id', user.id)
-    .eq('completed', true)
-    .limit(1)
-  hasPlayed = (spDone ?? []).length > 0
-  // Live: participated in a finished session of this quiz (or a copy).
-  if (!hasPlayed) {
-    const { data: liveSessions } = await adminClient
-      .from('forge_quiz_live_sessions')
-      .select('id')
-      .in('quiz_id', playableIds)
-      .in('status', ['ended', 'podium'])
-    const finishedIds = (liveSessions ?? []).map((s: any) => s.id)
-    if (finishedIds.length > 0) {
-      const { data: livePlayed } = await adminClient
-        .from('forge_quiz_live_players')
-        .select('id')
-        .in('session_id', finishedIds)
-        .eq('user_id', user.id)
-        .limit(1)
-      hasPlayed = (livePlayed ?? []).length > 0
-    }
-  }
-
   // Rating aggregate + this user's rating.
   const { data: ratings } = await adminClient.from('forge_quiz_ratings').select('user_id, rating').eq('quiz_id', params.quizId)
   const ratingCount = (ratings ?? []).length
@@ -98,7 +63,6 @@ export default async function BrowsePreviewPage({ params }: { params: { quizId: 
     ratingSum,
     myRating,
     isOwner,
-    hasPlayed,
     questions: (questions ?? []).map((q: any) => ({
       id: q.id,
       question_text: q.question_text,

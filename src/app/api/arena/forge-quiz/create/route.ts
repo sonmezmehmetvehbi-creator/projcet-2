@@ -27,7 +27,7 @@ import { NextResponse } from 'next/server'
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS play_count int DEFAULT 0;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS subject text;
 // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS topic text;
-// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS source_quiz_id uuid; -- original a relaunched copy came from
+// -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS source_quiz_id uuid REFERENCES forge_quizzes(id); -- original a relaunched copy came from
 // --
 // -- -- Browse-public "save" (star) join table — replaces the is_starred boolean.
 // -- CREATE TABLE IF NOT EXISTS forge_quiz_stars (
@@ -110,15 +110,10 @@ export async function POST(request: Request) {
 
     const { data: profile } = await adminClient.from('profiles').select('display_name').eq('id', user.id).single()
 
-    const isLive = playMode === 'live'
-    // Every quiz (self-paced and live) gets a shareable join code.
-    const code = roomCode()
-
-    // Self-paced quizzes stay open for a chosen window (preset or custom hours).
-    const DURATION_HOURS: Record<string, number> = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '3d': 72, '7d': 168 }
-    const hours = customDurationHours ? Math.max(1, Number(customDurationHours)) : (DURATION_HOURS[duration] ?? 24)
-    const expiresAt = isLive ? null : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
-
+    // Creation is decoupled from launching: a new quiz is saved as a reusable
+    // 'draft' TEMPLATE (no expiry, not a live/running instance). Launching it —
+    // Play Solo / Self-Paced Room / Host Live — spins up a fresh copy via
+    // /relaunch, so `playMode`/`duration`/`allowReplay` here are unused now.
     const { data: quiz, error } = await adminClient
       .from('forge_quizzes')
       .insert({
@@ -127,14 +122,14 @@ export async function POST(request: Request) {
         title,
         welcome_message: welcomeMessage,
         banner_color: bannerColor,
-        play_mode: isLive ? 'live' : 'self_paced',
+        play_mode: 'self_paced',
         time_per_question: timePerQuestion,
         max_players: maxPlayers ? Number(maxPlayers) : null,
-        room_code: code,
-        status: isLive ? 'waiting' : 'active',
+        room_code: roomCode(),
+        status: 'draft',
         question_count: questions.length,
-        expires_at: expiresAt,
-        allow_replay: !!allowReplay,
+        expires_at: null,
+        allow_replay: allowReplay !== false,
         is_public: !!isPublic,
         subject: subject ? String(subject).slice(0, 80) : null,
         topic: topic ? String(topic).slice(0, 120) : null,
@@ -163,7 +158,7 @@ export async function POST(request: Request) {
     const { error: qErr } = await adminClient.from('forge_quiz_questions').insert(rows)
     if (qErr) throw qErr
 
-    return NextResponse.json({ quizId: quiz.id, roomCode: code })
+    return NextResponse.json({ quizId: quiz.id })
   } catch (error: any) {
     console.error('Forge quiz create error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
