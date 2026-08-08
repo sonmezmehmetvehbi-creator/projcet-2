@@ -63,8 +63,8 @@ export function StarInput({
           aria-checked={value === i}
           aria-label={`${i} star${i === 1 ? "" : "s"}`}
           disabled={disabled}
-          onClick={() => { if (!disabled) onRate(i) }}
-          className="rounded outline-none transition-transform duration-150 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ember/40 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => { console.log('[StarInput] clicked star', i, 'current value:', value); if (!disabled) onRate(i) }}
+          className="rounded outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ember/40 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Star
             className={value >= i ? "fill-ember text-ember" : "text-arena-muted/50"}
