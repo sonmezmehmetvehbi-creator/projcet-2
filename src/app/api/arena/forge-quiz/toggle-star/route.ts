@@ -12,6 +12,13 @@ import { NextResponse } from 'next/server'
 // --   created_at timestamptz DEFAULT now(),
 // --   UNIQUE (quiz_id, user_id)
 // -- );
+// --
+// -- Live save-count / Starred-tab updates (Browse + Preview + Arena) rely on
+// -- Realtime. Ensure the table is published AND has REPLICA IDENTITY FULL so
+// -- DELETE payloads carry quiz_id/user_id (needed for both the incremental count
+// -- decrement and the user_id delete filter):
+// -- ALTER PUBLICATION supabase_realtime ADD TABLE forge_quiz_stars;
+// -- ALTER TABLE forge_quiz_stars REPLICA IDENTITY FULL;
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()

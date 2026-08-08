@@ -28,9 +28,10 @@ function timeLeftLabel(expiresAt: string | null): string {
 }
 
 export default function ArenaClient({
-  profile, quizzesCreated = [], quizzesJoined = [], quizzesStarred = [], liveHosted = [], liveJoined = [],
+  profile, currentUserId, quizzesCreated = [], quizzesJoined = [], quizzesStarred = [], liveHosted = [], liveJoined = [],
 }: {
   profile?: any
+  currentUserId: string
   quizzesCreated?: CreatedQuiz[]
   quizzesJoined?: JoinedQuiz[]
   quizzesStarred?: CreatedQuiz[]
@@ -171,7 +172,7 @@ export default function ArenaClient({
         </Link>
       </div>
 
-      <MyQuizzes created={createdCards} joined={joinedCards} starred={starredCards} createHref={CREATE_HREF} />
+      <MyQuizzes created={createdCards} joined={joinedCards} starred={starredCards} currentUserId={currentUserId} createHref={CREATE_HREF} />
     </div>
   )
 }

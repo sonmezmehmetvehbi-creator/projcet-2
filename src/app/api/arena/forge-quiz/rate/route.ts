@@ -17,6 +17,10 @@ import { NextResponse } from 'next/server'
 // --   updated_at timestamptz DEFAULT now(),
 // --   UNIQUE (quiz_id, user_id)
 // -- );
+// --
+// -- The Browse Preview page live-updates the average via Realtime (INSERT/UPDATE),
+// -- so the table must be in the publication:
+// -- ALTER PUBLICATION supabase_realtime ADD TABLE forge_quiz_ratings;
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()

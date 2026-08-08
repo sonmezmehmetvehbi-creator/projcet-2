@@ -5,6 +5,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Search, Star, Users, ListChecks, Play, Radio, Compass } from "lucide-react"
 import { StarDisplay } from "@/components/arena/StarRating"
+import { createClient } from "@/lib/supabase"
 
 export type BrowseQuiz = {
   id: string
@@ -34,7 +35,7 @@ function abbrev(n: number): string {
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M"
 }
 
-export default function BrowseClient({ quizzes }: { quizzes: BrowseQuiz[] }) {
+export default function BrowseClient({ quizzes, currentUserId }: { quizzes: BrowseQuiz[]; currentUserId: string }) {
   const [rawSearch, setRawSearch] = useState("")
   const [search, setSearch] = useState("")
   const [subject, setSubject] = useState("all")
@@ -52,6 +53,41 @@ export default function BrowseClient({ quizzes }: { quizzes: BrowseQuiz[] }) {
 
   const isStarred = (q: BrowseQuiz) => starOn[q.id] ?? q.starred
   const starCountOf = (q: BrowseQuiz) => starCt[q.id] ?? q.starCount
+
+  // Base star counts + the set of ids on this page, for the Realtime merge below.
+  const baseCount = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const q of quizzes) m.set(q.id, q.starCount)
+    return m
+  }, [quizzes])
+
+  // ── Realtime: keep per-card save counts live across the whole grid ──
+  // One broad subscription on forge_quiz_stars; we client-side filter to ids on
+  // this page and apply +1/-1 incrementally. The COUNT is driven entirely by
+  // Realtime (toggleStar no longer changes it) so our own action isn't
+  // double-counted. Own events also sync the button state (cross-tab).
+  // (forge_quiz_stars must be in the supabase_realtime publication with
+  //  REPLICA IDENTITY FULL so DELETE payloads carry quiz_id + user_id.)
+  useEffect(() => {
+    const supabase = createClient()
+    const applyDelta = (quizId: string | undefined, delta: number, userId?: string) => {
+      if (!quizId || !baseCount.has(quizId)) return
+      setStarCt((c) => ({ ...c, [quizId]: Math.max(0, (c[quizId] ?? baseCount.get(quizId) ?? 0) + delta) }))
+      if (userId && userId === currentUserId) setStarOn((s) => ({ ...s, [quizId]: delta > 0 }))
+    }
+    const channel = supabase
+      .channel("browse-stars")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "forge_quiz_stars" }, (payload) => {
+        const row = payload.new as any
+        applyDelta(row?.quiz_id, +1, row?.user_id)
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "forge_quiz_stars" }, (payload) => {
+        const row = payload.old as any
+        applyDelta(row?.quiz_id, -1, row?.user_id)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [baseCount, currentUserId])
 
   // Subjects actually present across public quizzes.
   const subjects = useMemo(() => {
@@ -85,10 +121,10 @@ export default function BrowseClient({ quizzes }: { quizzes: BrowseQuiz[] }) {
 
   async function toggleStar(q: BrowseQuiz) {
     const currentlyStarred = isStarred(q)
-    const baseCount = starCountOf(q)
     const next = !currentlyStarred
+    // Optimistic button state only; the count is applied by the Realtime handler
+    // (+1/-1) so we don't double-count our own star.
     setStarOn((s) => ({ ...s, [q.id]: next }))
-    setStarCt((c) => ({ ...c, [q.id]: baseCount + (next ? 1 : -1) }))
     try {
       const res = await fetch("/api/arena/forge-quiz/toggle-star", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -97,7 +133,6 @@ export default function BrowseClient({ quizzes }: { quizzes: BrowseQuiz[] }) {
       if (!res.ok) throw new Error()
     } catch {
       setStarOn((s) => ({ ...s, [q.id]: currentlyStarred }))
-      setStarCt((c) => ({ ...c, [q.id]: baseCount }))
     }
   }
 

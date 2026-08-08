@@ -84,7 +84,7 @@ export default async function BrowsePage() {
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
       <Navbar profile={profile} bans={bans} />
-      <BrowseClient quizzes={items} />
+      <BrowseClient quizzes={items} currentUserId={user.id} />
     </div>
   )
 }

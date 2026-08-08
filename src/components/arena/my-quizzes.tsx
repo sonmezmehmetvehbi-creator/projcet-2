@@ -1,10 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { LayoutGrid, Swords, Rocket, Compass, Star } from "lucide-react"
 import { CreatedQuizCard, JoinedQuizCard, type CreatedCard, type JoinedCard } from "@/components/arena/quiz-card"
 import { EmptyState } from "@/components/arena/empty-state"
+import { createClient } from "@/lib/supabase"
+
+// Build a Starred-tab card from a forge_quizzes row fetched client-side (used when
+// a quiz is starred elsewhere and arrives via Realtime without being in the
+// server-rendered lists). Mirrors ArenaClient's quizToCard shaping.
+function rowToStarredCard(row: any, currentUserId: string): CreatedCard {
+  const now = Date.now()
+  const active = row.status !== "ended" && (!row.expires_at || new Date(row.expires_at).getTime() > now)
+  const owned = row.creator_id === currentUserId
+  return {
+    id: `q-${row.id}`,
+    kind: "quiz",
+    quizId: row.id,
+    title: row.title,
+    active,
+    mode: row.play_mode === "live" ? "Live" : "Self-paced",
+    players: 0,
+    starred: true,
+    owned,
+    manageHref: owned ? `/arena/forge-quiz/${row.id}/edit` : `/arena/browse/${row.id}`,
+  }
+}
 
 type Tab = "created" | "joined" | "starred"
 
@@ -12,11 +34,13 @@ export function MyQuizzes({
   created,
   joined,
   starred = [],
+  currentUserId,
   createHref = "/arena/forge-quiz/create",
 }: {
   created: CreatedCard[]
   joined: JoinedCard[]
   starred?: CreatedCard[]
+  currentUserId?: string
   createHref?: string
 }) {
   const [tab, setTab] = useState<Tab>("created")
@@ -24,8 +48,12 @@ export function MyQuizzes({
 
   // Local, optimistic star state keyed by quizId. Overrides the server-provided
   // `starred` so toggling a card's ⭐ moves it in/out of the Starred tab instantly
-  // (the toggle-star API is still persisted in the background).
+  // (the toggle-star API is still persisted in the background). Realtime events
+  // (starring from Browse/Preview/menu, in any tab) feed into the SAME override
+  // map, so the Starred tab stays live everywhere.
   const [starOverrides, setStarOverrides] = useState<Record<string, boolean>>({})
+  // Cards discovered via Realtime that weren't in the server-rendered lists.
+  const [extraStarred, setExtraStarred] = useState<Record<string, CreatedCard>>({})
 
   const effectiveCreated: CreatedCard[] = created.map((c) => {
     const o = starOverrides[c.quizId]
@@ -33,10 +61,10 @@ export function MyQuizzes({
   })
 
   // The Starred tab shows EVERY saved quiz — created or not (e.g. a public quiz
-  // saved from Browse). Merge the server-provided starred list with created cards
-  // (dedup by quizId), apply optimistic overrides, then keep only starred ones.
+  // saved from Browse). Merge server lists + Realtime-fetched cards (dedup by
+  // quizId), apply optimistic overrides, then keep only starred ones.
   const starredById = new Map<string, CreatedCard>()
-  for (const c of [...starred, ...created]) {
+  for (const c of [...starred, ...created, ...Object.values(extraStarred)]) {
     if (c.quizId && !starredById.has(c.quizId)) starredById.set(c.quizId, c)
   }
   const starredCards = Array.from(starredById.values())
@@ -45,6 +73,45 @@ export function MyQuizzes({
       return o === undefined ? c : { ...c, starred: o }
     })
     .filter((c) => c.starred)
+
+  // Ref of every quizId we already have display data for, so the Realtime INSERT
+  // handler only fetches when a genuinely-new quiz is starred.
+  const knownIdsRef = useRef<Set<string>>(new Set())
+  knownIdsRef.current = new Set(
+    [...starred, ...created, ...Object.values(extraStarred)].map((c) => c.quizId).filter(Boolean),
+  )
+
+  // ── Realtime: keep the Starred tab live for THIS user ──
+  // Subscribe to forge_quiz_stars for the current user; INSERT stars a quiz
+  // (fetching its card if unknown), DELETE unstars it. Merges into starOverrides.
+  // (forge_quiz_stars must be in supabase_realtime with REPLICA IDENTITY FULL so
+  //  DELETE payloads carry quiz_id.)
+  useEffect(() => {
+    if (!currentUserId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`my-starred-${currentUserId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "forge_quiz_stars", filter: `user_id=eq.${currentUserId}` }, async (payload) => {
+        const quizId = (payload.new as any)?.quiz_id
+        if (!quizId) return
+        setStarOverrides((o) => ({ ...o, [quizId]: true }))
+        if (!knownIdsRef.current.has(quizId)) {
+          const { data: row } = await supabase
+            .from("forge_quizzes")
+            .select("id, title, banner_color, play_mode, status, expires_at, creator_id")
+            .eq("id", quizId)
+            .maybeSingle()
+          if (row) setExtraStarred((e) => ({ ...e, [quizId]: rowToStarredCard(row, currentUserId) }))
+        }
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "forge_quiz_stars", filter: `user_id=eq.${currentUserId}` }, (payload) => {
+        const quizId = (payload.old as any)?.quiz_id
+        if (!quizId) return
+        setStarOverrides((o) => ({ ...o, [quizId]: false }))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [currentUserId])
 
   async function handleToggleStar(quizId: string, current: boolean) {
     if (!quizId) return

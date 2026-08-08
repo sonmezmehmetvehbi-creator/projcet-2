@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Play, Star, Check, Pencil, Users, ListChecks, Radio, SlidersHorizontal, Type } from "lucide-react"
 import { LaunchChooser } from "@/components/arena/LaunchChooser"
 import { StarDisplay, StarInput } from "@/components/arena/StarRating"
 import { ANSWER_STYLES, AnswerShape } from "@/components/arena/AnswerShapes"
+import { createClient } from "@/lib/supabase"
 
 type PreviewQuestion = {
   id: string
@@ -55,8 +56,9 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
 
   async function toggleStar() {
     const next = !starred
-    const base = starCount
-    setStarred(next); setStarCount(base + (next ? 1 : -1))
+    // Optimistic button state only. The "X saved" COUNT is driven by the Realtime
+    // subscription below (+1/-1), so we never double-count our own action here.
+    setStarred(next)
     try {
       const res = await fetch("/api/arena/forge-quiz/toggle-star", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -64,9 +66,46 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
       })
       if (!res.ok) throw new Error()
     } catch {
-      setStarred(!next); setStarCount(base)
+      setStarred(!next)
     }
   }
+
+  // ── Realtime: keep the aggregate rating + save count fresh for everyone ──
+  // Ratings: on any insert/update, re-read the aggregate for this quiz and set the
+  // average + count (absolute recompute — never touches the user's own myRating).
+  // Stars: increment/decrement the save count incrementally on insert/delete.
+  // (Both tables have RLS disabled and are in the supabase_realtime publication;
+  //  forge_quiz_stars needs REPLICA IDENTITY FULL so DELETE payloads carry quiz_id.
+  //  -- ALTER PUBLICATION supabase_realtime ADD TABLE forge_quiz_ratings;
+  //  -- ALTER TABLE forge_quiz_stars REPLICA IDENTITY FULL;)
+  useEffect(() => {
+    const supabase = createClient()
+
+    async function refreshRatingAggregate() {
+      const { data: rows } = await supabase
+        .from("forge_quiz_ratings")
+        .select("rating")
+        .eq("quiz_id", data.id)
+      const count = rows?.length ?? 0
+      const avg = count > 0 ? rows!.reduce((s, r: any) => s + (r.rating ?? 0), 0) / count : 0
+      setRatingCount(count)
+      setAvgRating(avg)
+    }
+
+    const channel = supabase
+      .channel(`browse-preview-${data.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "forge_quiz_ratings", filter: `quiz_id=eq.${data.id}` }, refreshRatingAggregate)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "forge_quiz_ratings", filter: `quiz_id=eq.${data.id}` }, refreshRatingAggregate)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "forge_quiz_stars", filter: `quiz_id=eq.${data.id}` }, () => {
+        setStarCount((c) => c + 1)
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "forge_quiz_stars", filter: `quiz_id=eq.${data.id}` }, () => {
+        setStarCount((c) => Math.max(0, c - 1))
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [data.id])
 
   async function handleRate(n: number) {
     if (ratingBusy) return
