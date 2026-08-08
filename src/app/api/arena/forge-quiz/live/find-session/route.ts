@@ -1,4 +1,3 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -8,10 +7,7 @@ export const dynamic = 'force-dynamic'
 // Resolves a room code to a joinable (waiting, not full) live session.
 export async function GET(request: Request) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+    // Public: guests may resolve a room code to a joinable live session.
     const code = (new URL(request.url).searchParams.get('code') || '').trim().toUpperCase()
     if (!code) return NextResponse.json({ error: 'Game not found or already started' }, { status: 404 })
 

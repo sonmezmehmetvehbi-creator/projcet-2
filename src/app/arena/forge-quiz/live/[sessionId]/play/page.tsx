@@ -2,11 +2,13 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import PlayLiveClient from './PlayLiveClient'
+import GuestLivePlayGate from './GuestLivePlayGate'
 
 export default async function LivePlayPage({ params }: { params: { sessionId: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/arena/forge-quiz/live/${params.sessionId}/play`)
+  // Guests (no account) are allowed to play; they identify via a client-side
+  // guest_id. Session/quiz/questions are public and fetched for everyone.
 
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
@@ -18,14 +20,6 @@ export default async function LivePlayPage({ params }: { params: { sessionId: st
   if (!session) redirect('/arena')
   if (session.status === 'ended') redirect('/arena')
   if (session.status === 'waiting') redirect(`/arena/forge-quiz/live/${params.sessionId}/join`)
-
-  const { data: player } = await adminClient
-    .from('forge_quiz_live_players')
-    .select('id, display_name, avatar_emoji, is_kicked')
-    .eq('session_id', params.sessionId)
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!player || player.is_kicked) redirect(`/arena/forge-quiz/live/${params.sessionId}/join`)
 
   const { data: quiz } = await adminClient
     .from('forge_quizzes')
@@ -39,19 +33,43 @@ export default async function LivePlayPage({ params }: { params: { sessionId: st
     .eq('quiz_id', session.quiz_id)
     .order('position', { ascending: true })
 
+  const initialSession = {
+    status: session.status,
+    display_mode: session.display_mode,
+    current_question_index: session.current_question_index ?? 0,
+    question_state: session.question_state ?? 'question',
+    question_started_at: session.question_started_at,
+  }
+  const quizProps = { title: quiz?.title ?? 'Quiz', banner_color: quiz?.banner_color ?? '#7c3aed', time_per_question: quiz?.time_per_question ?? 20 }
+
+  // Guest: the player row can't be resolved server-side (guest_id lives in
+  // sessionStorage), so a client gate looks it up and then renders the game.
+  if (!user) {
+    return (
+      <GuestLivePlayGate
+        sessionId={params.sessionId}
+        initialSession={initialSession}
+        quiz={quizProps}
+        questions={questions ?? []}
+      />
+    )
+  }
+
+  const { data: player } = await adminClient
+    .from('forge_quiz_live_players')
+    .select('id, display_name, avatar_emoji, is_kicked')
+    .eq('session_id', params.sessionId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!player || player.is_kicked) redirect(`/arena/forge-quiz/live/${params.sessionId}/join`)
+
   return (
     <PlayLiveClient
       sessionId={params.sessionId}
-      userId={user.id}
+      playerId={player.id}
       me={{ display_name: player.display_name, avatar_emoji: player.avatar_emoji }}
-      initialSession={{
-        status: session.status,
-        display_mode: session.display_mode,
-        current_question_index: session.current_question_index ?? 0,
-        question_state: session.question_state ?? 'question',
-        question_started_at: session.question_started_at,
-      }}
-      quiz={{ title: quiz?.title ?? 'Quiz', banner_color: quiz?.banner_color ?? '#7c3aed', time_per_question: quiz?.time_per_question ?? 20 }}
+      initialSession={initialSession}
+      quiz={quizProps}
       questions={questions ?? []}
     />
   )

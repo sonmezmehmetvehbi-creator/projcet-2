@@ -8,18 +8,20 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { sessionId, avatarEmoji } = await request.json()
+    const { sessionId, avatarEmoji, guestId } = await request.json()
     if (!sessionId || !avatarEmoji) return NextResponse.json({ error: 'Missing sessionId or avatarEmoji' }, { status: 400 })
 
-    const { error } = await adminClient
+    const guest = String(guestId ?? '').trim()
+    if (!user && !guest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const updateQuery = adminClient
       .from('forge_quiz_live_players')
       .update({ avatar_emoji: String(avatarEmoji).slice(0, 8) })
       .eq('session_id', sessionId)
-      .eq('user_id', user.id)
+    const { error } = await (user ? updateQuery.eq('user_id', user.id) : updateQuery.eq('guest_id', guest))
     if (error) throw error
 
     return NextResponse.json({ success: true })

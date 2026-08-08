@@ -6,9 +6,9 @@ import ForgeQuizPlayClient from './ForgeQuizPlayClient'
 export default async function ForgeQuizPlayPage({ params }: { params: { quizId: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/arena/forge-quiz/${params.quizId}/play`)
-
-  const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+  // Guests (no account) may play a Self-Paced Room via its shared link. They
+  // identify via a client-side guest_id and always start a fresh playthrough
+  // (their prior completion can't be resolved server-side).
 
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
@@ -28,40 +28,51 @@ export default async function ForgeQuizPlayPage({ params }: { params: { quizId: 
     .order('position', { ascending: true })
   if (!questions || questions.length === 0) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
 
-  // Has the user already completed this quiz?
-  const { data: existing } = await adminClient
-    .from('forge_quiz_players')
-    .select('id, display_name, avatar_emoji, total_score, completed')
-    .eq('quiz_id', params.quizId)
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const alreadyCompleted = !!existing?.completed
-  // Expired, or completed with replay off → straight to results.
-  if (alreadyCompleted && (expired || quiz.allow_replay === false)) {
-    redirect(`/arena/forge-quiz/${params.quizId}/results`)
-  }
-  // Not yet played but expired → can't play.
-  if (!alreadyCompleted && expired) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
-
-  // Compute rank for the completed screen.
+  let profile: { display_name?: string | null } | null = null
+  let existing: any = null
+  let alreadyCompleted = false
   let myRank = 0, totalPlayers = 0
-  if (alreadyCompleted) {
-    const { data: board } = await adminClient
+
+  if (user) {
+    const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+    profile = prof
+
+    // Has the user already completed this quiz?
+    const { data: existingRow } = await adminClient
       .from('forge_quiz_players')
-      .select('user_id, total_score')
+      .select('id, display_name, avatar_emoji, total_score, completed')
       .eq('quiz_id', params.quizId)
-      .eq('completed', true)
-      .eq('is_kicked', false)
-      .order('total_score', { ascending: false })
-    totalPlayers = board?.length ?? 0
-    myRank = Math.max(1, (board ?? []).findIndex((b) => b.user_id === user.id) + 1)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    existing = existingRow
+    alreadyCompleted = !!existingRow?.completed
+
+    // Expired, or completed with replay off → straight to results.
+    if (alreadyCompleted && (expired || quiz.allow_replay === false)) {
+      redirect(`/arena/forge-quiz/${params.quizId}/results`)
+    }
+    // Compute rank for the completed screen.
+    if (alreadyCompleted) {
+      const { data: board } = await adminClient
+        .from('forge_quiz_players')
+        .select('user_id, total_score')
+        .eq('quiz_id', params.quizId)
+        .eq('completed', true)
+        .eq('is_kicked', false)
+        .order('total_score', { ascending: false })
+      totalPlayers = board?.length ?? 0
+      myRank = Math.max(1, (board ?? []).findIndex((b) => b.user_id === user.id) + 1)
+    }
   }
+
+  // Expired and not (yet) completed → can't play.
+  if (!alreadyCompleted && expired) redirect(`/arena/forge-quiz/${params.quizId}/lobby`)
 
   return (
     <ForgeQuizPlayClient
       quiz={{ id: quiz.id, title: quiz.title, subject: quiz.subject, time_per_question: quiz.time_per_question, banner_color: quiz.banner_color, allow_replay: quiz.allow_replay !== false }}
       questions={questions}
+      isGuest={!user}
       defaultName={existing?.display_name || profile?.display_name || 'Player'}
       defaultAvatar={existing?.avatar_emoji || '🎓'}
       alreadyCompleted={alreadyCompleted}

@@ -21,21 +21,26 @@ export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { quizId, score = 0, correct = 0, attempted = 0, bestStreak = 0, answers = [] } = await request.json()
+    const { quizId, score = 0, correct = 0, attempted = 0, bestStreak = 0, answers = [], guestId } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
+
+    // Authenticated user (unchanged) OR a guest identified by guestId.
+    const guest = String(guestId ?? '').trim()
+    if (!user && !guest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // forge_quiz_answers.user_id references profiles — guests store null there.
+    const answerUserId = user?.id ?? null
 
     const { data: quiz } = await adminClient.from('forge_quizzes').select('allow_replay').eq('id', quizId).maybeSingle()
 
     // Locate (or create) the player row.
-    let { data: player } = await adminClient
+    const playerQuery = adminClient
       .from('forge_quiz_players')
       .select('id, completed')
       .eq('quiz_id', quizId)
-      .eq('user_id', user.id)
+    let { data: player } = await (user ? playerQuery.eq('user_id', user.id) : playerQuery.eq('guest_id', guest))
       .maybeSingle()
 
     // Already completed → this is a replay. Store answers as practice (if the
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
       }
       if (Array.isArray(answers) && answers.length) {
         const rows = answers.map((a: any) => ({
-          quiz_id: quizId, player_id: player!.id, user_id: user.id, question_id: a.question_id,
+          quiz_id: quizId, player_id: player!.id, user_id: answerUserId, question_id: a.question_id,
           answer: a.answer != null ? String(a.answer) : null, is_correct: !!a.is_correct, points: Number(a.points) || 0,
         }))
         const { error: answersError } = await adminClient.from('forge_quiz_answers').insert(rows)
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
     if (!player) {
       const { data: created } = await adminClient
         .from('forge_quiz_players')
-        .insert({ quiz_id: quizId, user_id: user.id, display_name: 'Player' })
+        .insert({ quiz_id: quizId, user_id: user?.id ?? null, guest_id: user ? null : guest, display_name: 'Player' })
         .select('id, completed')
         .single()
       player = created
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
       const rows = answers.map((a: any) => ({
         quiz_id: quizId,
         player_id: player!.id,
-        user_id: user.id,
+        user_id: answerUserId,
         question_id: a.question_id,
         answer: a.answer != null ? String(a.answer) : null,
         is_correct: !!a.is_correct,
@@ -100,10 +105,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Award XP (5 per correct answer) directly on the profile.
+    // Award XP (5 per correct answer) directly on the profile. Guests have no
+    // profile, so XP is only awarded to signed-in users.
     try {
       const gained = (Number(correct) || 0) * 5
-      if (gained > 0) {
+      if (user && gained > 0) {
         const { data: prof } = await adminClient.from('profiles').select('xp').eq('id', user.id).single()
         await adminClient.from('profiles').update({ xp: (prof?.xp ?? 0) + gained }).eq('id', user.id)
       }

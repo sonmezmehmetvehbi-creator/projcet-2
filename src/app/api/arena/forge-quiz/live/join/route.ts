@@ -7,12 +7,17 @@ export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { sessionId, displayName, avatarEmoji = '🎓' } = await request.json()
+    const { sessionId, displayName, avatarEmoji = '🎓', guestId } = await request.json()
     if (!sessionId) return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
+
+    // Either an authenticated user (unchanged) OR a guest identified by guestId.
+    const guest = String(guestId ?? '').trim()
+    if (!user && !guest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Match a player row by whichever identity is present.
+    const matchPlayer = (q: any) => (user ? q.eq('user_id', user.id) : q.eq('guest_id', guest))
 
     const { data: session } = await adminClient
       .from('forge_quiz_live_sessions')
@@ -25,11 +30,10 @@ export async function POST(request: Request) {
     // Names are capped at 15 characters (client + server).
     const name = (String(displayName ?? '').trim().slice(0, 15)) || 'Player'
 
-    const { data: existing } = await adminClient
+    const { data: existing } = await matchPlayer(adminClient
       .from('forge_quiz_live_players')
       .select('id, is_kicked')
-      .eq('session_id', sessionId)
-      .eq('user_id', user.id)
+      .eq('session_id', sessionId))
       .maybeSingle()
     if (existing?.is_kicked) return NextResponse.json({ error: 'kicked', kicked: true }, { status: 403 })
 
@@ -53,7 +57,7 @@ export async function POST(request: Request) {
 
     const { data: player, error } = await adminClient
       .from('forge_quiz_live_players')
-      .insert({ session_id: sessionId, user_id: user.id, display_name: name, avatar_emoji: avatarEmoji })
+      .insert({ session_id: sessionId, user_id: user?.id ?? null, guest_id: user ? null : guest, display_name: name, avatar_emoji: avatarEmoji })
       .select('id')
       .single()
     if (error) throw error

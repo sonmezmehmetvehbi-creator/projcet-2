@@ -8,7 +8,7 @@ import { LaunchModePicker, customHours } from '@/app/arena/forge-quiz/create/For
 
 type Player = {
   id: string
-  user_id: string
+  user_id: string | null
   display_name: string
   avatar_emoji: string
   total_score: number
@@ -24,7 +24,7 @@ export default function LobbyClient({
   quiz: any
   questionCount: number
   initialPlayers: Player[]
-  currentUserId: string
+  currentUserId: string | null
 }) {
   const router = useRouter()
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
@@ -50,9 +50,11 @@ export default function LobbyClient({
   // The room "host" is the original creator OR whoever launched this instance
   // (a non-creator can spin up a Self-Paced Room from a public quiz). Both get the
   // host controls (start, kick, end, relaunch); everyone else is just a player.
-  const isCreator = currentUserId === quiz.creator_id || currentUserId === quiz.launched_by
+  const isCreator = !!currentUserId && (currentUserId === quiz.creator_id || currentUserId === quiz.launched_by)
   const color = quiz.banner_color || '#7c3aed'
-  const me = players.find((p) => p.user_id === currentUserId)
+  // Guests have no stable server identity here (their rows carry a null user_id),
+  // so `me` only resolves for a signed-in viewer. Guests always see "Join & Play".
+  const me = currentUserId ? players.find((p) => p.user_id === currentUserId) : undefined
   const hasPlayed = !!me?.completed
 
   // Self-paced expiry countdown.
@@ -369,7 +371,7 @@ export default function LobbyClient({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {players.filter((p) => p.completed).sort((a, b) => b.total_score - a.total_score).map((p, i) => {
-                  const isMe = p.user_id === currentUserId
+                  const isMe = !!currentUserId && p.user_id === currentUserId
                   return (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.875rem', padding: '0.7rem 1rem', border: isMe ? '1px solid rgba(124,58,237,0.6)' : '1px solid rgba(255,255,255,0.06)', background: isMe ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)' }}>
                       <span style={{ width: '1.5rem', textAlign: 'center', fontWeight: 800, color: 'rgb(180,180,200)' }}>{i + 1}</span>

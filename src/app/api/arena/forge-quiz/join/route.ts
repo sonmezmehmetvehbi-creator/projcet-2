@@ -7,22 +7,25 @@ export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { quizId, displayName, avatarEmoji = '🎓' } = await request.json()
+    const { quizId, displayName, avatarEmoji = '🎓', guestId } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
+
+    // Authenticated user (unchanged) OR a guest identified by guestId.
+    const guest = String(guestId ?? '').trim()
+    if (!user && !guest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: quiz } = await adminClient.from('forge_quizzes').select('id, max_players, play_count').eq('id', quizId).maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
 
-    // Already joined?
-    const { data: existing } = await adminClient
+    // Already joined? (matched by whichever identity is present)
+    const existingQuery = adminClient
       .from('forge_quiz_players')
       .select('id, is_kicked')
       .eq('quiz_id', quizId)
-      .eq('user_id', user.id)
+    const { data: existing } = await (user ? existingQuery.eq('user_id', user.id) : existingQuery.eq('guest_id', guest))
       .maybeSingle()
     if (existing?.is_kicked) return NextResponse.json({ error: 'kicked', kicked: true }, { status: 403 })
 
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
 
     const { data: player, error } = await adminClient
       .from('forge_quiz_players')
-      .insert({ quiz_id: quizId, user_id: user.id, display_name: displayName || 'Player', avatar_emoji: avatarEmoji })
+      .insert({ quiz_id: quizId, user_id: user?.id ?? null, guest_id: user ? null : guest, display_name: displayName || 'Player', avatar_emoji: avatarEmoji })
       .select('id')
       .single()
     if (error) throw error

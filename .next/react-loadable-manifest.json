@@ -10,5 +10,11 @@
     "files": [
       "static/chunks/7635.2cff99687bbe7bc8.js"
     ]
+  },
+  "lib/confettiBursts.ts -> canvas-confetti": {
+    "id": 79235,
+    "files": [
+      "static/chunks/9235.be987ed43ebdb143.js"
+    ]
   }
 }

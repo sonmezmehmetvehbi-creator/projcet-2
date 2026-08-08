@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, X, Loader2 } from 'lucide-react'
 import { sliderPoints } from '@/lib/quizScoring'
+import { getForgeGuestId, sanitizeNickname } from '@/lib/forgeGuest'
 
 const AVATARS = ['🎓', '📚', '⚡', '🔥', '💡', '🧠', '🏆', '🎯', '🚀', '💪', '🦁', '🐯', '🦊', '🐉', '⚔️', '🛡️', '🌟', '👑', '🎮', '🎲']
 
@@ -35,6 +36,7 @@ export default function ForgeQuizPlayClient({
   previousScore = 0,
   myRank = 0,
   totalPlayers = 0,
+  isGuest = false,
 }: {
   quiz: any
   questions: Question[]
@@ -44,8 +46,12 @@ export default function ForgeQuizPlayClient({
   previousScore?: number
   myRank?: number
   totalPlayers?: number
+  isGuest?: boolean
 }) {
   const router = useRouter()
+  // Guests carry a stable per-tab id instead of an auth user_id.
+  const guestIdRef = useRef<string>('')
+  if (isGuest && !guestIdRef.current) guestIdRef.current = getForgeGuestId()
 
   const [status, setStatus] = useState<'completed' | 'identity' | 'playing' | 'submitting'>(alreadyCompleted ? 'completed' : 'identity')
   const [practice, setPractice] = useState(false)
@@ -97,11 +103,14 @@ export default function ForgeQuizPlayClient({
           attempted: answersRef.current.length,
           bestStreak: bestStreakRef.current,
           answers: answersRef.current,
+          guestId: isGuest ? guestIdRef.current : undefined,
         }),
       })
     } catch {}
-    router.push(`/arena/forge-quiz/${quiz.id}/results`)
-  }, [quiz.id, router])
+    // Guests have no account-scoped results page — send them to the lobby, whose
+    // leaderboard now includes their nickname. Signed-in users see full results.
+    router.push(isGuest ? `/arena/forge-quiz/${quiz.id}/lobby` : `/arena/forge-quiz/${quiz.id}/results`)
+  }, [quiz.id, router, isGuest])
 
   const advance = useCallback(() => {
     if (qIndex + 1 >= questions.length) {
@@ -168,12 +177,13 @@ export default function ForgeQuizPlayClient({
   }
 
   async function startGame() {
-    if (!name.trim()) return
+    const cleanName = sanitizeNickname(name, 24)
+    if (!cleanName) return
     setJoining(true)
     try {
       await fetch('/api/arena/forge-quiz/join', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quizId: quiz.id, displayName: name, avatarEmoji: avatar }),
+        body: JSON.stringify({ quizId: quiz.id, displayName: cleanName, avatarEmoji: avatar, guestId: isGuest ? guestIdRef.current : undefined }),
       })
     } catch {}
     setJoining(false)

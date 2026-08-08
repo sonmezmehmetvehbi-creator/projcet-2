@@ -28,7 +28,7 @@ export default function HostGameClient({
   const [total, setTotal] = useState(0)
   const [answered, setAnswered] = useState(0)
   const [reveal, setReveal] = useState<{ counts: number[]; total: number } | null>(null)
-  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; streak: number; gained: number; change: number }[]>([])
+  const [board, setBoard] = useState<{ id: string; user_id: string | null; display_name: string; avatar_emoji: string; score: number; streak: number; gained: number; change: number }[]>([])
   const [busy, setBusy] = useState(false)
 
   const supaRef = useRef(createClient())
@@ -50,9 +50,9 @@ export default function HostGameClient({
   // Leaderboard FLIP animation: the visible rows, plus the round's single
   // biggest riser (largest positive rank delta) which gets an extra scale pulse.
   const lbVisible = board.slice(0, session.status === 'podium' ? 10 : 5)
-  const setLbRef = useFlipRows(lbVisible.map((p) => p.user_id), session.question_state === 'leaderboard')
+  const setLbRef = useFlipRows(lbVisible.map((p) => p.id), session.question_state === 'leaderboard')
   const lbMaxUp = Math.max(0, ...lbVisible.map((p) => (p.change > 0 ? p.change : 0)))
-  const lbBigMoverId = lbMaxUp > 0 ? lbVisible.find((p) => p.change === lbMaxUp)?.user_id : undefined
+  const lbBigMoverId = lbMaxUp > 0 ? lbVisible.find((p) => p.change === lbMaxUp)?.id : undefined
 
   // Refs so the realtime handlers (which are set up once) always read the
   // CURRENT question index / state rather than the values captured at mount.
@@ -129,13 +129,13 @@ export default function HostGameClient({
       .order('score', { ascending: false })
     console.error('[Leaderboard] final player list:', players)
     const ranked = (players ?? []).map((p, i) => {
-      const prev = prevRanksRef.current[p.user_id]
+      const prev = prevRanksRef.current[p.id]
       const change = prev != null ? prev - (i + 1) : 0
       return { ...p, gained: 0, change }
     })
     // Record ranks for next comparison.
     const nextRanks: Record<string, number> = {}
-    ranked.forEach((p, i) => { nextRanks[p.user_id] = i + 1 })
+    ranked.forEach((p, i) => { nextRanks[p.id] = i + 1 })
     prevRanksRef.current = nextRanks
     console.log('Leaderboard players fetched:', { rawPlayers: players, ranked })
     setBoard(ranked)
@@ -376,7 +376,7 @@ export default function HostGameClient({
               {lbVisible.map((p, i) => {
                 const onFire = p.streak >= 3 && i === board.findIndex((x) => x.streak >= 3)
                 const movedUp = p.change > 0
-                const isBigMover = movedUp && p.user_id === lbBigMoverId
+                const isBigMover = movedUp && p.id === lbBigMoverId
                 // Glow (green) for up-movers; extra scale pulse for the biggest riser.
                 // Inner element carries the visuals so the FLIP transform on the
                 // outer wrapper never collides with the scale-pulse transform.
@@ -384,7 +384,7 @@ export default function HostGameClient({
                   ? `lbFadeIn 0.4s ease both, lbUpGlow 1.6s ease 0.1s both${isBigMover ? ', lbBigMover 0.8s ease 0.25s both' : ''}`
                   : 'lbFadeIn 0.4s ease both'
                 return (
-                  <div key={p.user_id} ref={setLbRef(p.user_id)} style={{ willChange: 'transform' }}>
+                  <div key={p.id} ref={setLbRef(p.id)} style={{ willChange: 'transform' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '1rem', border: i < 3 ? '1px solid rgba(251,191,36,0.4)' : '1px solid rgba(255,255,255,0.08)', background: i < 3 ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.03)', padding: '0.9rem 1.25rem', animation: innerAnim }}>
                       <span style={{ width: '2rem', textAlign: 'center', fontWeight: 900, fontSize: '1.25rem', color: i < 3 ? 'rgb(251,191,36)' : 'rgb(180,180,200)' }}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
                       <span style={{ fontSize: '1.75rem' }}>{p.avatar_emoji}</span>

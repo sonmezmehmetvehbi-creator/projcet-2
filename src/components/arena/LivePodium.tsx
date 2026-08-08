@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { CountUp } from './Confetti'
 import { burstCannons, burstGold } from '@/lib/confettiBursts'
 
-export type PodiumPlayer = { user_id: string; display_name: string; avatar_emoji: string; score: number }
+// user_id is null for guest (no-account) players — they're matched/keyed by
+// their own row instead. `id` (player-row id) is preferred as a stable key.
+export type PodiumPlayer = { id?: string; user_id: string | null; display_name: string; avatar_emoji: string; score: number }
 
 const MEDALS = ['🥇', '🥈', '🥉']
 const PLACE_LABEL = ['1st Place — WINNER!', '2nd Place', '3rd Place']
@@ -20,7 +22,7 @@ export default function LivePodium({
   quizTitle: string
   bannerColor?: string
   animated?: boolean
-  highlightUserId?: string
+  highlightUserId?: string | null
   controls?: React.ReactNode
 }) {
   const ranked = [...players].sort((a, b) => b.score - a.score)
@@ -87,7 +89,7 @@ export default function LivePodium({
               if (!p) return <div key={r} style={{ flex: 1, maxWidth: '11rem' }} />
               const isFirst = r === 0
               const accent = ACCENT[r]
-              const mine = p.user_id === highlightUserId
+              const mine = !!p.user_id && p.user_id === highlightUserId
               return (
                 <div key={r} style={{ flex: 1, maxWidth: '11rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'podiumRise 0.7s cubic-bezier(0.22,1.4,0.36,1) both', animationDelay: `${r * 0.12}s` }}>
                   <div style={{ fontSize: isFirst ? '3rem' : '2.4rem' }}>{isFirst ? '👑' : ''}</div>
@@ -117,10 +119,10 @@ export default function LivePodium({
               <p style={{ textAlign: 'center', color: 'rgb(148,148,168)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Honorable Mentions</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {mentions.map((p, i) => (
-                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.user_id === highlightUserId ? `1px solid ${bannerColor}` : '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem' }}>
+                  <div key={p.id ?? p.user_id ?? `m-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.user_id && p.user_id === highlightUserId ? `1px solid ${bannerColor}` : '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem' }}>
                     <span style={{ width: '1.5rem', fontWeight: 900, color: 'rgb(180,180,200)' }}>{i + 4}</span>
                     <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
-                    <span style={{ flex: 1, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}{p.user_id === highlightUserId && ' (You)'}</span>
+                    <span style={{ flex: 1, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}{p.user_id && p.user_id === highlightUserId && ' (You)'}</span>
                     <span style={{ fontWeight: 800, color: 'rgb(251,191,36)' }}>{p.score}</span>
                   </div>
                 ))}
@@ -138,7 +140,7 @@ export default function LivePodium({
               {showAll && (
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.375rem', textAlign: 'left' }}>
                   {ranked.map((p, i) => (
-                    <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.625rem', background: p.user_id === highlightUserId ? `${bannerColor}22` : 'rgba(255,255,255,0.02)', padding: '0.5rem 0.85rem' }}>
+                    <div key={p.id ?? p.user_id ?? `r-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.625rem', background: p.user_id && p.user_id === highlightUserId ? `${bannerColor}22` : 'rgba(255,255,255,0.02)', padding: '0.5rem 0.85rem' }}>
                       <span style={{ width: '1.75rem', fontWeight: 800, color: 'rgb(148,148,168)' }}>{i + 1}</span>
                       <span style={{ fontSize: '1.1rem' }}>{p.avatar_emoji}</span>
                       <span style={{ flex: 1, color: 'white', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>

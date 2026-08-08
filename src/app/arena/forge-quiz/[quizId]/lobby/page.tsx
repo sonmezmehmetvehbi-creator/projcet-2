@@ -8,12 +8,15 @@ import LobbyClient from './LobbyClient'
 export default async function ForgeQuizLobbyPage({ params }: { params: { quizId: string } }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/arena/forge-quiz/${params.quizId}/lobby`)
+  // Guests (no account) may open a Self-Paced Room's shared link and play. The
+  // login gate is deferred until after we know the quiz mode.
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('*').eq('id', user.id).single()
+    : { data: null }
 
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const bans = await getUserBans(user.id, adminClient)
+  const bans = user ? await getUserBans(user.id, adminClient) : undefined
 
   const { data: quiz } = await adminClient
     .from('forge_quizzes')
@@ -34,11 +37,12 @@ export default async function ForgeQuizLobbyPage({ params }: { params: { quizId:
       .limit(1)
       .maybeSingle()
     if (liveSession) {
-      if (liveSession.host_id === user.id) redirect(`/arena/forge-quiz/live/${liveSession.id}/host`)
+      // The live join flow supports guests; only the host route needs an account.
+      if (user && liveSession.host_id === user.id) redirect(`/arena/forge-quiz/live/${liveSession.id}/host`)
       redirect(`/arena/forge-quiz/live/${liveSession.id}/join`)
     }
     // No open session — the host relaunches from the Arena; nothing to join here.
-    redirect('/arena')
+    redirect(user ? '/arena' : `/login?next=/arena/forge-quiz/${params.quizId}/lobby`)
   }
 
   const { data: questions } = await adminClient
@@ -61,7 +65,7 @@ export default async function ForgeQuizLobbyPage({ params }: { params: { quizId:
         quiz={quiz}
         questionCount={questions?.length ?? quiz.question_count ?? 0}
         initialPlayers={players ?? []}
-        currentUserId={user.id}
+        currentUserId={user?.id ?? null}
       />
     </div>
   )

@@ -28,12 +28,15 @@ export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    const { sessionId, questionIndex, answer } = await request.json()
+    const { sessionId, questionIndex, answer, guestId } = await request.json()
     if (!sessionId || questionIndex == null) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+    // Authenticated user (unchanged) OR a guest identified by guestId.
+    const guest = String(guestId ?? '').trim()
+    if (!user && !guest) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: session } = await adminClient
       .from('forge_quiz_live_sessions')
@@ -46,11 +49,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'not_accepting', tooLate: true }, { status: 409 })
     }
 
-    const { data: player } = await adminClient
+    const playerQuery = adminClient
       .from('forge_quiz_live_players')
       .select('id, score, streak, best_streak, correct, attempted, is_kicked')
       .eq('session_id', sessionId)
-      .eq('user_id', user.id)
+    const { data: player } = await (user ? playerQuery.eq('user_id', user.id) : playerQuery.eq('guest_id', guest))
       .maybeSingle()
     if (!player) return NextResponse.json({ error: 'Not a player in this game' }, { status: 403 })
     if (player.is_kicked) return NextResponse.json({ error: 'kicked' }, { status: 403 })

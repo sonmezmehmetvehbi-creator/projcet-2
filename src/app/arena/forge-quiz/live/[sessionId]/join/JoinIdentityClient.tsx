@@ -4,15 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { getForgeGuestId, sanitizeNickname } from '@/lib/forgeGuest'
 
 const AVATARS = ['🎓', '📚', '⚡', '🔥', '💡', '🧠', '🏆', '🎯', '🚀', '💪', '🦁', '🐯', '🦊', '🐉', '⚔️', '🛡️', '🌟', '👑', '🎮', '🎲']
 
 export default function JoinIdentityClient({
-  sessionId, quiz, currentUserId, defaultName, existing, initialCount,
+  sessionId, quiz, currentUserId, isGuest = false, defaultName, existing, initialCount,
 }: {
   sessionId: string
   quiz: any
-  currentUserId: string
+  currentUserId: string | null
+  isGuest?: boolean
   defaultName: string
   existing: { name: string; avatar: string; kicked: boolean } | null
   initialCount: number
@@ -28,8 +30,39 @@ export default function JoinIdentityClient({
   const [error, setError] = useState('')
   const [changingIcon, setChangingIcon] = useState(false)
   const [count, setCount] = useState(initialCount)
+  // The current viewer's own player-row id (set after joining, or found on
+  // mount for a returning guest). Used to match kick events regardless of
+  // whether this viewer is a signed-in user or a guest (user_id is null).
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null)
+  // Guests carry a stable per-tab id instead of an auth user_id.
+  const guestIdRef = useRef<string>('')
+  if (isGuest && !guestIdRef.current) guestIdRef.current = getForgeGuestId()
 
   const redirectedRef = useRef(false)
+
+  // Guest re-identification: on mount, if this tab already joined (same guest_id),
+  // jump straight to the waiting room instead of showing the identity screen
+  // again. Signed-in users are handled server-side (via the `existing` prop).
+  useEffect(() => {
+    if (!isGuest || !guestIdRef.current) return
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('forge_quiz_live_players')
+        .select('id, display_name, avatar_emoji, is_kicked')
+        .eq('session_id', sessionId)
+        .eq('guest_id', guestIdRef.current)
+        .maybeSingle()
+      if (cancelled || !data) return
+      setMyPlayerId(data.id)
+      setName((data.display_name || 'Player').slice(0, 15))
+      if (data.avatar_emoji) setAvatar(data.avatar_emoji)
+      setPhase(data.is_kicked ? 'kicked' : 'joined')
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, isGuest])
 
   const goToPlay = () => {
     if (redirectedRef.current) return
@@ -56,25 +89,30 @@ export default function JoinIdentityClient({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
         const row = payload.new
-        if (row && row.user_id === currentUserId && row.is_kicked) { setPhase('kicked'); return }
+        // Match "this is me" by player-row id (works for guests, whose user_id is
+        // null) or by user_id for signed-in viewers.
+        const isMe = row && ((myPlayerId && row.id === myPlayerId) || (currentUserId && row.user_id === currentUserId))
+        if (isMe && row.is_kicked) { setPhase('kicked'); return }
         refreshCount()
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, currentUserId])
+  }, [sessionId, currentUserId, myPlayerId])
 
   async function join() {
-    if (!name.trim() || joining) return
+    const cleanName = sanitizeNickname(name, 15)
+    if (!cleanName || joining) return
     setJoining(true); setError('')
     try {
       const res = await fetch('/api/arena/forge-quiz/live/join', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, displayName: name.trim().slice(0, 15), avatarEmoji: avatar }),
+        body: JSON.stringify({ sessionId, displayName: cleanName, avatarEmoji: avatar, guestId: isGuest ? guestIdRef.current : undefined }),
       })
       const data = await res.json()
       if (data.kicked) { setPhase('kicked'); return }
       if (!data.playerId) throw new Error(data.error || 'Could not join')
+      setMyPlayerId(data.playerId)
       setPhase('joined')
     } catch (e: any) {
       setError(e.message || 'Could not join')
@@ -89,7 +127,7 @@ export default function JoinIdentityClient({
       try {
         await fetch('/api/arena/forge-quiz/live/update-avatar', {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, avatarEmoji: a }),
+          body: JSON.stringify({ sessionId, avatarEmoji: a, guestId: isGuest ? guestIdRef.current : undefined }),
         })
       } catch {}
     }

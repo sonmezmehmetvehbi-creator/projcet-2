@@ -12,10 +12,11 @@ type Result = { qIndex: number; isCorrect?: boolean; points?: number; correctAns
 const WAITING_MSGS = ['Answer locked in!', 'Nice pick!']
 
 export default function PlayLiveClient({
-  sessionId, userId, me, initialSession, quiz, questions,
+  sessionId, playerId, guestId = null, me, initialSession, quiz, questions,
 }: {
   sessionId: string
-  userId: string
+  playerId: string
+  guestId?: string | null
   me: { display_name: string; avatar_emoji: string }
   initialSession: SessionState
   quiz: any
@@ -29,7 +30,7 @@ export default function PlayLiveClient({
   const [sliderVal, setSliderVal] = useState<number | null>(null)
   const [frVal, setFrVal] = useState('')
   const [waitIdx, setWaitIdx] = useState(0)
-  const [board, setBoard] = useState<{ user_id: string; display_name: string; avatar_emoji: string; score: number; correct?: number; attempted?: number; best_streak?: number; change?: number }[]>([])
+  const [board, setBoard] = useState<{ id: string; user_id: string | null; display_name: string; avatar_emoji: string; score: number; correct?: number; attempted?: number; best_streak?: number; change?: number }[]>([])
   const [shake, setShake] = useState(false)
 
   const supaRef = useRef(createClient())
@@ -78,15 +79,17 @@ export default function PlayLiveClient({
   const prevRanksRef = useRef<Record<string, number>>({})
   const fetchBoard = useCallback(async () => {
     const supabase = supaRef.current
-    const { data } = await supabase.from('forge_quiz_live_players').select('user_id, display_name, avatar_emoji, score, correct, attempted, best_streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false })
+    // Key rows by player-row id (always present) rather than user_id, which is
+    // null for guest players and would collide across multiple guests.
+    const { data } = await supabase.from('forge_quiz_live_players').select('id, user_id, display_name, avatar_emoji, score, correct, attempted, best_streak').eq('session_id', sessionId).eq('is_kicked', false).order('score', { ascending: false })
     // Rank delta vs the previous fetch: positive = moved up N spots. Drives the
     // overtake badges/glow (purely visual — order still comes from score desc).
     const ranked = (data ?? []).map((p, i) => {
-      const prev = prevRanksRef.current[p.user_id]
+      const prev = prevRanksRef.current[p.id]
       return { ...p, change: prev != null ? prev - (i + 1) : 0 }
     })
     const nextRanks: Record<string, number> = {}
-    ranked.forEach((p, i) => { nextRanks[p.user_id] = i + 1 })
+    ranked.forEach((p, i) => { nextRanks[p.id] = i + 1 })
     prevRanksRef.current = nextRanks
     setBoard(ranked)
   }, [sessionId])
@@ -99,7 +102,7 @@ export default function PlayLiveClient({
   useEffect(() => {
     const supabase = supaRef.current
     const channel = supabase
-      .channel(`live-play-${sessionId}-${userId}`)
+      .channel(`live-play-${sessionId}-${playerId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_sessions', filter: `id=eq.${sessionId}` }, (payload: any) => {
         const s = payload.new
         console.log('Session state updated to:', { status: s.status, question_state: s.question_state, q: s.current_question_index })
@@ -107,13 +110,13 @@ export default function PlayLiveClient({
         setSession((prev) => ({ ...prev, status: s.status, display_mode: s.display_mode, current_question_index: s.current_question_index ?? 0, question_state: s.question_state ?? 'question', question_started_at: s.question_started_at }))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'forge_quiz_live_players', filter: `session_id=eq.${sessionId}` }, (payload: any) => {
-        if (payload.new.user_id === userId && payload.new.is_kicked) { window.location.href = `/arena/forge-quiz/live/${sessionId}/join`; return }
+        if (payload.new.id === playerId && payload.new.is_kicked) { window.location.href = `/arena/forge-quiz/live/${sessionId}/join`; return }
         if (qStateRef.current === 'leaderboard' || qStateRef.current === 'revealed') fetchBoard()
       })
       .subscribe((status) => { console.log('[Live/play] channel status:', status) })
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, userId])
+  }, [sessionId, playerId])
 
   useEffect(() => {
     if (session.status === 'podium' || session.question_state === 'leaderboard' || session.question_state === 'revealed') fetchBoard()
@@ -127,7 +130,7 @@ export default function PlayLiveClient({
     try {
       const res = await fetch('/api/arena/forge-quiz/live/submit-answer', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, questionIndex: qIndex, answer }),
+        body: JSON.stringify({ sessionId, questionIndex: qIndex, answer, guestId: guestId ?? undefined }),
       })
       const data = await res.json().catch(() => ({}))
       // Transition to the "waiting for others" screen immediately on success —
@@ -151,12 +154,12 @@ export default function PlayLiveClient({
     setSubmitting(false)
   }
 
-  const myRank = board.findIndex((p) => p.user_id === userId)
+  const myRank = board.findIndex((p) => p.id === playerId)
   const myScore = myRank >= 0 ? board[myRank].score : 0
 
   // Leaderboard FLIP animation (mini-leaderboard shown between questions).
   const lbVisible = board.slice(0, 5)
-  const setLbRef = useFlipRows(lbVisible.map((p) => p.user_id), session.question_state === 'leaderboard')
+  const setLbRef = useFlipRows(lbVisible.map((p) => p.id), session.question_state === 'leaderboard')
   const lbMaxUp = Math.max(0, ...lbVisible.map((p) => ((p.change ?? 0) > 0 ? (p.change as number) : 0)))
   const lbBigMoverId = lbMaxUp > 0 ? lbVisible.find((p) => p.change === lbMaxUp)?.user_id : undefined
 
@@ -228,8 +231,8 @@ export default function PlayLiveClient({
               ? `lbFadeIn 0.4s ease both, lbUpGlow 1.6s ease 0.1s both${isBigMover ? ', lbBigMover 0.8s ease 0.25s both' : ''}`
               : 'lbFadeIn 0.4s ease both'
             return (
-              <div key={p.user_id} ref={setLbRef(p.user_id)} style={{ willChange: 'transform' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.user_id === userId ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.08)', background: p.user_id === userId ? `${color}22` : 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem', animation: innerAnim }}>
+              <div key={p.id} ref={setLbRef(p.id)} style={{ willChange: 'transform' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '0.75rem', border: p.id === playerId ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.08)', background: p.id === playerId ? `${color}22` : 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem', animation: innerAnim }}>
                   <span style={{ width: '1.5rem', fontWeight: 900, color: 'rgb(180,180,200)' }}>{i + 1}</span>
                   <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
                   <span style={{ flex: 1, color: 'white', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>

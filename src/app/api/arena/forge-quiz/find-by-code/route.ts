@@ -1,17 +1,13 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/arena/forge-quiz/find-by-code?code=XXXXXX
-// Resolves a join code to a quiz (active, non-expired).
+// Resolves a join code to a quiz (active, non-expired). Public — guests may
+// resolve a Self-Paced Room code from its shared link without an account.
 export async function GET(request: Request) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const code = (new URL(request.url).searchParams.get('code') || '').trim().toUpperCase()
     if (!code) return NextResponse.json({ error: 'Quiz not found or expired' }, { status: 404 })
 
