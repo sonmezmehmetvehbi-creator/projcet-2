@@ -60,7 +60,6 @@ export default async function BrowsePreviewPage({ params }: { params: { quizId: 
     starred,
     avgRating,
     ratingCount,
-    ratingSum,
     myRating,
     isOwner,
     questions: (questions ?? []).map((q: any) => ({

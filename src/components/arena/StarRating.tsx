@@ -39,9 +39,9 @@ export function StarDisplay({
   )
 }
 
-// Interactive 1-5 selector. Click-only: the display is driven purely by the
-// committed `value` prop and updates solely when a star is clicked (onRate). It
-// never tracks the cursor — no hover preview.
+// Interactive 1-5 selector. Simplest possible: click → callback → re-render.
+// The display is driven purely by the committed `value` prop; no hover state, no
+// transitions, no local math. The parent sets `value` from the server response.
 export function StarInput({
   value,
   onRate,
@@ -63,8 +63,8 @@ export function StarInput({
           aria-checked={value === i}
           aria-label={`${i} star${i === 1 ? "" : "s"}`}
           disabled={disabled}
-          onClick={() => { console.log('[StarInput] clicked star', i, 'current value:', value); if (!disabled) onRate(i) }}
-          className="rounded outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ember/40 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => onRate(i)}
+          className="rounded outline-none disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Star
             className={value >= i ? "fill-ember text-ember" : "text-arena-muted/50"}

@@ -34,7 +34,6 @@ export type PreviewData = {
   starred: boolean
   avgRating: number
   ratingCount: number
-  ratingSum: number
   myRating: number
   isOwner: boolean
   questions: PreviewQuestion[]
@@ -47,11 +46,12 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
   const [starred, setStarred] = useState(data.starred)
   const [starCount, setStarCount] = useState(data.starCount)
 
-  // Optimistic rating (keeps a running sum/count so the average updates live).
+  // Rating — no optimistic math. myRating/avgRating/ratingCount are ONLY set from
+  // the server's authoritative response after a successful rate call.
   const [myRating, setMyRating] = useState(data.myRating)
-  const [sum, setSum] = useState(data.ratingSum)
-  const [count, setCount] = useState(data.ratingCount)
-  const avg = count > 0 ? sum / count : 0
+  const [avgRating, setAvgRating] = useState(data.avgRating)
+  const [ratingCount, setRatingCount] = useState(data.ratingCount)
+  const [ratingBusy, setRatingBusy] = useState(false)
 
   async function toggleStar() {
     const next = !starred
@@ -68,19 +68,23 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
     }
   }
 
-  async function rate(n: number) {
-    const prevMine = myRating, prevSum = sum, prevCount = count
-    setMyRating(n)
-    setSum(prevSum - prevMine + n)
-    setCount(prevCount + (prevMine ? 0 : 1))
+  async function handleRate(n: number) {
+    if (ratingBusy) return
+    setRatingBusy(true)
     try {
       const res = await fetch("/api/arena/forge-quiz/rate", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quizId: data.id, rating: n }),
       })
-      if (!res.ok) throw new Error()
-    } catch {
-      setMyRating(prevMine); setSum(prevSum); setCount(prevCount)
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setMyRating(json.myRating)
+        setAvgRating(json.avgRating)
+        setRatingCount(json.ratingCount)
+      }
+    } finally {
+      setRatingBusy(false)
     }
   }
 
@@ -112,7 +116,7 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
 
         {/* Stats row */}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-arena-muted">
-          <StarDisplay value={avg} count={count} size={16} />
+          <StarDisplay value={avgRating} count={ratingCount} size={16} />
           <span className="inline-flex items-center gap-1.5"><Play className="h-4 w-4" aria-hidden /> {data.playCount.toLocaleString()} plays</span>
           <span className="inline-flex items-center gap-1.5"><Star className="h-4 w-4" aria-hidden /> {starCount.toLocaleString()} saved</span>
           <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" aria-hidden /> {data.questionCount} questions</span>
@@ -152,7 +156,7 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
           <p className="text-sm font-semibold text-arena-fg">{myRating ? "Your rating" : "Rate this quiz"}</p>
           <p className="mt-0.5 text-xs text-arena-muted">{myRating ? "Tap a star to change it." : "Help others discover great quizzes."}</p>
           <div className="mt-3">
-            <StarInput value={myRating} onRate={rate} />
+            <StarInput value={myRating} onRate={handleRate} disabled={ratingBusy} />
           </div>
         </div>
 
