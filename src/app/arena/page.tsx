@@ -15,27 +15,80 @@ export default async function ArenaPage() {
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
   const bans = await getUserBans(user.id, adminClient)
 
-  // Quizzes the user CREATED.
+  const now = Date.now()
+  const isActive = (q: any) => q && q.status !== 'ended' && (!q.expires_at || new Date(q.expires_at).getTime() > now)
+  // The canonical quiz an instance belongs to (an original has no source_quiz_id).
+  const originalIdOf = (q: any) => q?.source_quiz_id ?? q?.id
+
+  // ── Quizzes the user CREATED — genuine authored templates only ──
+  // Launched play instances carry a source_quiz_id and are transient copies owned
+  // (attributed) to the ORIGINAL creator; they must never appear here, only under
+  // "Joined". This is what keeps a played public quiz out of the player's Created.
   const { data: createdQuizzes } = await adminClient
     .from('forge_quizzes')
     .select('*')
     .eq('creator_id', user.id)
+    .is('source_quiz_id', null)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(50)
+  const createdRows = createdQuizzes ?? []
 
-  // Quizzes the user JOINED (as a player).
+  // ── Self-paced instances the user PLAYED (has a player row) ──
   const { data: playerRows } = await adminClient
     .from('forge_quiz_players')
-    .select('*, forge_quizzes(*)')
+    .select('quiz_id, total_score, completed, completed_at, joined_at, forge_quizzes(*)')
     .eq('user_id', user.id)
     .eq('is_kicked', false)
     .order('joined_at', { ascending: false })
-    .limit(20)
+    .limit(100)
 
-  const createdRows = createdQuizzes ?? []
-  const joinedRows = (playerRows ?? []).filter((p: any) => p.forge_quizzes && p.forge_quizzes.creator_id !== user.id)
-  const allIds = Array.from(new Set([...createdRows.map((q: any) => q.id), ...joinedRows.map((p: any) => p.quiz_id)]))
+  // ── Self-paced rooms the user LAUNCHED from someone else's quiz ──
+  // (A shareable room they spun up but may not have played themselves yet.)
+  const { data: launchedInstances } = await adminClient
+    .from('forge_quizzes')
+    .select('*')
+    .eq('launched_by', user.id)
+    .not('source_quiz_id', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(100)
 
+  // Group "Joined" by the ORIGINAL quiz so playing the same public quiz through
+  // several instances (solo replays reuse one row; rooms are distinct) collapses
+  // into ONE card — no duplicate-looking entries.
+  type JoinGroup = { originalId: string; instanceIds: Set<string>; instance: any; players: any[] }
+  const joinGroups = new Map<string, JoinGroup>()
+  const addInstance = (instanceQuiz: any, player: any | null) => {
+    if (!instanceQuiz) return
+    // Only quizzes the user did NOT author count as "Joined".
+    if (instanceQuiz.creator_id === user.id) return
+    const originalId = originalIdOf(instanceQuiz)
+    const g: JoinGroup = joinGroups.get(originalId) ?? { originalId, instanceIds: new Set<string>(), instance: instanceQuiz, players: [] }
+    g.instanceIds.add(instanceQuiz.id)
+    if (player) g.players.push({ ...player, quiz_id: instanceQuiz.id })
+    joinGroups.set(originalId, g)
+  }
+  for (const p of playerRows ?? []) addInstance(p.forge_quizzes, p)
+  for (const inst of launchedInstances ?? []) addInstance(inst, null)
+
+  // Fetch the canonical originals for accurate title/active/replay link.
+  const joinedOriginalIds = Array.from(joinGroups.keys())
+  const origById = new Map<string, any>()
+  if (joinedOriginalIds.length > 0) {
+    const { data: origs } = await adminClient.from('forge_quizzes').select('*').in('id', joinedOriginalIds)
+    for (const o of origs ?? []) origById.set(o.id, o)
+  }
+
+  // Every quiz the user has starred (any creator) — drives the Starred tab.
+  const { data: myStarRows } = await adminClient
+    .from('forge_quiz_stars')
+    .select('quiz_id')
+    .eq('user_id', user.id)
+  const starredQuizIds = Array.from(new Set((myStarRows ?? []).map((s: any) => s.quiz_id)))
+  const starredSet = new Set<string>(starredQuizIds)
+
+  // Player counts (for created/joined/starred cards) across every relevant quiz.
+  const joinedInstanceIds = Array.from(new Set(Array.from(joinGroups.values()).flatMap((g) => Array.from(g.instanceIds))))
+  const allIds = Array.from(new Set([...createdRows.map((q: any) => q.id), ...joinedInstanceIds, ...starredQuizIds]))
   const byQuiz = new Map<string, any[]>()
   if (allIds.length > 0) {
     const { data: allPlayers } = await adminClient
@@ -49,38 +102,55 @@ export default async function ArenaPage() {
     }
   }
 
-  const now = Date.now()
-  const isActive = (q: any) => q && q.status !== 'ended' && (!q.expires_at || new Date(q.expires_at).getTime() > now)
-
-  // Which of these quizzes has the current user starred (forge_quiz_stars join
-  // table — replaces the old is_starred boolean).
-  const starredSet = new Set<string>()
-  if (allIds.length > 0) {
-    const { data: stars } = await adminClient
-      .from('forge_quiz_stars')
-      .select('quiz_id')
-      .eq('user_id', user.id)
-      .in('quiz_id', allIds)
-    for (const s of stars ?? []) starredSet.add(s.quiz_id)
-  }
-
   const quizzesCreated = createdRows.map((q: any) => {
     const parts = byQuiz.get(q.id) ?? []
     return {
       id: q.id, title: q.title, banner_color: q.banner_color, play_mode: q.play_mode,
       expires_at: q.expires_at ?? null, playerCount: parts.filter((p) => p.completed).length,
-      active: isActive(q), is_starred: starredSet.has(q.id),
+      active: isActive(q), is_starred: starredSet.has(q.id), owned: true,
     }
   })
 
-  const quizzesJoined = joinedRows.map((p: any) => {
-    const q = p.forge_quizzes
-    const parts = byQuiz.get(p.quiz_id) ?? []
-    const completedSorted = parts.filter((x: any) => x.completed).sort((a: any, b: any) => b.total_score - a.total_score)
-    const rank = p.completed ? completedSorted.findIndex((x: any) => x.user_id === user.id) + 1 : 0
+  const quizzesJoined = Array.from(joinGroups.values()).map((g) => {
+    const orig = origById.get(g.originalId) ?? g.instance
+    const completedPlayers = g.players.filter((p: any) => p.completed)
+    // Best completed attempt across this quiz's instances → its score + rank.
+    const best = completedPlayers.slice().sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))[0] ?? null
+    let rank = 0, totalPlayers = 0, score = 0
+    if (best) {
+      score = best.total_score ?? 0
+      const board = (byQuiz.get(best.quiz_id) ?? []).filter((p: any) => p.completed).sort((a: any, b: any) => b.total_score - a.total_score)
+      totalPlayers = board.length
+      rank = board.findIndex((p: any) => p.user_id === user.id) + 1
+    }
+    const lastPlayed = completedPlayers.map((p: any) => p.completed_at).filter(Boolean).sort().slice(-1)[0] ?? null
+    const active = isActive(orig)
     return {
-      id: p.quiz_id, title: q?.title ?? 'Quiz', banner_color: q?.banner_color ?? '#7c3aed',
-      active: isActive(q), completed: p.completed, score: p.total_score ?? 0, rank, playerCount: completedSorted.length,
+      id: g.originalId,
+      title: orig?.title ?? 'Quiz',
+      banner_color: orig?.banner_color ?? '#7c3aed',
+      active,
+      completed: !!best,
+      score, rank, playerCount: totalPlayers,
+      timesPlayed: g.instanceIds.size,
+      lastPlayed,
+      // Replay the canonical original as a fresh solo attempt.
+      playHref: active ? `/arena/forge-quiz/${g.originalId}/play` : undefined,
+    }
+  })
+
+  // ── Starred tab — every quiz the user saved, regardless of who created it ──
+  let starredQuizRows: any[] = []
+  if (starredQuizIds.length > 0) {
+    const { data: sq } = await adminClient.from('forge_quizzes').select('*').in('id', starredQuizIds)
+    starredQuizRows = sq ?? []
+  }
+  const quizzesStarred = starredQuizRows.map((q: any) => {
+    const parts = byQuiz.get(q.id) ?? []
+    return {
+      id: q.id, title: q.title, banner_color: q.banner_color, play_mode: q.play_mode,
+      expires_at: q.expires_at ?? null, playerCount: parts.filter((p: any) => p.completed).length,
+      active: isActive(q), is_starred: true, owned: q.creator_id === user.id,
     }
   })
 
@@ -151,7 +221,7 @@ export default async function ArenaPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
       <Navbar profile={profile} bans={bans} />
-      <ArenaClient profile={profile} quizzesCreated={quizzesCreated} quizzesJoined={quizzesJoined} liveHosted={liveHosted} liveJoined={liveJoined} />
+      <ArenaClient profile={profile} quizzesCreated={quizzesCreated} quizzesJoined={quizzesJoined} quizzesStarred={quizzesStarred} liveHosted={liveHosted} liveJoined={liveJoined} />
     </div>
   )
 }

@@ -16,11 +16,15 @@ export async function POST(request: Request) {
 
     const { data: quiz } = await adminClient
       .from('forge_quizzes')
-      .select('creator_id')
+      .select('creator_id, launched_by')
       .eq('id', quizId)
       .maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
-    if (quiz.creator_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // The room host is either the original creator or whoever launched this
+    // instance (relaunch stamps launched_by).
+    if (quiz.creator_id !== user.id && quiz.launched_by !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // `.neq('user_id', user.id)` keeps the host from kicking themselves.
     const { error } = await adminClient

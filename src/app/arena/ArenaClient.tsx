@@ -9,8 +9,8 @@ import { ActionCards } from '@/components/arena/action-cards'
 import { MyQuizzes } from '@/components/arena/my-quizzes'
 import type { CreatedCard, JoinedCard } from '@/components/arena/quiz-card'
 
-type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean; is_starred?: boolean }
-type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number }
+type CreatedQuiz = { id: string; title: string; banner_color: string; play_mode: string; expires_at: string | null; playerCount: number; active: boolean; is_starred?: boolean; owned?: boolean }
+type JoinedQuiz = { id: string; title: string; banner_color: string; active: boolean; completed: boolean; score: number; rank: number; playerCount: number; timesPlayed?: number; lastPlayed?: string | null; playHref?: string }
 type HostedLive = { id: string; title: string; banner_color: string; date: string; playerCount: number; active: boolean }
 type JoinedLive = { id: string; title: string; banner_color: string; date: string; score: number; rank: number; playerCount: number; active: boolean }
 
@@ -28,11 +28,12 @@ function timeLeftLabel(expiresAt: string | null): string {
 }
 
 export default function ArenaClient({
-  profile, quizzesCreated = [], quizzesJoined = [], liveHosted = [], liveJoined = [],
+  profile, quizzesCreated = [], quizzesJoined = [], quizzesStarred = [], liveHosted = [], liveJoined = [],
 }: {
   profile?: any
   quizzesCreated?: CreatedQuiz[]
   quizzesJoined?: JoinedQuiz[]
+  quizzesStarred?: CreatedQuiz[]
   liveHosted?: HostedLive[]
   liveJoined?: JoinedLive[]
 }) {
@@ -66,8 +67,12 @@ export default function ArenaClient({
   // Created quizzes are owned: Manage → the edit/relaunch flow; the play button
   // quick-relaunches after a format pick. Hosted live sessions are owned too but
   // aren't relaunchable rows, so they get Manage → host control only.
-  const createdCards: CreatedCard[] = [
-    ...quizzesCreated.map((q): CreatedCard => ({
+  // A created/starred quiz → a CreatedCard. `owned` decides whether Manage points
+  // at the editor (owner) or the read-only Browse preview (a starred quiz you
+  // don't own) and whether Delete is offered.
+  const quizToCard = (q: CreatedQuiz): CreatedCard => {
+    const owned = q.owned !== false
+    return {
       id: `q-${q.id}`,
       kind: 'quiz',
       quizId: q.id,
@@ -77,8 +82,13 @@ export default function ArenaClient({
       players: q.playerCount,
       meta: q.active ? (q.expires_at ? timeLeftLabel(q.expires_at) : undefined) : undefined,
       starred: !!q.is_starred,
-      manageHref: `/arena/forge-quiz/${q.id}/edit`,
-    })),
+      owned,
+      manageHref: owned ? `/arena/forge-quiz/${q.id}/edit` : `/arena/browse/${q.id}`,
+    }
+  }
+
+  const createdCards: CreatedCard[] = [
+    ...quizzesCreated.map(quizToCard),
     ...liveHosted.map((s): CreatedCard => ({
       id: `lh-${s.id}`,
       kind: 'session',
@@ -89,6 +99,7 @@ export default function ArenaClient({
       players: s.playerCount,
       meta: liveDate(s.date),
       starred: false,
+      owned: true,
       manageHref: `/arena/forge-quiz/live/${s.id}/host`,
     })),
   ]
@@ -103,7 +114,10 @@ export default function ArenaClient({
       score: q.score,
       totalPlayers: q.playerCount,
       meta: q.completed ? undefined : 'Not finished',
-      playHref: q.active ? `/arena/forge-quiz/${q.id}/lobby` : undefined,
+      playHref: q.playHref,
+      timesLabel: q.timesPlayed && q.timesPlayed > 1
+        ? `Played ${q.timesPlayed} times${q.lastPlayed ? ` · last ${liveDate(q.lastPlayed)}` : ''}`
+        : undefined,
     })),
     ...liveJoined.map((s): JoinedCard => ({
       id: `lj-${s.id}`,
@@ -117,6 +131,9 @@ export default function ArenaClient({
       playHref: s.active ? `/arena/forge-quiz/live/${s.id}/play` : undefined,
     })),
   ]
+
+  // Starred quizzes (any creator) as cards for the Starred tab.
+  const starredCards: CreatedCard[] = quizzesStarred.map(quizToCard)
 
   // ── Real hero stats ──
   const podiums =
@@ -154,7 +171,7 @@ export default function ArenaClient({
         </Link>
       </div>
 
-      <MyQuizzes created={createdCards} joined={joinedCards} createHref={CREATE_HREF} />
+      <MyQuizzes created={createdCards} joined={joinedCards} starred={starredCards} createHref={CREATE_HREF} />
     </div>
   )
 }

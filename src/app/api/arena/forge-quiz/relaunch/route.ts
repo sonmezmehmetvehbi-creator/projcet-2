@@ -45,7 +45,11 @@ export async function POST(request: Request) {
     const { data: newQuiz, error } = await adminClient
       .from('forge_quizzes')
       .insert({
-        creator_id: user.id,
+        // A launched instance is a transient PLAY copy — it is NEVER owned by the
+        // person launching it. Ownership always stays with the ORIGINAL creator so
+        // the quiz is correctly attributed everywhere (edit/delete guards, Browse,
+        // "Created" tab). Who spun up this instance is tracked in `launched_by`.
+        creator_id: orig.creator_id,
         creator_name: orig.creator_name,
         title: orig.title,
         welcome_message: orig.welcome_message,
@@ -61,9 +65,14 @@ export async function POST(request: Request) {
         subject: orig.subject ?? null,
         topic: orig.topic ?? null,
         // Trace this playable copy back to its origin so plays of it count toward
-        // the original (e.g. the Browse "have you played this?" rating gate).
+        // the original (e.g. the Browse "have you played this?" rating gate) and so
+        // instances can be excluded from the "Created" tab.
         // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS source_quiz_id uuid;
         source_quiz_id: orig.source_quiz_id ?? originalQuizId,
+        // Who launched this instance (may be a non-creator playing a public quiz).
+        // Drives the launcher's "Joined" tab without granting them ownership.
+        // -- ALTER TABLE forge_quizzes ADD COLUMN IF NOT EXISTS launched_by uuid REFERENCES profiles(id);
+        launched_by: user.id,
       })
       .select('id')
       .single()

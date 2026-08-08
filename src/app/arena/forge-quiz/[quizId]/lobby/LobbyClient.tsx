@@ -47,7 +47,10 @@ export default function LobbyClient({
 
   const quizId = quiz.id
   const isLive = quiz.play_mode === 'live'
-  const isCreator = currentUserId === quiz.creator_id
+  // The room "host" is the original creator OR whoever launched this instance
+  // (a non-creator can spin up a Self-Paced Room from a public quiz). Both get the
+  // host controls (start, kick, end, relaunch); everyone else is just a player.
+  const isCreator = currentUserId === quiz.creator_id || currentUserId === quiz.launched_by
   const color = quiz.banner_color || '#7c3aed'
   const me = players.find((p) => p.user_id === currentUserId)
   const hasPlayed = !!me?.completed
@@ -301,7 +304,7 @@ export default function LobbyClient({
                     <span style={{ fontSize: '1.25rem' }}>{p.avatar_emoji}</span>
                     <span style={{ flex: 1, minWidth: 0, color: 'white', fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.display_name}</span>
                     {p.user_id === currentUserId && <span style={{ fontSize: '0.5625rem', fontWeight: 800, color: 'rgb(196,181,253)' }}>YOU</span>}
-                    {isCreator && p.user_id !== quiz.creator_id && (
+                    {isCreator && p.user_id !== currentUserId && (
                       <button type="button" onClick={() => kick(p)} title={`Kick ${p.display_name}`}
                         style={{ width: '1.5rem', height: '1.5rem', flexShrink: 0, borderRadius: '0.375rem', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(239,68,68,0.12)', color: 'rgb(248,113,113)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <X style={{ width: '0.8rem', height: '0.8rem' }} />

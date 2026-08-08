@@ -23,6 +23,10 @@ export type CreatedCard = {
   players: number
   meta?: string
   starred: boolean
+  // Whether the current user OWNS this quiz. Owned → Manage opens the editor and
+  // Delete is offered; not owned (a starred public quiz) → Manage opens the
+  // read-only Browse preview and Delete is hidden. Starring is allowed regardless.
+  owned?: boolean
   manageHref: string
 }
 
@@ -36,6 +40,9 @@ export type JoinedCard = {
   totalPlayers: number
   meta?: string
   playHref?: string
+  // "Played N times · last <date>" when this quiz was played through more than one
+  // instance; collapses repeat plays into a single card.
+  timesLabel?: string
 }
 
 function StatusBadge({ active, activeLabel = "Active" }: { active: boolean; activeLabel?: string }) {
@@ -84,8 +91,11 @@ function Meta({ icon: Icon, children }: { icon: typeof Users; children: React.Re
 // whole view — including the "Starred" tab — updates optimistically without a
 // reload; the `starred` prop reflects that parent-owned state.
 function CardMenu({
-  quizId, canModify, starred, onToggleStar,
-}: { quizId: string; canModify: boolean; starred: boolean; onToggleStar?: () => void }) {
+  quizId, canModify, starred, onToggleStar, canStar,
+}: { quizId: string; canModify: boolean; starred: boolean; onToggleStar?: () => void; canStar?: boolean }) {
+  // Starring is not ownership-gated: you can save any quiz to your library. Delete
+  // stays owner-only (canModify). Defaults keep existing call sites unchanged.
+  const starEnabled = (canStar ?? canModify) && !!quizId && !!onToggleStar
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -104,7 +114,7 @@ function CardMenu({
   }, [open])
 
   function toggleStar() {
-    if (busy || !canModify) return
+    if (busy || !starEnabled) return
     onToggleStar?.()
     setOpen(false)
   }
@@ -174,8 +184,8 @@ function CardMenu({
                 type="button"
                 role="menuitem"
                 onClick={toggleStar}
-                disabled={!canModify || busy}
-                className={`${itemBase} ${canModify ? "text-arena-fg hover:bg-arena-bg/60" : "cursor-not-allowed text-arena-muted/50"}`}
+                disabled={!starEnabled || busy}
+                className={`${itemBase} ${starEnabled ? "text-arena-fg hover:bg-arena-bg/60" : "cursor-not-allowed text-arena-muted/50"}`}
               >
                 <Star className={`h-4 w-4 ${starred ? "fill-ember text-ember" : ""}`} aria-hidden />
                 {starred ? "Unstar" : "Star"}
@@ -214,7 +224,10 @@ function CardMenu({
 
 export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onToggleStar?: () => void }) {
   const [launchOpen, setLaunchOpen] = useState(false)
-  const canModify = quiz.kind === "quiz" && !!quiz.quizId
+  const isQuiz = quiz.kind === "quiz" && !!quiz.quizId
+  // Delete/edit are owner-only; starring works on any quiz (e.g. a saved public one).
+  const canModify = isQuiz && quiz.owned !== false
+  const canStar = isQuiz
 
   return (
     <CardShell>
@@ -234,7 +247,7 @@ export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onT
             <StatusBadge active={quiz.active} activeLabel={quiz.mode === "Live" ? "Live" : "Active"} />
           </div>
         </div>
-        <CardMenu quizId={quiz.quizId} canModify={canModify} starred={quiz.starred} onToggleStar={onToggleStar} />
+        <CardMenu quizId={quiz.quizId} canModify={canModify} canStar={canStar} starred={quiz.starred} onToggleStar={onToggleStar} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-arena-muted">
@@ -247,7 +260,7 @@ export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onT
           href={quiz.manageHref}
           className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2.5 text-sm font-medium text-arena-fg transition-colors duration-200 outline-none hover:border-brand/50 hover:bg-brand/10 focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          Manage
+          {canModify ? "Manage" : "View"}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
         {quiz.kind === "quiz" && (
@@ -263,7 +276,7 @@ export function CreatedQuizCard({ quiz, onToggleStar }: { quiz: CreatedCard; onT
       </div>
 
       {launchOpen && (
-        <LaunchChooser quizId={quiz.quizId} onClose={() => setLaunchOpen(false)} owner editHref={quiz.manageHref} />
+        <LaunchChooser quizId={quiz.quizId} onClose={() => setLaunchOpen(false)} owner={canModify} editHref={quiz.manageHref} />
       )}
     </CardShell>
   )
@@ -306,6 +319,12 @@ export function JoinedQuizCard({ quiz }: { quiz: JoinedCard }) {
           </>
         ) : (
           <span className="text-arena-muted">{quiz.meta ?? "Not finished"}</span>
+        )}
+        {quiz.timesLabel && (
+          <span className="inline-flex items-center gap-1.5 text-arena-muted">
+            <Play className="h-3.5 w-3.5" aria-hidden />
+            {quiz.timesLabel}
+          </span>
         )}
       </div>
 

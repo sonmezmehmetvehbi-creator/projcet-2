@@ -14,9 +14,12 @@ export async function POST(request: Request) {
     const { quizId } = await request.json()
     if (!quizId) return NextResponse.json({ error: 'Missing quizId' }, { status: 400 })
 
-    const { data: quiz } = await adminClient.from('forge_quizzes').select('creator_id').eq('id', quizId).maybeSingle()
+    const { data: quiz } = await adminClient.from('forge_quizzes').select('creator_id, launched_by').eq('id', quizId).maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
-    if (quiz.creator_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // The room host (original creator or the launcher of this instance) can end it.
+    if (quiz.creator_id !== user.id && quiz.launched_by !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const { error } = await adminClient
       .from('forge_quizzes')

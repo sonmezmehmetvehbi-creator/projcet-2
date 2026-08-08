@@ -54,11 +54,15 @@ export async function POST(request: Request) {
 
     const { data: quiz } = await adminClient
       .from('forge_quizzes')
-      .select('creator_id, max_players')
+      .select('creator_id, launched_by, max_players')
       .eq('id', quizId)
       .maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
-    if (quiz.creator_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // The original creator can always host; a non-creator can host a live instance
+    // THEY launched (relaunch stamps launched_by). Both are legitimate hosts.
+    if (quiz.creator_id !== user.id && quiz.launched_by !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const { data: session, error } = await adminClient
       .from('forge_quiz_live_sessions')

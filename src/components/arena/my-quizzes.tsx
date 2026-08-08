@@ -11,10 +11,12 @@ type Tab = "created" | "joined" | "starred"
 export function MyQuizzes({
   created,
   joined,
+  starred = [],
   createHref = "/arena/forge-quiz/create",
 }: {
   created: CreatedCard[]
   joined: JoinedCard[]
+  starred?: CreatedCard[]
   createHref?: string
 }) {
   const [tab, setTab] = useState<Tab>("created")
@@ -29,7 +31,20 @@ export function MyQuizzes({
     const o = starOverrides[c.quizId]
     return o === undefined || !c.quizId ? c : { ...c, starred: o }
   })
-  const starredCards = effectiveCreated.filter((c) => c.starred)
+
+  // The Starred tab shows EVERY saved quiz — created or not (e.g. a public quiz
+  // saved from Browse). Merge the server-provided starred list with created cards
+  // (dedup by quizId), apply optimistic overrides, then keep only starred ones.
+  const starredById = new Map<string, CreatedCard>()
+  for (const c of [...starred, ...created]) {
+    if (c.quizId && !starredById.has(c.quizId)) starredById.set(c.quizId, c)
+  }
+  const starredCards = Array.from(starredById.values())
+    .map((c) => {
+      const o = starOverrides[c.quizId]
+      return o === undefined ? c : { ...c, starred: o }
+    })
+    .filter((c) => c.starred)
 
   async function handleToggleStar(quizId: string, current: boolean) {
     if (!quizId) return

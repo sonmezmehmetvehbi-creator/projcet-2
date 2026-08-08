@@ -6,13 +6,17 @@ import { X, Play, Link2, Gamepad2, Pencil, Loader2, ArrowLeft } from "lucide-rea
 import { DURATIONS, pill, input, sel, customHours } from "@/components/arena/forgeShared"
 
 // Unified launch chooser used from every entry point: My Quizzes card, the
-// Manage/edit screen, and a public quiz's Browse preview. Launching always spins
-// up a fresh copy of the quiz (relaunch → source_quiz_id), decoupled from the
-// original template.
+// Manage/edit screen, and a public quiz's Browse preview.
 //
-//   • Play Solo       — private single-player self-paced attempt, no room/sharing
-//   • Self-Paced Room — pick a duration, get a shareable link/lobby
-//   • Host Live        — open a live waiting room to host
+//   • Play Solo       — private single-player attempt; plays the ORIGINAL quiz
+//                       directly (no clone), so replays never duplicate
+//   • Self-Paced Room — spins up a fresh instance (relaunch → source_quiz_id) with
+//                       its own duration/room code; get a shareable link/lobby
+//   • Host Live        — spins up a fresh instance, then opens a live room to host
+//
+// A relaunched instance is always attributed to the ORIGINAL creator (creator_id)
+// and stamped with launched_by so it surfaces under the launcher's "Joined", never
+// their "Created".
 //
 // `owner` shows a Manage/Edit shortcut; non-creators never see it.
 export function LaunchChooser({
@@ -58,14 +62,14 @@ export function LaunchChooser({
     return rel.newQuizId as string
   }
 
-  async function playSolo() {
+  function playSolo() {
     if (busy) return
+    // Private single-player attempt: play the ORIGINAL quiz directly. We do NOT
+    // clone it — cloning per play spawned duplicate quiz rows (one "Joined" entry
+    // per replay) and mis-attributed ownership. Playing the original reuses the
+    // single per-user player row, so replays never duplicate.
     setBusy("solo"); setError("")
-    try {
-      // Private single-player attempt: a long-lived self-paced copy, straight to play.
-      const newId = await relaunch("self_paced", { duration: "7d" })
-      router.push(`/arena/forge-quiz/${newId}/play`)
-    } catch (e: any) { setError(e.message || "Something went wrong"); setBusy(null) }
+    router.push(`/arena/forge-quiz/${quizId}/play`)
   }
 
   async function startRoom() {
