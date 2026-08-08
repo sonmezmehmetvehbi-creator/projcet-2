@@ -280,7 +280,7 @@ export default function LobbyClient({
           <p style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgb(196,181,253)', marginBottom: '0.75rem' }}>Join Code</p>
           <p style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.25em', color: 'white', lineHeight: 1, textShadow: '0 0 30px rgba(124,58,237,0.8)' }}>{quiz.room_code}</p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginTop: '1rem' }}>
-            <span style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)' }}>Join at the Arena with this code</span>
+            <span style={{ fontSize: '0.8125rem', color: 'rgb(148,148,168)' }}>Join at aceforge.app/arena/join with this code</span>
             <button onClick={async () => { try { await navigator.clipboard.writeText(quiz.room_code); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) } catch {} }}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', borderRadius: '0.625rem', background: 'rgb(124,58,237)', color: 'white', border: 'none', padding: '0.4rem 0.75rem', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' }}>
               <Copy style={{ width: '0.85rem', height: '0.85rem' }} /> {codeCopied ? 'Copied!' : 'Copy code'}

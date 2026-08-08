@@ -208,7 +208,7 @@ export default function HostWaitingRoomClient({
 
         {/* Massive join code */}
         <p style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '0.08em', color: 'rgb(196,181,253)', marginBottom: '0.5rem' }}>
-          JOIN AT <span style={{ color: 'white' }}>aceforge.app/arena</span> — ENTER CODE:
+          JOIN AT <span style={{ color: 'white' }}>aceforge.app/arena/join</span> — ENTER CODE:
         </p>
         <p className="hp-code" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(3rem, 12vw, 6rem)', fontWeight: 900, letterSpacing: '0.2em', color: 'white', lineHeight: 1, marginBottom: '2.5rem', textShadow: `0 0 40px ${color}` }}>
           {session.room_code}

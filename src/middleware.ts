@@ -43,8 +43,20 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
+  // Guest-accessible Forge Quiz join/play flows. The Arena hub itself (/arena)
+  // and everything else under it stay auth-gated — only these specific
+  // Kahoot-style entry points work without an account: the standalone
+  // join-by-code page, the live code-entry page, and the join/play/lobby routes
+  // a shared code or link leads to (all built to accept guests via guest_id).
+  const isGuestArenaPath =
+    pathname === '/arena/join' ||
+    pathname === '/arena/forge-quiz/live/join' ||
+    /^\/arena\/forge-quiz\/live\/[^/]+\/(join|play)$/.test(pathname) ||
+    /^\/arena\/forge-quiz\/[^/]+\/(lobby|play)$/.test(pathname)
+
   const isPublic =
     PUBLIC_PATHS.includes(pathname) ||
+    isGuestArenaPath ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
