@@ -38,7 +38,7 @@ export default function ChallengeClient({ challenge, profile }: { challenge: any
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} />
+      <Navbar profile={profile} isDark={true} />
       <div style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '40rem', height: '24rem', borderRadius: '9999px', background: 'rgba(124,58,237,0.14)', filter: 'blur(120px)', pointerEvents: 'none' }} />
 

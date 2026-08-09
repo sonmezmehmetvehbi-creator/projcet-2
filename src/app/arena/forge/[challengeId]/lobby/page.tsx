@@ -30,7 +30,7 @@ export default async function ForgeLobbyPage({ params }: { params: { challengeId
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <LobbyClient challengeId={params.challengeId} isLoggedIn={!!user} />
     </div>
   )

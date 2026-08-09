@@ -60,7 +60,7 @@ export default async function ForgeQuizLobbyPage({ params }: { params: { quizId:
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <LobbyClient
         quiz={quiz}
         questionCount={questions?.length ?? quiz.question_count ?? 0}

@@ -36,9 +36,12 @@ function getLevelInfo(xp: number) {
 interface NavbarProps {
   profile?: Profile | null
   bans?: { generation: boolean; tutoring: boolean; support: boolean }
+  // When true, render the navbar in dark theme (for Arena pages, which sit on a
+  // dark background). Purely a color swap — structure/behavior are identical.
+  isDark?: boolean
 }
 
-export default function Navbar({ profile, bans }: NavbarProps) {
+export default function Navbar({ profile, bans, isDark = false }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -46,15 +49,28 @@ export default function Navbar({ profile, bans }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Theme tokens — green accents on a light surface.
-  const navSolidBg = 'rgba(255,255,255,0.95)'
-  const navBorderColor = 'var(--af-border)'
-  const tText = 'var(--af-text)'
-  const tMuted = 'var(--af-text-muted)'
-  const tHover = 'rgb(249,250,251)'
-  const dropBg = 'white'
-  const dropBorder = 'rgba(34,85,14,0.1)'
-  const overlayBg = 'rgba(255,255,255,0.98)'
+  // Theme tokens. Default: green accents on a light surface. When isDark, the
+  // same layout on a dark Arena-palette surface with light text. Every value
+  // below has a light + dark variant so the swap is purely cosmetic.
+  const navSolidBg = isDark ? 'rgba(10,10,20,0.95)' : 'rgba(255,255,255,0.95)'
+  const navBorderColor = isDark ? 'rgba(255,255,255,0.1)' : 'var(--af-border)'
+  const tText = isDark ? 'rgb(240,240,245)' : 'var(--af-text)'
+  const tMuted = isDark ? 'rgba(255,255,255,0.6)' : 'var(--af-text-muted)'
+  const tHover = isDark ? 'rgba(255,255,255,0.06)' : 'rgb(249,250,251)'
+  const dropBg = isDark ? 'rgb(19,19,31)' : 'white'
+  const dropBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(34,85,14,0.1)'
+  const overlayBg = isDark ? 'rgba(10,10,20,0.98)' : 'rgba(255,255,255,0.98)'
+  // Brand-green accent text; lightened on dark so it stays readable.
+  const tAccent = isDark ? 'rgb(134,196,84)' : 'rgb(34,85,14)'
+  // Active-link background + link hover background.
+  const activeBg = isDark ? 'rgba(255,255,255,0.1)' : 'var(--af-border)'
+  const linkHoverBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(34,85,14,0.06)'
+  // Neutral pill backgrounds for the streak/XP badges (green tint reads poorly
+  // on dark).
+  const badgeBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(34,85,14,0.06)'
+  const badgeBorder = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(34,85,14,0.15)'
+  // Sign-out hover tint.
+  const signOutHover = isDark ? 'rgba(163,45,45,0.18)' : 'rgb(254,242,242)'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -147,7 +163,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
             <div style={{ width:'2rem', height:'2rem', borderRadius:'0.5rem', background:'rgb(34,85,14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <BookOpen style={{ width:'1rem', height:'1rem', color:'white' }} strokeWidth={2.5} />
             </div>
-            <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.125rem', color:'rgb(34,85,14)' }}>AceForge</span>
+            <span style={{ fontFamily:'Fraunces, Georgia, serif', fontWeight:700, fontSize:'1.125rem', color:tAccent }}>AceForge</span>
           </Link>
 
           {/* Desktop nav links */}
@@ -160,12 +176,12 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                     style={{
                       padding:'0.5rem 0.875rem', borderRadius:'0.625rem',
                       fontSize:'0.9375rem', fontWeight: isActive ? 600 : 500,
-                      color: isActive ? 'rgb(34,85,14)' : isTransparent ? 'rgb(34,85,14)' : tMuted,
+                      color: isActive ? tAccent : isTransparent ? tAccent : tMuted,
                       textDecoration:'none', transition:'all 0.2s', whiteSpace:'nowrap',
-                      background: isActive ? 'var(--af-border)' : 'transparent',
+                      background: isActive ? activeBg : 'transparent',
                     }}
-                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(34,85,14,0.06)'; e.currentTarget.style.color = 'rgb(34,85,14)' }}}
-                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isTransparent ? 'rgb(34,85,14)' : tMuted }}}>
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = linkHoverBg; e.currentTarget.style.color = tAccent }}}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isTransparent ? tAccent : tMuted }}}>
                     {link.label}
                   </Link>
                 )
@@ -181,11 +197,11 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                 <div className="af-streak-badge" style={{
                   display:'flex', alignItems:'center', gap:'0.3rem',
                   padding:'0.25rem 0.625rem', borderRadius:'9999px',
-                  background: streak >= 7 ? 'rgba(232,160,32,0.12)' : 'rgba(34,85,14,0.06)',
-                  border: `1px solid ${streak >= 7 ? 'rgba(232,160,32,0.3)' : 'rgba(34,85,14,0.15)'}`,
+                  background: streak >= 7 ? 'rgba(232,160,32,0.12)' : badgeBg,
+                  border: `1px solid ${streak >= 7 ? 'rgba(232,160,32,0.3)' : badgeBorder}`,
                 }}>
                   <span style={{ fontSize:'0.875rem' }}>🔥</span>
-                  <span style={{ fontSize:'0.8125rem', fontWeight:700, color: streak >= 7 ? 'rgb(180,120,10)' : 'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>
+                  <span style={{ fontSize:'0.8125rem', fontWeight:700, color: streak >= 7 ? 'rgb(180,120,10)' : tAccent, fontFamily:'Syne, sans-serif' }}>
                     {streak}
                   </span>
                 </div>
@@ -196,14 +212,14 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                 display:'flex', alignItems:'center', gap:'0.5rem',
                 padding:'0.25rem 0.75rem 0.25rem 0.5rem',
                 borderRadius:'9999px',
-                background:'rgba(34,85,14,0.06)',
-                border:'1px solid rgba(34,85,14,0.15)',
+                background:badgeBg,
+                border:`1px solid ${badgeBorder}`,
                 minWidth:'110px',
               }}>
                 <span style={{ fontSize:'0.9375rem' }}>{levelInfo.current.emoji}</span>
                 <div style={{ flex:1 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'2px' }}>
-                    <span style={{ fontSize:'0.6875rem', fontWeight:700, color:'rgb(34,85,14)', fontFamily:'Syne, sans-serif' }}>
+                    <span style={{ fontSize:'0.6875rem', fontWeight:700, color:tAccent, fontFamily:'Syne, sans-serif' }}>
                       Lv.{levelInfo.current.level}
                     </span>
                     <span style={{ fontSize:'0.6rem', color:tMuted, fontFamily:'Syne, sans-serif' }}>
@@ -224,7 +240,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
               {/* Mobile menu button */}
               <button onClick={() => setMobileOpen(o => !o)}
                 className="af-mobile-menu-btn"
-                style={{ display:'none', padding:'0.5rem', background:'transparent', border:'none', cursor:'pointer', color:'rgb(34,85,14)', borderRadius:'0.5rem' }}>
+                style={{ display:'none', padding:'0.5rem', background:'transparent', border:'none', cursor:'pointer', color:tAccent, borderRadius:'0.5rem' }}>
                 {mobileOpen ? <X style={{ width:'1.25rem', height:'1.25rem' }} /> : <Menu style={{ width:'1.25rem', height:'1.25rem' }} />}
               </button>
 
@@ -249,7 +265,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                 {open && (
                   <div style={{ position:'absolute', right:0, top:'calc(100% + 0.5rem)', width:'17rem', background:dropBg, borderRadius:'1rem', boxShadow:'0 20px 60px rgba(0,0,0,0.12)', border:`1px solid ${dropBorder}`, overflow:'hidden', zIndex:100 }}>
 
-                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid `, display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid ${dropBorder}`, display:'flex', alignItems:'center', gap:'0.75rem' }}>
                       {profile.avatar_url ? (
                         <img src={profile.avatar_url} alt="" style={{ width:'2.5rem', height:'2.5rem', borderRadius:'50%', objectFit:'cover' }} />
                       ) : (
@@ -263,7 +279,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                       </div>
                     </div>
 
-                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid `, background:'rgba(34,85,14,0.02)' }}>
+                    <div style={{ padding:'0.75rem 1rem', borderBottom:`1px solid ${dropBorder}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(34,85,14,0.02)' }}>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.5rem' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
                           <span style={{ fontSize:'1rem' }}>{levelInfo.current.emoji}</span>
@@ -321,7 +337,7 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                             : <span>Free</span>}
                         </div>
                         {!profile.is_premium && (
-                          <Link href="/pricing" onClick={() => setOpen(false)} style={{ fontSize:'0.75rem', fontWeight:600, color:'rgb(34,85,14)', textDecoration:'none' }}>Upgrade →</Link>
+                          <Link href="/pricing" onClick={() => setOpen(false)} style={{ fontSize:'0.75rem', fontWeight:600, color:tAccent, textDecoration:'none' }}>Upgrade →</Link>
                         )}
                       </div>
 
@@ -333,10 +349,10 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                       </Link>
                     </div>
 
-                    <div style={{ borderTop:`1px solid `, padding:'0.5rem 0' }}>
+                    <div style={{ borderTop:`1px solid ${dropBorder}`, padding:'0.5rem 0' }}>
                       <button onClick={() => { setOpen(false); signOut() }}
                         style={{ display:'flex', alignItems:'center', gap:'0.75rem', width:'100%', padding:'0.625rem 1rem', fontSize:'0.875rem', color:'rgb(163,45,45)', background:'transparent', border:'none', cursor:'pointer', textAlign:'left' }}
-                        onMouseEnter={e => (e.currentTarget.style.background='rgb(254,242,242)')}
+                        onMouseEnter={e => (e.currentTarget.style.background=signOutHover)}
                         onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                         <LogOut style={{ width:'1rem', height:'1rem' }} /> Sign Out
                       </button>
@@ -371,17 +387,17 @@ export default function Navbar({ profile, bans }: NavbarProps) {
                 style={{
                   padding:'1rem 1.25rem', borderRadius:'0.875rem',
                   fontSize:'1.0625rem', fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'rgb(34,85,14)' : tText,
+                  color: isActive ? tAccent : tText,
                   textDecoration:'none', transition:'all 0.2s',
-                  background: isActive ? 'var(--af-border)' : 'transparent',
-                  border: isActive ? '1.5px solid rgba(34,85,14,0.2)' : '1.5px solid transparent',
+                  background: isActive ? activeBg : 'transparent',
+                  border: isActive ? `1.5px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(34,85,14,0.2)'}` : '1.5px solid transparent',
                 }}>
                 {link.label}
               </Link>
             )
           })}
 
-          <div style={{ marginTop:'1rem', padding:'1rem', borderRadius:'0.875rem', background:'rgba(34,85,14,0.04)', border:'1px solid rgba(34,85,14,0.1)' }}>
+          <div style={{ marginTop:'1rem', padding:'1rem', borderRadius:'0.875rem', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(34,85,14,0.04)', border:`1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(34,85,14,0.1)'}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.75rem' }}>
               <span style={{ fontSize:'1.25rem' }}>{levelInfo.current.emoji}</span>
               <div>

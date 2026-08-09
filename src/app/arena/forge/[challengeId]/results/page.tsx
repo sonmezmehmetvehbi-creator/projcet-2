@@ -44,7 +44,7 @@ export default async function ForgeResultsPage({ params }: { params: { challenge
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <ResultsClient
         challenge={challenge}
         me={me}

@@ -53,7 +53,7 @@ export default async function ForgeQuizResultsPage({ params }: { params: { quizI
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <ForgeQuizResultsClient
         quiz={{ id: quiz.id, title: quiz.title, banner_color: quiz.banner_color, status: quiz.status }}
         me={me}

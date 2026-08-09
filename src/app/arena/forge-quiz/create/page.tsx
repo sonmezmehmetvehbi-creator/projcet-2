@@ -18,7 +18,7 @@ export default async function ForgeQuizCreatePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <ForgeQuizCreateClient defaultName={profile?.display_name ?? ''} />
     </div>
   )

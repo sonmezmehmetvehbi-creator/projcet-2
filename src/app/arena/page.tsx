@@ -220,7 +220,7 @@ export default async function ArenaPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'rgb(10,10,20)' }}>
-      <Navbar profile={profile} bans={bans} />
+      <Navbar profile={profile} bans={bans} isDark={true} />
       <ArenaClient profile={profile} currentUserId={user.id} quizzesCreated={quizzesCreated} quizzesJoined={quizzesJoined} quizzesStarred={quizzesStarred} liveHosted={liveHosted} liveJoined={liveJoined} />
     </div>
   )
