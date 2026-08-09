@@ -112,7 +112,14 @@ export default function LobbyClient({
     return () => { supabase.removeChannel(channel) }
   }, [quizId])
 
-  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/arena/forge-quiz/${quizId}/lobby` : ''
+  // Share the guest-accessible join flow (same destination the on-screen code
+  // points to), with the room code pre-filled so one tap lands the guest ready
+  // to join — no auth gate. Live rooms don't render this block; guard for a code.
+  const shareLink = typeof window !== 'undefined'
+    ? (quiz.room_code
+        ? `${window.location.origin}/arena/join?code=${encodeURIComponent(quiz.room_code)}`
+        : `${window.location.origin}/arena/join`)
+    : ''
   async function copyLink() {
     try { await navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
   }

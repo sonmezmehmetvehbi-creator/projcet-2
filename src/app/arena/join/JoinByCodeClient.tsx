@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Loader2 } from 'lucide-react'
 
@@ -14,6 +14,17 @@ export default function JoinByCodeClient() {
   const [error, setError] = useState('')
   const [shake, setShake] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Pre-fill the code from a shared link's `?code=` param (e.g. the Self-Paced
+  // lobby's "Copy Link" button bundles the room code). Read from window on mount
+  // rather than useSearchParams to avoid the Suspense boundary requirement.
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('code')
+    if (!raw) return
+    const c = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+    if (c) setCode(c)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function submit() {
     const c = code.trim().toUpperCase()
