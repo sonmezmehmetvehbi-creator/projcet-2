@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import AdminSidebar from '../dashboard/AdminSidebar'
 import { getSidebarCounts } from '../dashboard/adminSidebarCounts'
 import AdminReportsClient from './AdminReportsClient'
+import AdminQuizReportsClient, { type QuizReport } from './AdminQuizReportsClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,34 @@ export default async function AdminReportsPage() {
     reports = []
   }
 
+  // Forge Quiz reports. Wrapped so a missing forge_quiz_reports table (before
+  // migration) renders empty rather than 500-ing the whole page.
+  let quizReports: QuizReport[] = []
+  try {
+    const { data: raw } = await adminClient
+      .from('forge_quiz_reports').select('*').order('created_at', { ascending: false })
+    quizReports = await Promise.all((raw ?? []).map(async (r: any) => {
+      const [quiz, reporter] = await Promise.all([
+        r.quiz_id ? adminClient.from('forge_quizzes').select('title, is_public').eq('id', r.quiz_id).maybeSingle().then(x => x.data) : Promise.resolve(null),
+        r.reporter_id ? adminClient.from('profiles').select('display_name').eq('id', r.reporter_id).maybeSingle().then(x => x.data) : Promise.resolve(null),
+      ])
+      return {
+        id: r.id,
+        quiz_id: r.quiz_id,
+        quizTitle: quiz?.title ?? '(quiz deleted)',
+        quizIsPublic: quiz?.is_public ?? false,
+        quizDeleted: !quiz,
+        reporterName: reporter?.display_name ?? 'User',
+        reason: r.reason,
+        details: r.details ?? null,
+        status: r.status ?? 'pending',
+        created_at: r.created_at,
+      }
+    }))
+  } catch {
+    quizReports = []
+  }
+
   const counts = await getSidebarCounts()
 
   return (
@@ -51,6 +80,9 @@ export default async function AdminReportsPage() {
       <AdminSidebar profile={profile} counts={counts} />
       <div className="admin-content" style={{ marginLeft: '240px', flex: 1, minWidth: 0, minHeight: '100vh', background: 'rgb(18,18,28)' }}>
         <AdminReportsClient reports={reports} />
+        <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem 4rem' }}>
+          <AdminQuizReportsClient reports={quizReports} />
+        </div>
       </div>
     </div>
   )

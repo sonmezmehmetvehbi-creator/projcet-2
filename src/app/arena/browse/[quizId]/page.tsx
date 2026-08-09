@@ -46,6 +46,14 @@ export default async function BrowsePreviewPage({ params }: { params: { quizId: 
   const avgRating = ratingCount > 0 ? ratingSum / ratingCount : 0
   const myRating = (ratings ?? []).find((r: any) => r.user_id === user.id)?.rating ?? 0
 
+  // Has this user already reported this quiz? (Wrapped: table may not exist yet.)
+  let alreadyReported = false
+  try {
+    const { data: existing } = await adminClient
+      .from('forge_quiz_reports').select('id').eq('quiz_id', params.quizId).eq('reporter_id', user.id).maybeSingle()
+    alreadyReported = !!existing
+  } catch { alreadyReported = false }
+
   const data: PreviewData = {
     id: quiz.id,
     title: quiz.title,
@@ -62,6 +70,7 @@ export default async function BrowsePreviewPage({ params }: { params: { quizId: 
     ratingCount,
     myRating,
     isOwner,
+    alreadyReported,
     questions: (questions ?? []).map((q: any) => ({
       id: q.id,
       question_text: q.question_text,

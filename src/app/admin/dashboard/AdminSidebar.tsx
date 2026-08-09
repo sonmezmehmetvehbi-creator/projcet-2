@@ -23,7 +23,7 @@ const GROUPS: { label: string; items: { href: string; label: string; Icon: typeo
   ] },
   { label: 'Users', items: [
     { href: '/admin/users', label: 'All Users', Icon: Users },
-    { href: '/admin/reports', label: 'Reports', Icon: Flag },
+    { href: '/admin/reports', label: 'Reports', Icon: Flag, badge: 'reports' },
   ] },
   { label: 'Tutoring', items: [
     { href: '/admin/tutors', label: 'Applications', Icon: GraduationCap, badge: 'applications' },

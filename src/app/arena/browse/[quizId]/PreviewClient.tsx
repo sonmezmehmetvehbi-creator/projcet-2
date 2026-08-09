@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Play, Star, Check, Pencil, Users, ListChecks, Radio, SlidersHorizontal, Type } from "lucide-react"
+import { ArrowLeft, Play, Star, Check, Pencil, Users, ListChecks, Radio, SlidersHorizontal, Type, Flag, X } from "lucide-react"
 import { LaunchChooser } from "@/components/arena/LaunchChooser"
 import { StarDisplay, StarInput } from "@/components/arena/StarRating"
 import { ANSWER_STYLES, AnswerShape } from "@/components/arena/AnswerShapes"
@@ -37,8 +37,17 @@ export type PreviewData = {
   ratingCount: number
   myRating: number
   isOwner: boolean
+  alreadyReported: boolean
   questions: PreviewQuestion[]
 }
+
+const REPORT_REASONS = [
+  "Inappropriate content",
+  "Spam",
+  "Incorrect/misleading information",
+  "Copyright violation",
+  "Other",
+]
 
 export default function PreviewClient({ data }: { data: PreviewData }) {
   const [playOpen, setPlayOpen] = useState(false)
@@ -53,6 +62,11 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
   const [avgRating, setAvgRating] = useState(data.avgRating)
   const [ratingCount, setRatingCount] = useState(data.ratingCount)
   const [ratingBusy, setRatingBusy] = useState(false)
+
+  // Report flow. Owners can't report their own quiz; once reported the button
+  // stays disabled (server also upserts on quiz_id+reporter_id as a backstop).
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reported, setReported] = useState(data.alreadyReported)
 
   async function toggleStar() {
     const next = !starred
@@ -207,6 +221,25 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
           ))}
           {data.questions.length === 0 && <p className="text-sm text-arena-muted">This quiz has no questions.</p>}
         </div>
+
+        {/* Subtle report link — logged-in non-owners only. */}
+        {!data.isOwner && (
+          <div className="mt-10 flex justify-center">
+            {reported ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-arena-muted">
+                <Flag className="h-3.5 w-3.5" aria-hidden /> You reported this quiz
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-arena-muted outline-none transition-colors hover:text-red-400 focus-visible:ring-2 focus-visible:ring-red-400/40"
+              >
+                <Flag className="h-3.5 w-3.5" aria-hidden /> Report this quiz
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {playOpen && (
@@ -218,6 +251,96 @@ export default function PreviewClient({ data }: { data: PreviewData }) {
           title="Play now"
         />
       )}
+
+      {reportOpen && (
+        <ReportModal
+          quizId={data.id}
+          onClose={() => setReportOpen(false)}
+          onReported={() => { setReported(true); setReportOpen(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ReportModal({ quizId, onClose, onReported }: { quizId: string; onClose: () => void; onReported: () => void }) {
+  const [reason, setReason] = useState(REPORT_REASONS[0])
+  const [details, setDetails] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+
+  async function submit() {
+    if (busy) return
+    setBusy(true)
+    setError("")
+    try {
+      const res = await fetch("/api/arena/forge-quiz/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, reason, details }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to submit report")
+      onReported()
+    } catch (e: any) {
+      setError(e.message || "Failed to submit report")
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-arena-border bg-surface p-5 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-arena-fg">
+            <Flag className="h-4.5 w-4.5 text-red-400" aria-hidden /> Report this quiz
+          </h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-arena-muted outline-none transition-colors hover:text-arena-fg focus-visible:ring-2 focus-visible:ring-brand/40">
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-arena-muted">Flag this quiz for the moderation team to review.</p>
+
+        <label className="mt-4 block text-sm font-medium text-arena-fg">Reason</label>
+        <select
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          className="mt-1.5 w-full rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2.5 text-sm text-arena-fg outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        >
+          {REPORT_REASONS.map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+
+        <label className="mt-4 block text-sm font-medium text-arena-fg">Details <span className="font-normal text-arena-muted">(optional)</span></label>
+        <textarea
+          value={details}
+          onChange={e => setDetails(e.target.value)}
+          rows={3}
+          maxLength={2000}
+          placeholder="Add any context that will help us review this quiz…"
+          className="mt-1.5 w-full resize-y rounded-xl border border-arena-border bg-arena-bg/60 px-3 py-2.5 text-sm text-arena-fg outline-none placeholder:text-arena-muted/60 focus-visible:ring-2 focus-visible:ring-brand/40"
+        />
+
+        {error && <p className="mt-3 text-sm font-medium text-red-400">{error}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} disabled={busy}
+            className="rounded-xl border border-arena-border bg-arena-bg/60 px-4 py-2.5 text-sm font-semibold text-arena-fg outline-none transition-colors hover:border-arena-fg/30 focus-visible:ring-2 focus-visible:ring-brand/40">
+            Cancel
+          </button>
+          <button type="button" onClick={submit} disabled={busy}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white outline-none transition-colors hover:bg-red-600 focus-visible:ring-4 focus-visible:ring-red-500/40 disabled:opacity-60">
+            {busy ? "Submitting…" : "Submit Report"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
