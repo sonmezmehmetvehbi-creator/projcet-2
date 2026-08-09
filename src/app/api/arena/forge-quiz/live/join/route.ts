@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getClientIp, allowGuestJoin, isNicknameClean } from '@/lib/forgeAbuse'
 
 // POST /api/arena/forge-quiz/live/join — a player joins a waiting live session.
 export async function POST(request: Request) {
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
 
     // Names are capped at 15 characters (client + server).
     const name = (String(displayName ?? '').trim().slice(0, 15)) || 'Player'
+    // Reject clearly-inappropriate names (applies to guests AND authed users,
+    // who can freely rename themselves per session on each join).
+    if (!isNicknameClean(name)) {
+      return NextResponse.json({ error: 'Please choose an appropriate name', badName: true }, { status: 400 })
+    }
 
     const { data: existing } = await matchPlayer(adminClient
       .from('forge_quiz_live_players')
@@ -53,6 +59,13 @@ export async function POST(request: Request) {
         .eq('session_id', sessionId)
         .eq('is_kicked', false)
       if ((count ?? 0) >= session.max_players) return NextResponse.json({ error: 'This game is full', full: true }, { status: 403 })
+    }
+
+    // Spam guard: a brand-new guest joining. Cap distinct guest joins per IP per
+    // room in a short window so one device can't flood a room with fake players.
+    // (Rejoins took the `existing` path above and never reach here.)
+    if (!user && !allowGuestJoin(getClientIp(request), sessionId)) {
+      return NextResponse.json({ error: 'Too many join attempts, please wait a moment', rateLimited: true }, { status: 429 })
     }
 
     const { data: player, error } = await adminClient

@@ -58,6 +58,7 @@ export default function ForgeQuizPlayClient({
   const [name, setName] = useState(defaultName)
   const [avatar, setAvatar] = useState(defaultAvatar)
   const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState('')
 
   const [qIndex, setQIndex] = useState(0)
   const [totalMs, setTotalMs] = useState(1)
@@ -179,13 +180,25 @@ export default function ForgeQuizPlayClient({
   async function startGame() {
     const cleanName = sanitizeNickname(name, 24)
     if (!cleanName) return
-    setJoining(true)
+    setJoining(true); setJoinError('')
     try {
-      await fetch('/api/arena/forge-quiz/join', {
+      const res = await fetch('/api/arena/forge-quiz/join', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quizId: quiz.id, displayName: cleanName, avatarEmoji: avatar, guestId: isGuest ? guestIdRef.current : undefined }),
       })
-    } catch {}
+      const data = await res.json().catch(() => ({}))
+      // Server enforces the guardrails (bad name, room full, rate limit) — if it
+      // rejected the join, show why instead of silently letting the player in.
+      if (!res.ok || !data.playerId) {
+        setJoinError(data.error || 'Could not join this quiz')
+        setJoining(false)
+        return
+      }
+    } catch {
+      setJoinError('Could not join this quiz')
+      setJoining(false)
+      return
+    }
     setJoining(false)
     setStatus('playing')
   }
@@ -237,6 +250,8 @@ export default function ForgeQuizPlayClient({
                 style={{ aspectRatio: '1', borderRadius: '0.5rem', border: avatar === a ? '2px solid rgb(124,58,237)' : '1px solid rgba(255,255,255,0.1)', background: avatar === a ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.03)', fontSize: '1.1rem', cursor: 'pointer' }}>{a}</button>
             ))}
           </div>
+
+          {joinError && <p style={{ color: 'rgb(248,113,113)', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.75rem', textAlign: 'center' }}>{joinError}</p>}
 
           <button onClick={startGame} disabled={joining || !name.trim()}
             style={{ width: '100%', height: '3.25rem', borderRadius: '0.875rem', border: 'none', background: 'linear-gradient(90deg, rgb(124,58,237), rgb(139,92,246))', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: joining ? 'wait' : 'pointer', opacity: name.trim() ? 1 : 0.5 }}>

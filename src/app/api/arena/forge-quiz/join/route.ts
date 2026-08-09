@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getClientIp, allowGuestJoin, isNicknameClean } from '@/lib/forgeAbuse'
 
 // POST /api/arena/forge-quiz/join — register the current user as a quiz player.
 export async function POST(request: Request) {
@@ -20,6 +21,14 @@ export async function POST(request: Request) {
     const { data: quiz } = await adminClient.from('forge_quizzes').select('id, max_players, play_count').eq('id', quizId).maybeSingle()
     if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
 
+    // Names are capped at 24 characters (matching the self-paced client), and
+    // clearly-inappropriate names are rejected (applies to guests AND authed
+    // users, who pass a per-session name).
+    const name = (String(displayName ?? '').trim().slice(0, 24)) || 'Player'
+    if (!isNicknameClean(name)) {
+      return NextResponse.json({ error: 'Please choose an appropriate name', badName: true }, { status: 400 })
+    }
+
     // Already joined? (matched by whichever identity is present)
     const existingQuery = adminClient
       .from('forge_quiz_players')
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
     if (existing) {
       await adminClient
         .from('forge_quiz_players')
-        .update({ display_name: displayName || 'Player', avatar_emoji: avatarEmoji })
+        .update({ display_name: name, avatar_emoji: avatarEmoji })
         .eq('id', existing.id)
       return NextResponse.json({ playerId: existing.id })
     }
@@ -47,9 +56,15 @@ export async function POST(request: Request) {
       if ((count ?? 0) >= quiz.max_players) return NextResponse.json({ error: 'quiz_full', full: true }, { status: 403 })
     }
 
+    // Spam guard: a brand-new guest joining. Cap distinct guest joins per IP per
+    // room in a short window. Rejoins took the `existing` path and never reach here.
+    if (!user && !allowGuestJoin(getClientIp(request), quizId)) {
+      return NextResponse.json({ error: 'Too many join attempts, please wait a moment', rateLimited: true }, { status: 429 })
+    }
+
     const { data: player, error } = await adminClient
       .from('forge_quiz_players')
-      .insert({ quiz_id: quizId, user_id: user?.id ?? null, guest_id: user ? null : guest, display_name: displayName || 'Player', avatar_emoji: avatarEmoji })
+      .insert({ quiz_id: quizId, user_id: user?.id ?? null, guest_id: user ? null : guest, display_name: name, avatar_emoji: avatarEmoji })
       .select('id')
       .single()
     if (error) throw error
