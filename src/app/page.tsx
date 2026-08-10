@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import Navbar from '@/components/layout/Navbar'
 import Hero from '@/components/landing/hero'
 import StatsBar from '@/components/landing/stats-bar'
+import PowerSequence from '@/components/landing/power-sequence'
 import Features from '@/components/landing/features'
 import HowItWorks from '@/components/landing/how-it-works'
 import SubjectGrid from '@/components/landing/subject-grid'
@@ -28,6 +29,7 @@ export default async function HomePage() {
     <div style={{ background: 'rgb(248,250,245)', minHeight: '100vh' }}>
       <Navbar profile={profile} />
       <Hero isLoggedIn={!!profile} />
+      <PowerSequence isLoggedIn={!!profile} />
       <StatsBar />
       <Features />
       <HowItWorks />
