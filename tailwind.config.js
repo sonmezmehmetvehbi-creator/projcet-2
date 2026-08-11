@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Class-based dark mode: only the landing page opts in via a `dark` wrapper,
+  // so the light student/tutor palettes elsewhere are unaffected. Enables the
+  // `dark:` variants used by the macbook-scroll / draggable-card components.
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
