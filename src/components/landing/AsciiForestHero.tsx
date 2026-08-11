@@ -76,6 +76,7 @@ export default function AsciiForestHero() {
         }
         return
       }
+      console.log('[AsciiForestHero] CURRENT WIDTH CHECK:', w, 'x', h)
       sizeRetries = 0
 
       cellSize = window.innerWidth < 768 ? 18 : 13
