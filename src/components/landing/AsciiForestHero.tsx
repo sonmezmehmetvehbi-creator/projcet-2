@@ -46,22 +46,51 @@ export default function AsciiForestHero() {
     let running = false
     let lastFrame = 0
 
+    let disposed = false
+    let sizeRetries = 0
+    let retryRafId = 0
+
     const img = new Image()
     let imgLoaded = false
 
     // Offscreen canvas used to downsample the photo to one pixel per grid cell.
     const sampler = document.createElement('canvas')
     const sctx = sampler.getContext('2d', { willReadFrequently: true })
+    console.log('[AsciiForestHero] sctx is', sctx ? 'non-null' : 'NULL')
 
     function buildGrid() {
-      if (!sctx || !imgLoaded) return
+      if (disposed) return
+      if (!sctx) {
+        console.warn('[AsciiForestHero] buildGrid: sctx is null, aborting')
+        return
+      }
+      if (!imgLoaded) return
       const w = wrap!.clientWidth
       const h = wrap!.clientHeight
-      if (w === 0 || h === 0) return
+      console.log('[AsciiForestHero] buildGrid: w,h =', w, h)
+      if (w === 0 || h === 0) {
+        // The wrapper hasn't been laid out yet (its parent hero section reports
+        // no height at this instant). Retry on the next frame — bounded — so the
+        // effect self-heals once real layout occurs, instead of bailing forever.
+        if (sizeRetries < 120) {
+          sizeRetries++
+          retryRafId = requestAnimationFrame(() => {
+            buildGrid()
+            if (prefersReducedMotion) render(0)
+          })
+        } else {
+          console.warn(
+            '[AsciiForestHero] buildGrid: gave up waiting for a non-zero wrapper size',
+          )
+        }
+        return
+      }
+      sizeRetries = 0
 
       cellSize = window.innerWidth < 768 ? 18 : 13
       cols = Math.max(1, Math.ceil(w / cellSize))
       rows = Math.max(1, Math.ceil(h / cellSize))
+      console.log('[AsciiForestHero] buildGrid: cols,rows =', cols, rows)
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas!.width = Math.round(w * dpr)
@@ -101,6 +130,9 @@ export default function AsciiForestHero() {
         colB[i] = Math.round(DARK.b + (BRIGHT.b - DARK.b) * lum)
       }
       ready = true
+      // Draw an immediate frame so the art shows even before the first animation
+      // tick (and covers the reduced-motion / paused-tab cases).
+      render(lastFrame)
     }
 
     function render(time: number) {
@@ -156,26 +188,51 @@ export default function AsciiForestHero() {
     }
 
     img.onload = () => {
+      console.log(
+        '[AsciiForestHero] image loaded, natural size:',
+        img.naturalWidth,
+        img.naturalHeight,
+      )
       imgLoaded = true
       buildGrid()
       if (prefersReducedMotion) render(0)
       else start()
     }
+    img.onerror = (e) => {
+      console.error('[AsciiForestHero] image failed to load:', e)
+    }
     img.src = '/landing/hero-nature.jpg'
 
     const ro = new ResizeObserver(() => {
+      console.log(
+        '[AsciiForestHero] ResizeObserver fired: w,h =',
+        wrap!.clientWidth,
+        wrap!.clientHeight,
+      )
       buildGrid()
       if (prefersReducedMotion) render(0)
     })
     ro.observe(wrap)
 
+    // Safety net: if the image's onload fired before the wrapper had its final
+    // layout (e.g. a cached image on first paint), buildGrid would have bailed on
+    // a zero size. Re-run it on the next frame, once layout has settled.
+    const mountRaf = requestAnimationFrame(() => {
+      buildGrid()
+      if (prefersReducedMotion) render(0)
+    })
+
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      disposed = true
       stop()
+      if (retryRafId) cancelAnimationFrame(retryRafId)
+      cancelAnimationFrame(mountRaf)
       ro.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       img.onload = null
+      img.onerror = null
     }
   }, [])
 
@@ -188,7 +245,7 @@ export default function AsciiForestHero() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(120% 90% at 50% 40%, rgba(7,8,9,0.25) 0%, rgba(7,8,9,0.65) 55%, rgba(7,8,9,0.9) 100%), linear-gradient(to top, #08090c 0%, rgba(8,9,12,0.4) 45%, rgba(8,9,12,0.55) 100%)',
+            'radial-gradient(120% 90% at 50% 40%, rgba(7,8,9,0.15) 0%, rgba(7,8,9,0.55) 55%, rgba(7,8,9,0.85) 100%), linear-gradient(to top, rgba(8,9,12,0.85) 0%, rgba(8,9,12,0.35) 45%, rgba(8,9,12,0.45) 100%)',
         }}
       />
     </div>

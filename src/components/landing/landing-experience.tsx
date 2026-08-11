@@ -46,7 +46,7 @@ export default function LandingExperience() {
       <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden">
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <AsciiForestHero />
         <div className="relative z-10 mx-auto max-w-4xl px-4 py-24 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[rgb(74,222,128)]/30 bg-[rgb(74,222,128)]/10 px-4 py-1.5 text-sm font-medium text-[rgb(134,196,84)]">
