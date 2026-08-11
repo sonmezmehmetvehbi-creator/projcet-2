@@ -46,9 +46,14 @@ export default function LandingExperience() {
       <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
+      {/* Full-bleed positioning context: AsciiForestHero (absolute inset-0) is a
+          direct child of this full-width section, so its canvas spans the whole
+          viewport. The max-width + centering live ONLY on the inner content
+          wrapper below — never on a parent shared with AsciiForestHero, which
+          would otherwise squeeze the art into a narrow column. */}
+      <section className="relative min-h-screen w-full overflow-hidden">
         <AsciiForestHero />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 py-24 text-center">
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center px-4 py-24 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[rgb(74,222,128)]/30 bg-[rgb(74,222,128)]/10 px-4 py-1.5 text-sm font-medium text-[rgb(134,196,84)]">
             <Sparkles className="h-4 w-4" />
             AI-Powered Study Platform

@@ -56,18 +56,13 @@ export default function AsciiForestHero() {
     // Offscreen canvas used to downsample the photo to one pixel per grid cell.
     const sampler = document.createElement('canvas')
     const sctx = sampler.getContext('2d', { willReadFrequently: true })
-    console.log('[AsciiForestHero] sctx is', sctx ? 'non-null' : 'NULL')
 
     function buildGrid() {
       if (disposed) return
-      if (!sctx) {
-        console.warn('[AsciiForestHero] buildGrid: sctx is null, aborting')
-        return
-      }
+      if (!sctx) return
       if (!imgLoaded) return
       const w = wrap!.clientWidth
       const h = wrap!.clientHeight
-      console.log('[AsciiForestHero] buildGrid: w,h =', w, h)
       if (w === 0 || h === 0) {
         // The wrapper hasn't been laid out yet (its parent hero section reports
         // no height at this instant). Retry on the next frame — bounded — so the
@@ -78,10 +73,6 @@ export default function AsciiForestHero() {
             buildGrid()
             if (prefersReducedMotion) render(0)
           })
-        } else {
-          console.warn(
-            '[AsciiForestHero] buildGrid: gave up waiting for a non-zero wrapper size',
-          )
         }
         return
       }
@@ -90,7 +81,6 @@ export default function AsciiForestHero() {
       cellSize = window.innerWidth < 768 ? 18 : 13
       cols = Math.max(1, Math.ceil(w / cellSize))
       rows = Math.max(1, Math.ceil(h / cellSize))
-      console.log('[AsciiForestHero] buildGrid: cols,rows =', cols, rows)
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas!.width = Math.round(w * dpr)
@@ -188,27 +178,14 @@ export default function AsciiForestHero() {
     }
 
     img.onload = () => {
-      console.log(
-        '[AsciiForestHero] image loaded, natural size:',
-        img.naturalWidth,
-        img.naturalHeight,
-      )
       imgLoaded = true
       buildGrid()
       if (prefersReducedMotion) render(0)
       else start()
     }
-    img.onerror = (e) => {
-      console.error('[AsciiForestHero] image failed to load:', e)
-    }
     img.src = '/landing/hero-nature.jpg'
 
     const ro = new ResizeObserver(() => {
-      console.log(
-        '[AsciiForestHero] ResizeObserver fired: w,h =',
-        wrap!.clientWidth,
-        wrap!.clientHeight,
-      )
       buildGrid()
       if (prefersReducedMotion) render(0)
     })
@@ -232,7 +209,6 @@ export default function AsciiForestHero() {
       ro.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       img.onload = null
-      img.onerror = null
     }
   }, [])
 
