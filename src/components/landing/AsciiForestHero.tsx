@@ -4,11 +4,12 @@ import { useEffect, useRef } from 'react'
 
 // Density-ordered charset: space (darkest / emptiest) → '@' (brightest / densest).
 const CHARSET = ' .:-=+*#%@'
-// Accent endpoints. Bright luminance cells trend toward AceForge green; dark
-// cells dim toward a near-black green so the art never competes with the
-// foreground copy.
-const BRIGHT = { r: 74, g: 222, b: 128 } // rgb(74,222,128)
-const DARK = { r: 20, g: 40, b: 20 } // rgb(20,40,20)
+// Accent endpoints. Bright luminance cells trend toward a vivid, saturated
+// AceForge green; dark cells hold a visible dark-green floor (never near-black)
+// so the entire luminance range stays perceptible against the near-black base
+// fill instead of the darkest glyphs vanishing into it.
+const BRIGHT = { r: 120, g: 255, b: 140 } // vivid saturated green
+const DARK = { r: 40, g: 70, b: 35 } // visible dark-green floor
 
 /**
  * Full-bleed character-art rendering of a source photo, drawn on a Canvas2D and
@@ -147,6 +148,8 @@ export default function AsciiForestHero() {
           const b = Math.min(255, (colB[i] * shimmer) | 0)
           ctx!.fillStyle = `rgb(${r},${g},${b})`
           ctx!.fillText(CHARSET[ci], x * cellSize, y * cellSize)
+          if (x === 0 && y === 0)
+            console.log('[AsciiForestHero] sample glyph color:', ctx!.fillStyle)
         }
       }
     }
@@ -222,7 +225,7 @@ export default function AsciiForestHero() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(120% 90% at 50% 40%, rgba(7,8,9,0.15) 0%, rgba(7,8,9,0.55) 55%, rgba(7,8,9,0.85) 100%), linear-gradient(to top, rgba(8,9,12,0.85) 0%, rgba(8,9,12,0.35) 45%, rgba(8,9,12,0.45) 100%)',
+            'radial-gradient(120% 90% at 50% 40%, rgba(7,8,9,0) 0%, rgba(7,8,9,0.2) 55%, rgba(7,8,9,0.4) 100%), linear-gradient(to top, rgba(8,9,12,0.45) 0%, rgba(8,9,12,0.1) 45%, rgba(8,9,12,0.05) 100%)',
         }}
       />
     </div>
